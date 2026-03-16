@@ -15,7 +15,7 @@ const modes = [
   {
     icon: Video,
     title: 'Video Avatar',
-    description: 'Face-to-face interviews with an AI video avatar. The most human-like experience for sensitive or in-depth qualitative research.',
+    description: 'Face-to-face interviews with an AI video avatar. The most human-like experience for sensitive or in-depth qualitative surveys.',
   },
 ];
 

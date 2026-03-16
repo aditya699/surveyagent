@@ -4,15 +4,23 @@ from datetime import datetime, timedelta
 from fastapi import HTTPException, Header, Request
 from jose import JWTError, jwt
 from bson import ObjectId
-from passlib.context import CryptContext
+from bcrypt._bcrypt import hashpw, checkpw, gensalt
 from server.db.mongo import log_error, get_db
 from server.core.config import settings
 from server.core.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-# Password hashing context
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# Password hashing helpers (using bcrypt directly — passlib is incompatible with bcrypt 4.1+)
+def hash_password(password: str) -> str:
+    """Hash a password using bcrypt."""
+    return hashpw(password.encode("utf-8"), gensalt()).decode("utf-8")
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify a plain password against a bcrypt hash."""
+    return checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
 
 
 # JWT Token Management - With Token Versioning

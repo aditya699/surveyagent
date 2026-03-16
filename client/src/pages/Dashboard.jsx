@@ -1,5 +1,6 @@
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { PlusCircle, FileText, BarChart3, LogOut } from 'lucide-react';
+import { PlusCircle, FileText, BarChart3, LogOut, Settings } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 export default function Dashboard() {
@@ -30,6 +31,13 @@ export default function Dashboard() {
         <h1 className="text-xl font-serif text-text-primary">SurveyAgent</h1>
         <div className="flex items-center gap-4">
           <span className="text-sm text-text-muted font-sans">{user?.name}</span>
+          <Link
+            to="/settings"
+            className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors font-sans"
+          >
+            <Settings className="w-4 h-4" />
+            Settings
+          </Link>
           <button
             onClick={logout}
             className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors font-sans"

@@ -39,7 +39,7 @@ export default function Hero() {
             transition={{ delay: 0.1 }}
             className="inline-flex items-center gap-2 text-sm font-sans text-accent border border-accent/30 rounded-full px-4 py-1.5 mb-8 bg-accent/5"
           >
-            Open-Source AI Research Platform
+            Open-Source AI Survey Platform
           </motion.span>
 
           {/* Headline */}
@@ -62,7 +62,7 @@ export default function Hero() {
             className="text-lg sm:text-xl text-text-muted font-sans max-w-2xl mx-auto mb-10 leading-relaxed"
           >
             AI that interviews your respondents via chat, voice, or video avatar.
-            Self-host it. Plug in any LLM. Own your research data.
+            Self-host it. Plug in any LLM. Own your survey data.
           </motion.p>
 
           {/* CTAs */}

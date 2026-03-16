@@ -6,7 +6,7 @@ const steps = [
     number: '01',
     icon: PenLine,
     title: 'Create your survey',
-    description: 'Define your research goals and questions. The AI structures the conversation flow automatically.',
+    description: 'Define your survey goals and questions. The AI structures the conversation flow automatically.',
   },
   {
     number: '02',
@@ -50,7 +50,7 @@ export default function HowItWorks() {
           className="text-center mb-16"
         >
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif text-text-primary">
-            Research goal to insights.
+            Survey to insights.
             <br />
             <span className="italic">Minutes, not months.</span>
           </h2>

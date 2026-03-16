@@ -21,7 +21,7 @@ export default function Solution() {
             forms with dynamic conversations. Your AI interviewer adapts in real-time,
             asks follow-up questions, and extracts deeper insights — through text chat,
             real-time voice, or a video avatar. Deploy it on your servers, connect your
-            preferred LLM, and keep full control of your research data.
+            preferred LLM, and keep full control of your survey data.
           </p>
         </motion.div>
       </div>

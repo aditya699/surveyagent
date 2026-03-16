@@ -5,12 +5,12 @@ const problems = [
   {
     icon: DollarSign,
     title: '$2,000+/month',
-    description: 'Enterprise research platforms charge thousands per seat. Small teams are priced out entirely.',
+    description: 'Enterprise survey platforms charge thousands per seat. Small teams are priced out entirely.',
   },
   {
     icon: Cloud,
     title: 'Your data, their cloud',
-    description: 'Sensitive research data lives on vendor servers. You can\'t control where it goes or who accesses it.',
+    description: 'Sensitive survey data lives on vendor servers. You can\'t control where it goes or who accesses it.',
   },
   {
     icon: Lock,
@@ -46,7 +46,7 @@ export default function Problem() {
           className="text-center mb-16"
         >
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif text-text-primary">
-            Research platforms got expensive.
+            Survey platforms got expensive.
             <br />
             <span className="italic text-text-muted">And closed.</span>
           </h2>

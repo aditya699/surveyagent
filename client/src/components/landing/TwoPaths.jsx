@@ -34,7 +34,7 @@ export default function TwoPaths() {
             <h3 className="font-serif text-2xl text-text-primary mb-3">Cloud</h3>
             <p className="text-text-muted font-sans text-sm leading-relaxed mb-6">
               Start instantly with our hosted platform. No setup, no infrastructure.
-              We handle scaling, updates, and uptime so you can focus on research.
+              We handle scaling, updates, and uptime so you can focus on your surveys.
             </p>
             <ul className="space-y-2 text-sm text-text-muted font-sans mb-6">
               <li className="flex items-center gap-2">

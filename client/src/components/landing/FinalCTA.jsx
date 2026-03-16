@@ -13,7 +13,7 @@ export default function FinalCTA() {
           transition={{ duration: 0.6 }}
         >
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif text-white mb-6">
-            Your research.
+            Your surveys.
             <br />
             Your infrastructure.
             <br />

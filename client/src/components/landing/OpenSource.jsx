@@ -38,7 +38,7 @@ export default function OpenSource() {
             Open source. <span className="italic">Open book.</span>
           </h2>
           <p className="text-text-muted font-sans text-lg max-w-2xl mx-auto">
-            We believe research tools should be transparent, auditable, and community-owned.
+            We believe survey tools should be transparent, auditable, and community-owned.
           </p>
         </motion.div>
 

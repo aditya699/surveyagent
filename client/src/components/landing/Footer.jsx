@@ -46,7 +46,7 @@ export default function Footer() {
           <div className="col-span-2 md:col-span-1">
             <span className="font-serif text-xl text-white">SurveyAgent</span>
             <p className="text-white/40 text-sm font-sans mt-3 leading-relaxed">
-              Open-source AI survey platform for qualitative research.
+              Open-source AI survey platform for qualitative insights.
             </p>
           </div>
 

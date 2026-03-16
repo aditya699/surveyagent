@@ -1,6 +1,6 @@
 import { createContext, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api, { sendFormData } from '../api/axios';
+import api, { sendFormData, sendFormPut } from '../api';
 
 export const AuthContext = createContext(null);
 
@@ -57,6 +57,14 @@ export function AuthProvider({ children }) {
     return meResponse.data.user;
   }, []);
 
+  const updateProfile = useCallback(async (data) => {
+    await sendFormPut('/api/v1/auth/update-profile', data);
+    // Re-fetch canonical user data from /me
+    const meResponse = await api.get('/api/v1/auth/me');
+    setUser(meResponse.data.user);
+    return meResponse.data.user;
+  }, []);
+
   const logout = useCallback(() => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
@@ -64,7 +72,7 @@ export function AuthProvider({ children }) {
     navigate('/');
   }, [navigate]);
 
-  const value = { user, loading, isAuthenticated, login, register, logout };
+  const value = { user, loading, isAuthenticated, login, register, updateProfile, logout };
 
   return (
     <AuthContext.Provider value={value}>

@@ -3,7 +3,6 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from typing import Optional
 from datetime import datetime
 from bson import ObjectId
-from passlib.context import CryptContext
 from server.db.mongo import get_db, log_error
 from server.auth.schemas import AdminInDB, TokenResponse, AdminUpdateResponse, AdminProfile
 from server.auth.utils import (
@@ -11,13 +10,12 @@ from server.auth.utils import (
     create_refresh_token,
     verify_token,
     get_current_user,
+    hash_password,
+    verify_password,
 )
 from server.core.logging_config import get_logger
 
 logger = get_logger(__name__)
-
-# Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 router = APIRouter()
 
@@ -59,7 +57,7 @@ async def register_admin(
             )
 
         # Hash the password
-        hashed_password = pwd_context.hash(password)
+        hashed_password = hash_password(password)
 
         # Create admin document with token_version
         now = datetime.utcnow()
@@ -166,7 +164,7 @@ async def login_admin(
             )
 
         # Verify password
-        if not pwd_context.verify(password, admin["password"]):
+        if not verify_password(password, admin["password"]):
             logger.error(f"Login failed - Invalid password for email: {email}")
             raise HTTPException(
                 status_code=401,
