@@ -1,0 +1,233 @@
+import { useState, useEffect } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import {
+  ArrowLeft,
+  LogOut,
+  Calendar,
+  HelpCircle,
+  Copy,
+  Check,
+  Pencil,
+  ExternalLink,
+} from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
+import { getSurvey } from '../api';
+
+function formatDate(dateString) {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date(dateString));
+}
+
+function StatusBadge({ status }) {
+  const isDraft = status === 'draft';
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-sans font-medium ${
+        isDraft ? 'bg-text-muted/10 text-text-muted' : 'bg-success/10 text-success'
+      }`}
+    >
+      <span
+        className={`w-1.5 h-1.5 rounded-full ${isDraft ? 'bg-text-muted' : 'bg-success'}`}
+      />
+      {isDraft ? 'Draft' : 'Published'}
+    </span>
+  );
+}
+
+export default function SurveyDetail() {
+  const { id } = useParams();
+  const { logout } = useAuth();
+
+  const [survey, setSurvey] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [copySuccess, setCopySuccess] = useState(false);
+
+  useEffect(() => {
+    const fetchSurvey = async () => {
+      try {
+        const res = await getSurvey(id);
+        setSurvey(res.data.survey);
+      } catch (err) {
+        setError(err.response?.data?.detail || 'Survey not found');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSurvey();
+  }, [id]);
+
+  const handleCopy = async () => {
+    const url = `${window.location.origin}/s/${survey.token}`;
+    await navigator.clipboard.writeText(url);
+    setCopySuccess(true);
+    setTimeout(() => setCopySuccess(false), 2000);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="bg-white border-b border-card-border px-6 py-4">
+          <Link
+            to="/dashboard"
+            className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors font-sans"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Dashboard
+          </Link>
+        </header>
+        <main className="container-max max-w-2xl section-padding">
+          <div className="bg-error/10 border border-error/20 rounded-lg px-4 py-3 text-sm text-error font-sans">
+            {error}
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Top bar */}
+      <header className="bg-white border-b border-card-border px-6 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Link
+            to="/dashboard"
+            className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors font-sans"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Dashboard
+          </Link>
+          <span className="text-card-border">|</span>
+          <h1 className="text-xl font-serif text-text-primary line-clamp-1">{survey.title}</h1>
+          <StatusBadge status={survey.status} />
+        </div>
+        <button
+          onClick={logout}
+          className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors font-sans"
+        >
+          <LogOut className="w-4 h-4" />
+          Logout
+        </button>
+      </header>
+
+      {/* Content */}
+      <main className="container-max max-w-2xl section-padding">
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
+          {/* Metadata */}
+          <div className="flex items-center gap-4 text-sm text-text-muted font-sans">
+            <span className="flex items-center gap-1.5">
+              <Calendar className="w-4 h-4" />
+              Created {formatDate(survey.created_at)}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <HelpCircle className="w-4 h-4" />
+              {survey.questions.length} {survey.questions.length === 1 ? 'question' : 'questions'}
+            </span>
+          </div>
+
+          {/* Shareable link */}
+          {survey.status === 'published' && survey.token && (
+            <div className="card">
+              <label className="block text-sm font-sans text-text-muted mb-2">Shareable link</label>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-1 bg-background rounded-lg px-4 py-3">
+                  <ExternalLink className="w-4 h-4 text-text-muted/40 shrink-0" />
+                  <span className="text-sm font-sans text-text-primary truncate">
+                    {window.location.origin}/s/{survey.token}
+                  </span>
+                </div>
+                <button
+                  onClick={handleCopy}
+                  className="btn-secondary text-sm inline-flex items-center gap-1.5 shrink-0"
+                >
+                  {copySuccess ? (
+                    <>
+                      <Check className="w-4 h-4 text-success" />
+                      Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4" />
+                      Copy
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Description */}
+          {survey.description && (
+            <div>
+              <h3 className="text-sm font-sans text-text-muted mb-2">Description</h3>
+              <p className="text-sm font-sans text-text-primary leading-relaxed">
+                {survey.description}
+              </p>
+            </div>
+          )}
+
+          {/* Goal */}
+          {survey.goal && (
+            <div>
+              <h3 className="text-sm font-sans text-text-muted mb-2">Goal</h3>
+              <p className="text-sm font-sans text-text-primary leading-relaxed">{survey.goal}</p>
+            </div>
+          )}
+
+          {/* Context */}
+          {survey.context && (
+            <div>
+              <h3 className="text-sm font-sans text-text-muted mb-2">Context</h3>
+              <p className="text-sm font-sans text-text-primary leading-relaxed">
+                {survey.context}
+              </p>
+            </div>
+          )}
+
+          {/* Questions */}
+          {survey.questions.length > 0 && (
+            <div>
+              <h3 className="text-sm font-sans text-text-muted mb-3">Questions</h3>
+              <ol className="space-y-3">
+                {survey.questions.map((q, i) => (
+                  <li key={i} className="flex gap-3">
+                    <span className="text-sm text-text-muted font-sans w-6 text-right shrink-0">
+                      {i + 1}.
+                    </span>
+                    <span className="text-sm font-sans text-text-primary">{q}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex items-center gap-3 pt-4 border-t border-card-border">
+            <Link
+              to={`/surveys/${survey.id}/edit`}
+              className="btn-primary text-sm inline-flex items-center gap-2"
+            >
+              <Pencil className="w-4 h-4" />
+              Edit Survey
+            </Link>
+            <Link to="/dashboard" className="btn-secondary text-sm">
+              Back to Dashboard
+            </Link>
+          </div>
+        </motion.div>
+      </main>
+    </div>
+  );
+}

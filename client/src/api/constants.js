@@ -15,16 +15,14 @@ export const ENDPOINTS = {
     UPDATE_PROFILE: `${PREFIX}/auth/update-profile`,
   },
 
-  // Future — uncomment / fill in as we build these modules
-  // SURVEYS: {
-  //   LIST:   `${PREFIX}/surveys`,
-  //   CREATE: `${PREFIX}/surveys`,
-  //   DETAIL: (id) => `${PREFIX}/surveys/${id}`,
-  //   DELETE: (id) => `${PREFIX}/surveys/${id}`,
-  // },
-  // ANALYTICS: {
-  //   DASHBOARD: `${PREFIX}/analytics/dashboard`,
-  // },
+  SURVEYS: {
+    LIST:    `${PREFIX}/surveys`,
+    CREATE:  `${PREFIX}/surveys`,
+    DETAIL:  (id) => `${PREFIX}/surveys/${id}`,
+    UPDATE:  (id) => `${PREFIX}/surveys/${id}`,
+    DELETE:  (id) => `${PREFIX}/surveys/${id}`,
+    PUBLISH: (id) => `${PREFIX}/surveys/${id}/publish`,
+  },
 };
 
 export const FORM_HEADERS = {

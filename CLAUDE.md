@@ -4,7 +4,7 @@
 
 SurveyAgent is an open-source AI survey platform that replaces static forms with dynamic conversations. It conducts interviews via text chat, voice, or video avatar. It's self-hostable, LLM-agnostic, and keeps survey data under the user's control.
 
-**Status:** Early development. Auth system and landing page are built. Core survey features are not yet implemented.
+**Status:** Early development. Auth system, landing page, and survey CRUD API are built. AI interviewer and response collection are not yet implemented.
 
 ## Tech Stack
 
@@ -25,10 +25,14 @@ surveyagent/
 │   │   └── llm.py             # Singleton AsyncOpenAI client
 │   ├── db/
 │   │   └── mongo.py           # get_db() singleton + log_error() helper
-│   └── auth/
-│       ├── routes.py          # register, login, refresh, /me, update-profile
-│       ├── schemas.py         # Pydantic models (AdminInDB, TokenResponse, etc.)
-│       └── utils.py           # JWT create/verify, bcrypt hash/verify, get_current_user
+│   ├── auth/
+│   │   ├── routes.py          # register, login, refresh, /me, update-profile
+│   │   ├── schemas.py         # Pydantic models (AdminInDB, TokenResponse, etc.)
+│   │   └── utils.py           # JWT create/verify, bcrypt hash/verify, get_current_user
+│   └── surveys/
+│       ├── routes.py          # CRUD + publish (all Bearer-auth protected)
+│       ├── schemas.py         # Pydantic models (SurveyCreate, SurveyResponse, etc.)
+│       └── utils.py           # generate_survey_token() via uuid4
 ├── client/                    # React frontend
 │   ├── index.html             # Entry HTML with Google Fonts
 │   ├── tailwind.config.js     # Design system (colors, fonts, animations)
@@ -111,14 +115,21 @@ Requires a `.env` file at the project root (copy `.env.example`).
 ### CORS
 - Currently `allow_origins=["*"]` for development. Tighten for production.
 
+### Surveys
+- Survey endpoints accept **JSON** bodies (not form data like auth).
+- All survey routes require Bearer auth via `Depends(get_current_user)`.
+- Ownership isolation: every query filters by `created_by` so admins only see their own surveys.
+- Publish generates a `uuid4` token stored in the survey document.
+
 ### MongoDB
 - Database name: `surveyagent` (configurable via `MONGO_DB_NAME`)
-- Collections: `admins` (user accounts), `error_logs` (error tracking)
+- Collections: `admins` (user accounts), `surveys` (survey definitions), `error_logs` (error tracking)
 - Admin document fields: `name`, `email`, `password`, `org_name`, `token_version`, `is_active`, `created_at`, `updated_at`, `last_login`
+- Survey document fields: `title`, `description`, `goal`, `context`, `questions`, `status`, `token`, `created_by`, `created_at`, `updated_at`
 
 ## API Endpoints
 
-All under `/api/v1/auth`:
+### Auth — `/api/v1/auth`
 
 | Method | Path             | Auth     | Description                        |
 |--------|------------------|----------|------------------------------------|
@@ -127,6 +138,17 @@ All under `/api/v1/auth`:
 | POST   | /refresh         | None     | Rotate tokens (increments version) |
 | GET    | /me              | Bearer   | Get current admin profile          |
 | PUT    | /update-profile  | Bearer   | Update name and/or org_name        |
+
+### Surveys — `/api/v1/surveys`
+
+| Method | Path             | Auth     | Description                        |
+|--------|------------------|----------|------------------------------------|
+| POST   | /                | Bearer   | Create survey (draft)              |
+| GET    | /                | Bearer   | List all surveys for current admin |
+| GET    | /{id}            | Bearer   | Get single survey                  |
+| PUT    | /{id}            | Bearer   | Update survey fields               |
+| DELETE | /{id}            | Bearer   | Delete survey                      |
+| POST   | /{id}/publish    | Bearer   | Publish survey + generate token    |
 
 ## Conventions
 
@@ -138,10 +160,9 @@ All under `/api/v1/auth`:
 
 ## What's NOT Built Yet
 
-- Survey creation / editing
 - Survey response collection (text chat, voice, video)
 - AI interviewer logic (LLM integration for dynamic questions)
 - Analytics / reporting
-- Admin dashboard with real data
+- Admin dashboard with real data (frontend survey management UI)
 - Email verification
 - Multi-tenant access control

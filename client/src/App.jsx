@@ -4,6 +4,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Settings from './pages/Settings';
+import SurveyForm from './pages/SurveyForm';
+import SurveyDetail from './pages/SurveyDetail';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
 export default function App() {
@@ -15,6 +17,9 @@ export default function App() {
       <Route element={<ProtectedRoute />}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/surveys/create" element={<SurveyForm />} />
+        <Route path="/surveys/:id/edit" element={<SurveyForm />} />
+        <Route path="/surveys/:id" element={<SurveyDetail />} />
       </Route>
     </Routes>
   );

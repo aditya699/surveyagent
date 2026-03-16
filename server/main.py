@@ -58,6 +58,9 @@ app.add_middleware(
 from server.auth.routes import router as auth_router
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
 
+from server.surveys.routes import router as surveys_router
+app.include_router(surveys_router, prefix="/api/v1/surveys", tags=["Surveys"])
+
 
 @app.get("/")
 async def root():

@@ -1,28 +1,88 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { PlusCircle, FileText, BarChart3, LogOut, Settings } from 'lucide-react';
+import {
+  PlusCircle,
+  FileText,
+  LogOut,
+  Settings,
+  Pencil,
+  Trash2,
+  Copy,
+  Check,
+  Eye,
+  ExternalLink,
+} from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { getSurveys, deleteSurvey } from '../api';
+
+function formatDate(dateString) {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date(dateString));
+}
+
+function StatusBadge({ status }) {
+  const isDraft = status === 'draft';
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-sans font-medium ${
+        isDraft ? 'bg-text-muted/10 text-text-muted' : 'bg-success/10 text-success'
+      }`}
+    >
+      <span
+        className={`w-1.5 h-1.5 rounded-full ${isDraft ? 'bg-text-muted' : 'bg-success'}`}
+      />
+      {isDraft ? 'Draft' : 'Published'}
+    </span>
+  );
+}
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
 
-  const cards = [
-    {
-      title: 'Create Survey',
-      description: 'Design a new AI-powered conversational survey',
-      icon: PlusCircle,
-    },
-    {
-      title: 'My Surveys',
-      description: 'View and manage your existing surveys',
-      icon: FileText,
-    },
-    {
-      title: 'Analytics',
-      description: 'Insights and reports from survey responses',
-      icon: BarChart3,
-    },
-  ];
+  const [surveys, setSurveys] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [deleteId, setDeleteId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(null);
+
+  useEffect(() => {
+    const fetchSurveys = async () => {
+      try {
+        const res = await getSurveys();
+        setSurveys(res.data.surveys);
+      } catch (err) {
+        setError(err.response?.data?.detail || 'Failed to load surveys');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSurveys();
+  }, []);
+
+  const handleDelete = async (id) => {
+    setDeleting(true);
+    try {
+      await deleteSurvey(id);
+      setSurveys((prev) => prev.filter((s) => s.id !== id));
+      setDeleteId(null);
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to delete survey');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleCopy = async (token) => {
+    const url = `${window.location.origin}/s/${token}`;
+    await navigator.clipboard.writeText(url);
+    setCopySuccess(token);
+    setTimeout(() => setCopySuccess(null), 2000);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -50,31 +110,168 @@ export default function Dashboard() {
 
       {/* Main content */}
       <main className="container-max section-padding">
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-          <h2 className="text-3xl lg:text-4xl font-serif text-text-primary">
-            Welcome back, {user?.name}
-          </h2>
-          <p className="text-text-muted font-sans mt-2">{user?.org_name}</p>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-start justify-between mb-10"
+        >
+          <div>
+            <h2 className="text-3xl lg:text-4xl font-serif text-text-primary">
+              Welcome back, {user?.name}
+            </h2>
+            <p className="text-text-muted font-sans mt-2">{user?.org_name}</p>
+          </div>
+          <Link
+            to="/surveys/create"
+            className="btn-primary text-sm inline-flex items-center gap-2 shrink-0"
+          >
+            <PlusCircle className="w-4 h-4" />
+            Create Survey
+          </Link>
         </motion.div>
 
-        <div className="grid md:grid-cols-3 gap-6 mt-10">
-          {cards.map((card, i) => (
-            <motion.div
-              key={card.title}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-              className="card hover:shadow-lg transition-all duration-200 cursor-pointer group"
+        {/* Error */}
+        {error && (
+          <div className="bg-error/10 border border-error/20 rounded-lg px-4 py-3 text-sm text-error font-sans mb-6">
+            {error}
+          </div>
+        )}
+
+        {/* Loading */}
+        {loading && (
+          <div className="flex items-center justify-center py-20">
+            <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!loading && surveys.length === 0 && !error && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center py-20"
+          >
+            <FileText className="w-12 h-12 text-text-muted/30 mx-auto mb-4" />
+            <h3 className="font-serif text-xl text-text-primary mb-2">No surveys yet</h3>
+            <p className="text-sm text-text-muted font-sans mb-6">
+              Create your first AI-powered survey to get started.
+            </p>
+            <Link
+              to="/surveys/create"
+              className="btn-primary text-sm inline-flex items-center gap-2"
             >
-              <card.icon className="w-8 h-8 text-accent mb-4 group-hover:scale-110 transition-transform" />
-              <h3 className="font-serif text-lg text-text-primary">{card.title}</h3>
-              <p className="text-sm text-text-muted font-sans mt-1">{card.description}</p>
-              <span className="inline-block mt-4 text-xs bg-accent/10 text-accent px-3 py-1 rounded-full font-sans font-medium">
-                Coming soon
-              </span>
-            </motion.div>
-          ))}
-        </div>
+              <PlusCircle className="w-4 h-4" />
+              Create Survey
+            </Link>
+          </motion.div>
+        )}
+
+        {/* Survey cards */}
+        {!loading && surveys.length > 0 && (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {surveys.map((survey, i) => (
+              <motion.div
+                key={survey.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+                className="card flex flex-col"
+              >
+                {/* Header */}
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <Link
+                    to={`/surveys/${survey.id}`}
+                    className="font-serif text-lg text-text-primary hover:text-accent transition-colors line-clamp-1"
+                  >
+                    {survey.title}
+                  </Link>
+                  <StatusBadge status={survey.status} />
+                </div>
+
+                {/* Description */}
+                {survey.description && (
+                  <p className="text-sm text-text-muted font-sans line-clamp-2 mb-3">
+                    {survey.description}
+                  </p>
+                )}
+
+                {/* Date */}
+                <p className="text-xs text-text-muted/60 font-sans mb-4">
+                  Created {formatDate(survey.created_at)}
+                </p>
+
+                {/* Published link */}
+                {survey.status === 'published' && survey.token && (
+                  <div className="flex items-center gap-2 bg-background rounded-lg px-3 py-2 mb-4">
+                    <ExternalLink className="w-3.5 h-3.5 text-text-muted/40 shrink-0" />
+                    <span className="text-xs text-text-muted font-sans truncate flex-1">
+                      {window.location.origin}/s/{survey.token}
+                    </span>
+                    <button
+                      onClick={() => handleCopy(survey.token)}
+                      className="text-text-muted/60 hover:text-accent transition-colors shrink-0"
+                    >
+                      {copySuccess === survey.token ? (
+                        <Check className="w-3.5 h-3.5 text-success" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {/* Spacer */}
+                <div className="flex-1" />
+
+                {/* Delete confirmation */}
+                {deleteId === survey.id ? (
+                  <div className="flex items-center justify-between bg-error/5 border border-error/10 rounded-lg px-3 py-2">
+                    <span className="text-xs text-error font-sans">Delete this survey?</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setDeleteId(null)}
+                        className="text-xs text-text-muted hover:text-text-primary font-sans transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => handleDelete(survey.id)}
+                        disabled={deleting}
+                        className="text-xs text-error hover:text-error/80 font-sans font-medium transition-colors disabled:opacity-50"
+                      >
+                        {deleting ? 'Deleting...' : 'Yes, delete'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 pt-2 border-t border-card-border">
+                    <Link
+                      to={`/surveys/${survey.id}`}
+                      className="flex items-center gap-1.5 text-xs text-text-muted hover:text-accent transition-colors font-sans"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      View
+                    </Link>
+                    <Link
+                      to={`/surveys/${survey.id}/edit`}
+                      className="flex items-center gap-1.5 text-xs text-text-muted hover:text-accent transition-colors font-sans"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      Edit
+                    </Link>
+                    <button
+                      onClick={() => setDeleteId(survey.id)}
+                      className="flex items-center gap-1.5 text-xs text-text-muted hover:text-error transition-colors font-sans ml-auto"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Delete
+                    </button>
+                  </div>
+                )}
+              </motion.div>
+            ))}
+          </div>
+        )}
       </main>
     </div>
   );
