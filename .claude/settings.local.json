@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv --version)",
+      "Bash(uv init)",
+      "Bash(rm -f main.py)",
+      "Bash(mkdir -p server/core server/db server/auth)",
+      "Bash(uv run python -c \"from server.core.config import settings; print\\(''Config loaded:'', settings.MONGO_DB_NAME, settings.JWT_ALGORITHM\\)\")",
+      "Bash(uv run python -c \"from server.main import app; print\\(''App loaded successfully. Routes:''\\); [print\\(f''  {r.methods} {r.path}''\\) for r in app.routes]\")",
+      "Bash(timeout 15 uv run uvicorn server.main:app --host 127.0.0.1 --port 8000)",
+      "Bash(git -C \"D:/Desktop/2026/surveyagent\" log --oneline -5)",
+      "Bash(npm create vite@latest client -- --template react)",
+      "Bash(npm install)",
+      "Bash(npm install react-router-dom axios framer-motion lucide-react)",
+      "Bash(npm install -D tailwindcss@3 postcss autoprefixer)",
+      "Bash(npx tailwindcss init -p)",
+      "Bash(rm -f src/App.css src/assets/react.svg public/vite.svg)",
+      "Bash(mkdir -p src/api src/context src/hooks src/pages src/components/landing src/components/auth)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(where node)",
+      "Bash(where npx.cmd)",
+      "Read(//c/Program Files/nodejs//**)",
+      "Bash(.venv/Scripts/python -c \"import bcrypt; print\\(bcrypt.__version__\\)\")",
+      "Bash(uv pip install \"bcrypt==4.0.1\")",
+      "Bash(.venv/Scripts/python -c \"import bcrypt; print\\(dir\\(bcrypt\\)\\); print\\(bcrypt.__version__\\)\")",
+      "Bash(.venv/Scripts/python -c \"import bcrypt._bcrypt as b; print\\(dir\\(b\\)\\)\")",
+      "Bash(.venv/Scripts/python -c \":*)",
+      "Bash(node node_modules/vite/bin/vite.js build)",
+      "Bash(git status -u)",
+      "Bash(git add client/src/api/constants.js client/src/api/index.js client/src/api/surveys.js client/src/pages/Dashboard.jsx client/src/pages/SurveyForm.jsx client/src/pages/SurveyDetail.jsx client/src/App.jsx server/surveys/__init__.py server/surveys/routes.py server/surveys/schemas.py server/surveys/utils.py server/main.py CLAUDE.md)",
+      "Bash(git commit:*)",
+      "Bash(git push origin main)"
+    ]
+  }
+}

@@ -61,6 +61,9 @@ app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
 from server.surveys.routes import router as surveys_router
 app.include_router(surveys_router, prefix="/api/v1/surveys", tags=["Surveys"])
 
+from server.ai.routes import router as ai_router
+app.include_router(ai_router, prefix="/api/v1/ai", tags=["AI"])
+
 
 @app.get("/")
 async def root():

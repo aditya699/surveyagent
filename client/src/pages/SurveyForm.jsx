@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { ArrowLeft, LogOut, Plus, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, LogOut, Plus, X, Sparkles, Loader2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { createSurvey, getSurvey, updateSurvey, publishSurvey } from '../api';
+import { streamGenerateQuestions } from '../api/ai';
 
 export default function SurveyForm() {
   const { id } = useParams();
@@ -21,6 +22,13 @@ export default function SurveyForm() {
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState('');
   const [loadingExisting, setLoadingExisting] = useState(isEdit);
+
+  // AI generation state
+  const [showAiPanel, setShowAiPanel] = useState(false);
+  const [aiNumQuestions, setAiNumQuestions] = useState(5);
+  const [aiAdditionalInfo, setAiAdditionalInfo] = useState('');
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiError, setAiError] = useState('');
 
   useEffect(() => {
     if (!id) return;
@@ -98,8 +106,65 @@ export default function SurveyForm() {
   };
 
   const removeQuestion = (index) => {
-    if (questions.length === 1) return;
+    if (questions.length === 1) {
+      // Last question — clear it instead of removing, so the input stays visible
+      setQuestions(['']);
+      return;
+    }
     setQuestions(questions.filter((_, i) => i !== index));
+  };
+
+  // Track abort controller for cancelling in-flight generation
+  const abortRef = useRef(null);
+
+  const handleAiGenerate = async () => {
+    setAiError('');
+    setAiGenerating(true);
+
+    // Create abort controller for cancellation
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    await streamGenerateQuestions({
+      data: {
+        num_questions: aiNumQuestions,
+        title: title.trim(),
+        description: description.trim(),
+        goal: goal.trim(),
+        context: context.trim(),
+        additional_info: aiAdditionalInfo.trim(),
+      },
+      onQuestion: (question) => {
+        setQuestions((prev) => {
+          // Strip out any empty questions, then append the new one.
+          // Pure function — safe under React StrictMode double-invocation.
+          const nonEmpty = prev.filter((q) => q.trim() !== '');
+          return [...nonEmpty, question];
+        });
+      },
+      onDone: () => {
+        setAiGenerating(false);
+        setShowAiPanel(false);
+        setAiAdditionalInfo('');
+        abortRef.current = null;
+      },
+      onError: (errMsg) => {
+        setAiError(errMsg || 'Failed to generate questions. Please try again.');
+        setAiGenerating(false);
+        abortRef.current = null;
+      },
+      signal: controller.signal,
+    });
+  };
+
+  const handleAiCancel = () => {
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
+    setAiGenerating(false);
+    setShowAiPanel(false);
+    setAiError('');
   };
 
   if (loadingExisting) {
@@ -229,22 +294,112 @@ export default function SurveyForm() {
                     <button
                       type="button"
                       onClick={() => removeQuestion(i)}
-                      disabled={questions.length === 1}
-                      className="mt-2 p-1.5 text-text-muted/40 hover:text-error transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="mt-2 p-1.5 text-text-muted/40 hover:text-error transition-colors"
                     >
                       <X className="w-4 h-4" />
                     </button>
                   </div>
                 ))}
               </div>
-              <button
-                type="button"
-                onClick={addQuestion}
-                className="flex items-center gap-1.5 text-sm text-accent hover:text-accent-hover transition-colors font-sans mt-3"
-              >
-                <Plus className="w-4 h-4" />
-                Add question
-              </button>
+              <div className="flex items-center gap-4 mt-3">
+                <button
+                  type="button"
+                  onClick={addQuestion}
+                  className="flex items-center gap-1.5 text-sm text-accent hover:text-accent-hover transition-colors font-sans"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add question
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAiPanel(!showAiPanel)}
+                  className="flex items-center gap-1.5 text-sm text-accent hover:text-accent-hover transition-colors font-sans"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  AI Generate Questions
+                </button>
+              </div>
+
+              {/* AI Generation Panel */}
+              <AnimatePresence>
+                {showAiPanel && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="mt-4 border border-accent/30 bg-accent/5 rounded-lg p-4 space-y-3">
+                      <p className="text-sm font-sans text-text-primary font-medium">
+                        AI will use your survey title, goal, and context to generate relevant questions.
+                      </p>
+
+                      {aiError && (
+                        <div className="bg-error/10 border border-error/20 rounded-lg px-3 py-2 text-xs text-error font-sans">
+                          {aiError}
+                        </div>
+                      )}
+
+                      <div>
+                        <label htmlFor="ai-num" className="block text-xs font-sans text-text-muted mb-1">
+                          Number of questions
+                        </label>
+                        <input
+                          id="ai-num"
+                          type="number"
+                          min={1}
+                          max={20}
+                          value={aiNumQuestions}
+                          onChange={(e) => setAiNumQuestions(Math.max(1, Math.min(20, Number(e.target.value) || 1)))}
+                          className="w-24 bg-white border border-card-border rounded-lg px-3 py-2 text-sm font-sans text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-all"
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor="ai-info" className="block text-xs font-sans text-text-muted mb-1">
+                          Additional info for AI (optional)
+                        </label>
+                        <textarea
+                          id="ai-info"
+                          value={aiAdditionalInfo}
+                          onChange={(e) => setAiAdditionalInfo(e.target.value)}
+                          rows={2}
+                          className="w-full bg-white border border-card-border rounded-lg px-3 py-2 text-sm font-sans text-text-primary placeholder:text-text-muted/40 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-all resize-none"
+                          placeholder="e.g. Focus on employee engagement, include rating-scale questions..."
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleAiGenerate}
+                          disabled={aiGenerating}
+                          className="btn-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                        >
+                          {aiGenerating ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Generating...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-4 h-4" />
+                              Generate
+                            </>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleAiCancel}
+                          className="btn-secondary text-sm"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             {/* Actions */}

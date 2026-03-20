@@ -4,13 +4,14 @@
 
 SurveyAgent is an open-source AI survey platform that replaces static forms with dynamic conversations. It conducts interviews via text chat, voice, or video avatar. It's self-hostable, LLM-agnostic, and keeps survey data under the user's control.
 
-**Status:** Early development. Auth system, landing page, and survey CRUD API are built. AI interviewer and response collection are not yet implemented.
+**Status:** Early development. Auth system, landing page, survey CRUD, and AI question generation are built. AI interviewer and response collection are not yet implemented.
 
 ## Tech Stack
 
 - **Backend:** Python 3.12+, FastAPI, Motor (async MongoDB), python-jose (JWT), bcrypt, OpenAI SDK
 - **Frontend:** React 19, Vite, Tailwind CSS v3, Framer Motion, Lucide React, React Router v7, Axios
 - **Database:** MongoDB (Atlas or self-hosted)
+- **AI:** OpenAI Responses API (gpt-5.4-mini), streaming via SSE
 - **Package Manager:** `uv` (backend), `npm` (frontend)
 
 ## Project Structure
@@ -29,20 +30,30 @@ surveyagent/
 │   │   ├── routes.py          # register, login, refresh, /me, update-profile
 │   │   ├── schemas.py         # Pydantic models (AdminInDB, TokenResponse, etc.)
 │   │   └── utils.py           # JWT create/verify, bcrypt hash/verify, get_current_user
-│   └── surveys/
-│       ├── routes.py          # CRUD + publish (all Bearer-auth protected)
-│       ├── schemas.py         # Pydantic models (SurveyCreate, SurveyResponse, etc.)
-│       └── utils.py           # generate_survey_token() via uuid4
+│   ├── surveys/
+│   │   ├── routes.py          # CRUD + publish (all Bearer-auth protected)
+│   │   ├── schemas.py         # Pydantic models (SurveyCreate, SurveyResponse, etc.)
+│   │   └── utils.py           # generate_survey_token() via uuid4
+│   └── ai/
+│       ├── __init__.py        # Package marker
+│       ├── prompts.py         # SYSTEM_PROMPT + build_user_prompt()
+│       └── routes.py          # SSE streaming question generation endpoint
 ├── client/                    # React frontend
 │   ├── index.html             # Entry HTML with Google Fonts
 │   ├── tailwind.config.js     # Design system (colors, fonts, animations)
-│   ├── vite.config.js         # Vite config, port 5173
+│   ├── vite.config.js         # Vite config, port 5174
 │   ├── src/
 │   │   ├── main.jsx           # BrowserRouter > AuthProvider > App
-│   │   ├── App.jsx            # Routes: /, /login, /register, /dashboard, /settings
+│   │   ├── App.jsx            # Routes: /, /login, /register, /dashboard, /settings, /surveys/*
 │   │   ├── index.css          # Tailwind directives + custom component classes
 │   │   ├── api/
-│   │   │   └── axios.js       # Axios instance, form-data helpers, token refresh interceptor
+│   │   │   ├── index.js       # Barrel export for entire API layer
+│   │   │   ├── client.js      # Axios instance (baseURL from env)
+│   │   │   ├── constants.js   # ENDPOINTS map (AUTH, SURVEYS, AI)
+│   │   │   ├── helpers.js     # toFormParams, sendFormData, sendFormPut
+│   │   │   ├── interceptors.js # Bearer token + 401 refresh queue pattern
+│   │   │   ├── surveys.js     # Survey CRUD + publish API functions
+│   │   │   └── ai.js          # streamGenerateQuestions() via fetch SSE
 │   │   ├── context/
 │   │   │   └── AuthContext.jsx # Auth state, login/register/updateProfile/logout
 │   │   ├── hooks/
@@ -65,11 +76,13 @@ surveyagent/
 │   │   │       ├── FinalCTA.jsx     # Final call-to-action (dark bg)
 │   │   │       └── Footer.jsx       # 4-column footer
 │   │   └── pages/
-│   │       ├── Landing.jsx    # Composes all 13 landing sections
-│   │       ├── Login.jsx      # Glassmorphism login form
-│   │       ├── Register.jsx   # Glassmorphism register form
-│   │       ├── Dashboard.jsx  # Placeholder with 3 "Coming soon" cards
-│   │       └── Settings.jsx   # Profile edit (name, org_name)
+│   │       ├── Landing.jsx      # Composes all 13 landing sections
+│   │       ├── Login.jsx        # Glassmorphism login form
+│   │       ├── Register.jsx     # Glassmorphism register form
+│   │       ├── Dashboard.jsx    # Survey list grid with CRUD actions
+│   │       ├── Settings.jsx     # Profile edit (name, org_name)
+│   │       ├── SurveyForm.jsx   # Create/Edit survey + AI question generation
+│   │       └── SurveyDetail.jsx # Read-only survey view with share link
 ├── .env                       # Secrets (gitignored)
 ├── .env.example               # Template for .env
 ├── pyproject.toml             # Python deps (uv)
@@ -88,16 +101,56 @@ uvicorn server.main:app --reload    # http://localhost:8000
 # Frontend
 cd client
 npm install
-npm run dev                          # http://localhost:5173
+npm run dev                          # http://localhost:5174
 ```
 
 Requires a `.env` file at the project root (copy `.env.example`).
+
+## Features Built
+
+### Authentication (complete)
+- Admin registration and login with JWT tokens
+- Token versioning for server-side revocation (no blacklist needed)
+- Token refresh with automatic version increment
+- Profile viewing and editing (name, org_name)
+- Frontend auth guard (ProtectedRoute) with loading state
+- Axios interceptor: 401 → queue pattern → single refresh → retry all
+
+### Survey Management (complete)
+- Full CRUD: create, list, view, edit, delete surveys
+- Survey fields: title, description, goal, context, questions (string array)
+- Draft → Published workflow with uuid4 token generation
+- Ownership isolation: admins only see their own surveys
+- Dashboard with survey cards (status badge, dates, share link, actions)
+- Delete confirmation dialog
+- Published survey share link with copy-to-clipboard
+
+### AI Question Generation (complete)
+- Streaming question generation via OpenAI Responses API (gpt-5.4-mini)
+- Server-Sent Events (SSE) — questions appear one by one as they stream in
+- User controls: number of questions (1-20) + additional context for AI
+- Inline panel in SurveyForm with Generate/Cancel buttons
+- Abort support (cancel mid-stream)
+- Generated questions are fully editable (same textarea list as manual questions)
+- Prompts separated into `server/ai/prompts.py`
+
+### Landing Page (complete)
+- 13-section marketing page with scroll animations (Framer Motion)
+- Responsive navbar with mobile hamburger menu
+- Sections: Hero, Problem, Solution, Three Modes, How It Works, Two Paths, BringYourLLM, Security, Comparison, Open Source, Final CTA, Footer
+
+### Frontend Infrastructure (complete)
+- API layer: Axios client, endpoint constants, form helpers, interceptors, barrel exports
+- AI streaming via native `fetch()` (Axios doesn't support ReadableStream)
+- Auth context with login/register/logout/updateProfile
+- Protected routes with auth guard
+- Design system: warm palette, glassmorphism auth forms, Tailwind component classes
 
 ## Key Architecture Decisions
 
 ### Authentication
 - All auth endpoints use **Form data** (`application/x-www-form-urlencoded`), NOT JSON. This is because FastAPI uses `Form(...)` parameters.
-- Frontend uses `sendFormData()` and `sendFormPut()` helpers in `axios.js` that convert JS objects to `URLSearchParams`.
+- Frontend uses `sendFormData()` and `sendFormPut()` helpers that convert JS objects to `URLSearchParams`.
 - JWT **token versioning**: each admin has a `token_version` field in MongoDB. On token refresh, version is incremented via `$inc`, invalidating all old tokens without a blacklist.
 - Access tokens expire in 1 day, refresh tokens in 14 days.
 - Frontend stores tokens in `localStorage` (not cookies).
@@ -120,6 +173,14 @@ Requires a `.env` file at the project root (copy `.env.example`).
 - All survey routes require Bearer auth via `Depends(get_current_user)`.
 - Ownership isolation: every query filters by `created_by` so admins only see their own surveys.
 - Publish generates a `uuid4` token stored in the survey document.
+
+### AI Question Generation
+- Uses OpenAI **Responses API** with `stream=True` (not Chat Completions).
+- Model: `gpt-5.4-mini` (configurable via `OPENAI_MODEL` in `.env`).
+- Backend streams SSE events: `data: {"question": "..."}\n\n` per question, `data: [DONE]\n\n` at end.
+- Frontend uses native `fetch()` + `ReadableStream` (not Axios) because Axios doesn't support streaming.
+- Prompt asks LLM to output one question per line (no JSON, no numbering) for easy newline-based parsing.
+- `onQuestion` callback uses pure state updater (filters empties + appends) — safe under React StrictMode double-invocation.
 
 ### MongoDB
 - Database name: `surveyagent` (configurable via `MONGO_DB_NAME`)
@@ -150,19 +211,28 @@ Requires a `.env` file at the project root (copy `.env.example`).
 | DELETE | /{id}            | Bearer   | Delete survey                      |
 | POST   | /{id}/publish    | Bearer   | Publish survey + generate token    |
 
+### AI — `/api/v1/ai`
+
+| Method | Path                | Auth     | Description                                  |
+|--------|---------------------|----------|----------------------------------------------|
+| POST   | /generate-questions | Bearer   | Stream AI-generated questions via SSE         |
+
 ## Conventions
 
-- Backend follows the pattern from the AI-Prescription-Writer reference project (same error handling, same JWT structure, same MongoDB patterns).
+- Backend follows the pattern from the OB-Reporter reference project (same error handling, same JWT structure, same MongoDB patterns, same OpenAI streaming).
 - Every backend route uses the pattern: `try / except HTTPException: raise / except Exception: log + log_error + raise 500`.
 - Frontend components use functional components with hooks. No class components.
 - Landing page sections alternate between light (`bg-background`) and dark (`bg-dark`) backgrounds.
 - Framer Motion: never use `left-1/2 -translate-x-1/2` on `motion.*` elements — framer-motion overrides CSS `transform`. Use `inset-x-0 mx-auto` instead.
+- AI prompts live in dedicated `prompts.py` files, separate from route handlers.
+- SSE streaming pattern: backend yields `data: {json}\n\n` events, frontend consumes via `fetch()` + `ReadableStream`.
+- React state updaters inside streaming callbacks must be **pure functions** (no mutable closure variables) to survive StrictMode double-invocation.
 
 ## What's NOT Built Yet
 
+- Public survey page (the token URL respondents visit to take a survey)
 - Survey response collection (text chat, voice, video)
-- AI interviewer logic (LLM integration for dynamic questions)
+- AI interviewer logic (LLM integration for dynamic follow-up questions)
 - Analytics / reporting
-- Admin dashboard with real data (frontend survey management UI)
 - Email verification
 - Multi-tenant access control

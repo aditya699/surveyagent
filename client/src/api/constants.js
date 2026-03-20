@@ -2,7 +2,7 @@
 // API constants — base URL, endpoint map, shared headers
 // ---------------------------------------------------------------------------
 
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+export const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8001';
 
 const PREFIX = '/api/v1';
 
@@ -13,6 +13,10 @@ export const ENDPOINTS = {
     REFRESH:  `${PREFIX}/auth/refresh`,
     ME:       `${PREFIX}/auth/me`,
     UPDATE_PROFILE: `${PREFIX}/auth/update-profile`,
+  },
+
+  AI: {
+    GENERATE_QUESTIONS: `${PREFIX}/ai/generate-questions`,
   },
 
   SURVEYS: {

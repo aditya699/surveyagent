@@ -23,3 +23,4 @@ export {
   deleteSurvey,
   publishSurvey,
 } from './surveys';
+export { streamGenerateQuestions } from './ai';

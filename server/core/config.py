@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     MONGO_URI: str
     MONGO_DB_NAME: str = "surveyagent"
     OPENAI_API_KEY: str
+    OPENAI_MODEL: str = "gpt-5.4-mini"
     JWT_SECRET_KEY: str
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 1 * 24 * 60  # 1 day in minutes
