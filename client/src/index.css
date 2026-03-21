@@ -57,4 +57,13 @@
   .container-max {
     @apply max-w-7xl mx-auto;
   }
+
+  /* Typing indicator dot stagger delays */
+  .typing-dot-1 { animation-delay: 0s; }
+  .typing-dot-2 { animation-delay: 0.2s; }
+  .typing-dot-3 { animation-delay: 0.4s; }
+
+  /* Show typing dots only while streaming */
+  .typing-dots { display: none; }
+  [data-status="running"] ~ .typing-dots { display: flex; }
 }

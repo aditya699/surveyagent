@@ -67,6 +67,9 @@ app.include_router(ai_router, prefix="/api/v1/ai", tags=["AI"])
 from server.interviewer.routes import router as interview_router
 app.include_router(interview_router, prefix="/api/v1/interview", tags=["Interview"])
 
+from server.analytics.routes import router as analytics_router
+app.include_router(analytics_router, prefix="/api/v1/analytics", tags=["Analytics"])
+
 
 @app.get("/")
 async def root():

@@ -1,12 +1,18 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useSearchParams, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Clock, MessageSquare } from 'lucide-react';
+import { Clock, MessageSquare, Timer } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { getInterviewInfo, startInterview, startTestInterview } from '../api';
+import { getInterviewInfo, startInterview, startTestInterview, publishSurvey } from '../api';
 import InterviewChat from '../components/interview/InterviewChat';
 import RespondentForm from '../components/interview/RespondentForm';
 import CompletionScreen from '../components/interview/CompletionScreen';
+
+function formatTimer(seconds) {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
 
 // Phases: loading | info | details | chatting | completed | error
 export default function InterviewPage() {
@@ -21,8 +27,28 @@ export default function InterviewPage() {
   const [welcomeMessage, setWelcomeMessage] = useState('');
   const [error, setError] = useState('');
   const [starting, setStarting] = useState(false);
+  const [testKey, setTestKey] = useState(0); // bump to re-trigger test mode
 
-  const onComplete = useCallback(() => setPhase('completed'), []);
+  // Timer state
+  const startTimeRef = useRef(null);
+  const [elapsed, setElapsed] = useState(0);
+  const [duration, setDuration] = useState(null);
+
+  const onComplete = useCallback(() => {
+    if (startTimeRef.current) {
+      setDuration(Math.round((Date.now() - startTimeRef.current) / 1000));
+    }
+    setPhase('completed');
+  }, []);
+
+  // Tick the timer every second while chatting
+  useEffect(() => {
+    if (phase !== 'chatting' || !startTimeRef.current) return;
+    const id = setInterval(() => {
+      setElapsed(Math.round((Date.now() - startTimeRef.current) / 1000));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [phase]);
 
   // --- Test mode: wait for auth, then start immediately ---
   useEffect(() => {
@@ -38,9 +64,14 @@ export default function InterviewPage() {
         setSurveyInfo({
           title: d.survey_title,
           estimated_duration: d.estimated_duration,
+          status: d.survey_status,
+          token: d.survey_token,
         });
         setSessionId(d.session_id);
         setWelcomeMessage(d.welcome_message);
+        startTimeRef.current = Date.now();
+        setElapsed(0);
+        setDuration(null);
         setPhase('chatting');
       } catch (err) {
         if (cancelled) return;
@@ -49,7 +80,7 @@ export default function InterviewPage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [isTestMode, authLoading, isAuthenticated, surveyId]);
+  }, [isTestMode, authLoading, isAuthenticated, surveyId, testKey]);
 
   // --- Respondent mode: fetch survey info ---
   useEffect(() => {
@@ -80,6 +111,7 @@ export default function InterviewPage() {
       setSurveyInfo((prev) => ({ ...prev, title: d.survey_title }));
       setSessionId(d.session_id);
       setWelcomeMessage(d.welcome_message);
+      startTimeRef.current = Date.now();
       setPhase('chatting');
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to start interview');
@@ -88,6 +120,21 @@ export default function InterviewPage() {
       setStarting(false);
     }
   };
+
+  // --- Test mode: restart with fresh session ---
+  const handleTestAgain = useCallback(() => {
+    setPhase('loading');
+    setSessionId(null);
+    setWelcomeMessage('');
+    setTestKey((k) => k + 1);
+  }, []);
+
+  // --- Test mode: publish survey from completion screen ---
+  const handlePublish = useCallback(async () => {
+    const res = await publishSurvey(surveyId);
+    const s = res.data.survey;
+    setSurveyInfo((prev) => ({ ...prev, status: 'published', token: s.token }));
+  }, [surveyId]);
 
   // --- Redirect unauthenticated admin to login ---
   if (isTestMode && !authLoading && !isAuthenticated) {
@@ -175,11 +222,17 @@ export default function InterviewPage() {
     return (
       <div className="h-screen bg-background flex flex-col">
         {/* Minimal header */}
-        <header className="shrink-0 bg-white border-b border-card-border px-4 py-3 flex items-center gap-3">
-          <MessageSquare className="w-4 h-4 text-accent" />
-          <h1 className="text-sm font-serif text-text-primary line-clamp-1">
+        <header className="shrink-0 bg-white/80 backdrop-blur-sm border-b border-card-border/50 shadow-sm px-4 py-3.5 flex items-center gap-3">
+          <div className="w-7 h-7 rounded-full bg-accent/10 flex items-center justify-center">
+            <MessageSquare className="w-3.5 h-3.5 text-accent" />
+          </div>
+          <h1 className="text-sm font-serif text-text-primary line-clamp-1 flex-1">
             {surveyInfo?.title || 'Interview'}
           </h1>
+          <span className="flex items-center gap-1.5 text-xs font-sans text-text-muted tabular-nums">
+            <Timer className="w-3.5 h-3.5" />
+            {formatTimer(elapsed)}
+          </span>
           {isTestMode && (
             <span className="text-[10px] font-sans font-medium bg-accent/10 text-accent px-2 py-0.5 rounded-full">
               TEST
@@ -206,6 +259,12 @@ export default function InterviewPage() {
         <CompletionScreen
           surveyTitle={surveyInfo?.title}
           isTestMode={isTestMode}
+          duration={duration}
+          surveyId={surveyId}
+          surveyStatus={surveyInfo?.status}
+          surveyToken={surveyInfo?.token}
+          onTestAgain={handleTestAgain}
+          onPublish={handlePublish}
         />
       </div>
     );

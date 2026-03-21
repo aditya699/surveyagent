@@ -74,6 +74,9 @@ function createAdapter(sessionId, onComplete) {
                 content: [{ type: 'text', text: fullText }],
               };
             }
+            if (parsed.type === 'complete') {
+              onComplete?.();
+            }
             if (parsed.error) {
               throw new Error(parsed.error);
             }

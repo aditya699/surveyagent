@@ -7,6 +7,9 @@ import Settings from './pages/Settings';
 import SurveyForm from './pages/SurveyForm';
 import SurveyDetail from './pages/SurveyDetail';
 import InterviewPage from './pages/InterviewPage';
+import AnalyticsOverview from './pages/AnalyticsOverview';
+import SurveyAnalytics from './pages/SurveyAnalytics';
+import InterviewDetail from './pages/InterviewDetail';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
 export default function App() {
@@ -23,6 +26,9 @@ export default function App() {
         <Route path="/surveys/create" element={<SurveyForm />} />
         <Route path="/surveys/:id/edit" element={<SurveyForm />} />
         <Route path="/surveys/:id" element={<SurveyDetail />} />
+        <Route path="/analytics" element={<AnalyticsOverview />} />
+        <Route path="/surveys/:id/analytics" element={<SurveyAnalytics />} />
+        <Route path="/analytics/interviews/:interviewId" element={<InterviewDetail />} />
       </Route>
     </Routes>
   );

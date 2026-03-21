@@ -12,6 +12,7 @@ import {
   Pencil,
   ExternalLink,
   MessageSquare,
+  BarChart3,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { getSurvey } from '../api';
@@ -247,6 +248,13 @@ export default function SurveyDetail() {
             >
               <MessageSquare className="w-4 h-4" />
               Test Survey
+            </Link>
+            <Link
+              to={`/surveys/${survey.id}/analytics`}
+              className="btn-secondary text-sm inline-flex items-center gap-2"
+            >
+              <BarChart3 className="w-4 h-4" />
+              Analytics
             </Link>
             <Link to="/dashboard" className="btn-secondary text-sm">
               Back to Dashboard

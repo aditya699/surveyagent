@@ -34,6 +34,13 @@ export const ENDPOINTS = {
     DELETE:  (id) => `${PREFIX}/surveys/${id}`,
     PUBLISH: (id) => `${PREFIX}/surveys/${id}/publish`,
   },
+
+  ANALYTICS: {
+    OVERVIEW:         `${PREFIX}/analytics/surveys`,
+    SURVEY:           (id) => `${PREFIX}/analytics/surveys/${id}`,
+    INTERVIEWS:       (id) => `${PREFIX}/analytics/surveys/${id}/interviews`,
+    INTERVIEW_DETAIL: (id) => `${PREFIX}/analytics/interviews/${id}`,
+  },
 };
 
 export const FORM_HEADERS = {

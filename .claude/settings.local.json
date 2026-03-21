@@ -32,7 +32,8 @@
       "Bash(git push origin main)",
       "WebFetch(domain:www.assistant-ui.com)",
       "WebFetch(domain:github.com)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(find D:Desktop2026surveyagentclientnode_modules@assistant-ui -type f \\\\\\(-name *.css -o -name *theme* -o -name *style* -o -name *.d.ts \\\\\\))"
     ]
   }
 }

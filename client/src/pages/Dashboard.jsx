@@ -12,6 +12,7 @@ import {
   Check,
   Eye,
   ExternalLink,
+  BarChart3,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { getSurveys, deleteSurvey } from '../api';
@@ -91,6 +92,13 @@ export default function Dashboard() {
         <h1 className="text-xl font-serif text-text-primary">SurveyAgent</h1>
         <div className="flex items-center gap-4">
           <span className="text-sm text-text-muted font-sans">{user?.name}</span>
+          <Link
+            to="/analytics"
+            className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors font-sans"
+          >
+            <BarChart3 className="w-4 h-4" />
+            Analytics
+          </Link>
           <Link
             to="/settings"
             className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors font-sans"
@@ -259,6 +267,15 @@ export default function Dashboard() {
                       <Pencil className="w-3.5 h-3.5" />
                       Edit
                     </Link>
+                    {survey.status === 'published' && (
+                      <Link
+                        to={`/surveys/${survey.id}/analytics`}
+                        className="flex items-center gap-1.5 text-xs text-text-muted hover:text-accent transition-colors font-sans"
+                      >
+                        <BarChart3 className="w-3.5 h-3.5" />
+                        Analytics
+                      </Link>
+                    )}
                     <button
                       onClick={() => setDeleteId(survey.id)}
                       className="flex items-center gap-1.5 text-xs text-text-muted hover:text-error transition-colors font-sans ml-auto"

@@ -1,7 +1,50 @@
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, Clock, Pencil, RotateCcw, Rocket, Link as LinkIcon, Check } from 'lucide-react';
 
-export default function CompletionScreen({ surveyTitle, isTestMode }) {
+function formatDuration(seconds) {
+  if (seconds == null) return null;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m} min ${s} sec`;
+}
+
+export default function CompletionScreen({
+  surveyTitle,
+  isTestMode,
+  duration,
+  surveyId,
+  surveyStatus,
+  surveyToken,
+  onTestAgain,
+  onPublish,
+}) {
+  const [publishing, setPublishing] = useState(false);
+  const [publishError, setPublishError] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  const isPublished = surveyStatus === 'published';
+
+  const handlePublish = async () => {
+    setPublishing(true);
+    setPublishError('');
+    try {
+      await onPublish();
+    } catch (err) {
+      setPublishError(err.response?.data?.detail || 'Failed to publish');
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const handleCopyLink = () => {
+    const url = `${window.location.origin}/interview/${surveyToken}`;
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -15,18 +58,69 @@ export default function CompletionScreen({ surveyTitle, isTestMode }) {
         <h2 className="text-2xl font-serif text-text-primary mb-2">
           Interview Complete
         </h2>
+        {duration != null && (
+          <p className="flex items-center justify-center gap-1.5 text-sm font-sans text-accent mb-3">
+            <Clock className="w-4 h-4" />
+            Interview completed in {formatDuration(duration)}
+          </p>
+        )}
         <p className="text-sm font-sans text-text-muted leading-relaxed">
           {isTestMode
-            ? `Test session for "${surveyTitle}" finished. You can close this tab.`
+            ? `Test session for "${surveyTitle}" finished.`
             : 'Thank you for taking the time to share your thoughts. Your responses have been recorded.'}
         </p>
+
         {isTestMode && (
-          <button
-            onClick={() => window.close()}
-            className="btn-secondary text-sm mt-6"
-          >
-            Close Tab
-          </button>
+          <div className="flex flex-col gap-2.5 mt-6">
+            <div className="flex gap-2.5">
+              <Link
+                to={`/surveys/${surveyId}/edit`}
+                className="btn-secondary text-sm flex-1 inline-flex items-center justify-center gap-2"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                Edit Survey
+              </Link>
+              <button
+                onClick={onTestAgain}
+                className="btn-secondary text-sm flex-1 inline-flex items-center justify-center gap-2"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                Test Again
+              </button>
+            </div>
+
+            {isPublished ? (
+              <button
+                onClick={handleCopyLink}
+                className="btn-primary text-sm w-full inline-flex items-center justify-center gap-2"
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-3.5 h-3.5" />
+                    Link Copied!
+                  </>
+                ) : (
+                  <>
+                    <LinkIcon className="w-3.5 h-3.5" />
+                    Copy Share Link
+                  </>
+                )}
+              </button>
+            ) : (
+              <button
+                onClick={handlePublish}
+                disabled={publishing}
+                className="btn-primary text-sm w-full inline-flex items-center justify-center gap-2"
+              >
+                <Rocket className="w-3.5 h-3.5" />
+                {publishing ? 'Publishing...' : 'Publish Survey'}
+              </button>
+            )}
+
+            {publishError && (
+              <p className="text-xs font-sans text-error">{publishError}</p>
+            )}
+          </div>
         )}
       </div>
     </motion.div>

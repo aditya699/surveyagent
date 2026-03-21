@@ -30,3 +30,9 @@ export {
   startTestInterview,
   streamInterviewMessage,
 } from './interview';
+export {
+  getAnalyticsOverview,
+  getSurveyAnalytics,
+  getSurveyInterviews,
+  getInterviewDetail,
+} from './analytics';

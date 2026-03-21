@@ -238,6 +238,7 @@ async def send_message(
             )
             if should_complete:
                 await update_status(session_id, "completed")
+                yield 'data: {"type": "complete"}\n\n'
 
         return StreamingResponse(
             event_stream(),
@@ -313,6 +314,8 @@ async def test_interview(
             "welcome_message": welcome,
             "survey_title": survey.get("title", ""),
             "estimated_duration": survey.get("estimated_duration", 5),
+            "survey_status": survey.get("status", "draft"),
+            "survey_token": survey.get("token"),
         }
 
     except HTTPException:

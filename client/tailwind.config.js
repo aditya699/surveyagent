@@ -24,6 +24,7 @@ export default {
         card: {
           DEFAULT: '#FFFFFF',
           border: '#E8E0D4',
+          assistant: '#FFFDF9',
         },
         success: '#16A34A',
         error: '#DC2626',
@@ -36,11 +37,16 @@ export default {
         'float': 'float 6s ease-in-out infinite',
         'float-delayed': 'float 6s ease-in-out 2s infinite',
         'float-slow': 'float 8s ease-in-out 1s infinite',
+        'typing-dot': 'typing-dot 1.4s ease-in-out infinite',
       },
       keyframes: {
         float: {
           '0%, 100%': { transform: 'translateY(0)' },
           '50%': { transform: 'translateY(-10px)' },
+        },
+        'typing-dot': {
+          '0%, 60%, 100%': { opacity: '0.3', transform: 'translateY(0)' },
+          '30%': { opacity: '1', transform: 'translateY(-4px)' },
         },
       },
     },
