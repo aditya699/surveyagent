@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import Settings from './pages/Settings';
 import SurveyForm from './pages/SurveyForm';
 import SurveyDetail from './pages/SurveyDetail';
+import InterviewPage from './pages/InterviewPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
 export default function App() {
@@ -14,6 +15,8 @@ export default function App() {
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/interview/test/:surveyId" element={<InterviewPage />} />
+      <Route path="/interview/:token" element={<InterviewPage />} />
       <Route element={<ProtectedRoute />}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/settings" element={<Settings />} />

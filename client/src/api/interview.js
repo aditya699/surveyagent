@@ -1,0 +1,92 @@
+// ---------------------------------------------------------------------------
+// Interview API — session management + SSE streaming
+// Uses Axios for JSON endpoints, fetch for SSE streaming.
+// ---------------------------------------------------------------------------
+
+import api from './client';
+import { API_URL, ENDPOINTS } from './constants';
+
+/** Get survey info for the respondent landing page (public). */
+export function getInterviewInfo(token) {
+  return api.get(ENDPOINTS.INTERVIEW.INFO(token));
+}
+
+/** Start a new interview session for a published survey (public). */
+export function startInterview(token, respondent = null) {
+  return api.post(ENDPOINTS.INTERVIEW.START(token), { respondent });
+}
+
+/** Start an admin test interview session (requires Bearer auth). */
+export function startTestInterview(surveyId) {
+  return api.post(ENDPOINTS.INTERVIEW.TEST(surveyId), { respondent: null });
+}
+
+/**
+ * Stream an interview message via Server-Sent Events.
+ *
+ * @param {string}      sessionId  - Interview session ID
+ * @param {string}      message    - Respondent message text
+ * @param {Function}    onToken    - Called with each text delta
+ * @param {Function}    onDone     - Called with { clean_text, questions_covered }
+ * @param {Function}    onError    - Called with error message string
+ * @param {AbortSignal} [signal]   - Optional AbortSignal for cancellation
+ * @returns {Promise<Response>}    - The raw fetch Response (for status checking)
+ */
+export async function streamInterviewMessage({ sessionId, message, onToken, onDone, onError, signal }) {
+  try {
+    const res = await fetch(`${API_URL}${ENDPOINTS.INTERVIEW.MESSAGE(sessionId)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message }),
+      signal,
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Request failed' }));
+      onError?.(err.detail || `HTTP ${res.status}`, res.status);
+      return res;
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      const lines = buffer.split('\n');
+      buffer = lines.pop(); // keep incomplete line in buffer
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const payload = line.slice(6).trim();
+
+        try {
+          const parsed = JSON.parse(payload);
+          if (parsed.token) {
+            onToken?.(parsed.token);
+          }
+          if (parsed.done) {
+            onDone?.({
+              clean_text: parsed.clean_text,
+              questions_covered: parsed.questions_covered,
+            });
+          }
+          if (parsed.error) {
+            onError?.(parsed.error);
+          }
+        } catch {
+          // skip malformed JSON
+        }
+      }
+    }
+
+    return res;
+  } catch (err) {
+    if (err.name === 'AbortError') return;
+    onError?.(err.message || 'Failed to send message');
+  }
+}

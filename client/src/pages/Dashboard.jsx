@@ -78,7 +78,7 @@ export default function Dashboard() {
   };
 
   const handleCopy = async (token) => {
-    const url = `${window.location.origin}/s/${token}`;
+    const url = `${window.location.origin}/interview/${token}`;
     await navigator.clipboard.writeText(url);
     setCopySuccess(token);
     setTimeout(() => setCopySuccess(null), 2000);
@@ -205,7 +205,7 @@ export default function Dashboard() {
                   <div className="flex items-center gap-2 bg-background rounded-lg px-3 py-2 mb-4">
                     <ExternalLink className="w-3.5 h-3.5 text-text-muted/40 shrink-0" />
                     <span className="text-xs text-text-muted font-sans truncate flex-1">
-                      {window.location.origin}/s/{survey.token}
+                      {window.location.origin}/interview/{survey.token}
                     </span>
                     <button
                       onClick={() => handleCopy(survey.token)}

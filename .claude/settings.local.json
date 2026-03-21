@@ -29,7 +29,10 @@
       "Bash(git status -u)",
       "Bash(git add client/src/api/constants.js client/src/api/index.js client/src/api/surveys.js client/src/pages/Dashboard.jsx client/src/pages/SurveyForm.jsx client/src/pages/SurveyDetail.jsx client/src/App.jsx server/surveys/__init__.py server/surveys/routes.py server/surveys/schemas.py server/surveys/utils.py server/main.py CLAUDE.md)",
       "Bash(git commit:*)",
-      "Bash(git push origin main)"
+      "Bash(git push origin main)",
+      "WebFetch(domain:www.assistant-ui.com)",
+      "WebFetch(domain:github.com)",
+      "WebSearch"
     ]
   }
 }

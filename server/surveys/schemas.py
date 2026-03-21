@@ -17,6 +17,9 @@ class SurveyCreate(BaseModel):
     goal: str = Field("", description="Survey goal / objective")
     context: str = Field("", description="Context or background for the survey")
     questions: List[str] = Field(default_factory=list, description="List of survey questions")
+    estimated_duration: int = Field(5, description="Estimated interview duration in minutes", ge=1, le=60)
+    welcome_message: Optional[str] = Field(None, description="Custom welcome message for respondents", max_length=1000)
+    personality_tone: str = Field("friendly", description="Interviewer tone: professional, friendly, casual, or fun")
 
 
 class SurveyUpdate(BaseModel):
@@ -32,6 +35,9 @@ class SurveyUpdate(BaseModel):
     goal: Optional[str] = Field(None, description="Survey goal / objective")
     context: Optional[str] = Field(None, description="Context or background for the survey")
     questions: Optional[List[str]] = Field(None, description="List of survey questions")
+    estimated_duration: Optional[int] = Field(None, description="Estimated interview duration in minutes", ge=1, le=60)
+    welcome_message: Optional[str] = Field(None, description="Custom welcome message for respondents", max_length=1000)
+    personality_tone: Optional[str] = Field(None, description="Interviewer tone: professional, friendly, casual, or fun")
 
 
 class SurveyInDB(BaseModel):
@@ -47,6 +53,9 @@ class SurveyInDB(BaseModel):
     goal: str = Field("", description="Survey goal / objective")
     context: str = Field("", description="Context or background for the survey")
     questions: List[str] = Field(default_factory=list, description="List of survey questions")
+    estimated_duration: int = Field(5, description="Estimated interview duration in minutes")
+    welcome_message: Optional[str] = Field(None, description="Custom welcome message for respondents")
+    personality_tone: str = Field("friendly", description="Interviewer tone: professional, friendly, casual, or fun")
     status: str = Field("draft", description="Survey status: draft or published")
     token: Optional[str] = Field(None, description="Unique public token, generated on publish")
     created_by: str = Field(..., description="Admin ObjectId who created the survey")
@@ -67,6 +76,9 @@ class SurveyResponse(BaseModel):
     goal: str = Field("", description="Survey goal / objective")
     context: str = Field("", description="Context or background for the survey")
     questions: List[str] = Field(default_factory=list, description="List of survey questions")
+    estimated_duration: int = Field(5, description="Estimated interview duration in minutes")
+    welcome_message: Optional[str] = Field(None, description="Custom welcome message for respondents")
+    personality_tone: str = Field("friendly", description="Interviewer tone: professional, friendly, casual, or fun")
     status: str = Field(..., description="Survey status: draft or published")
     token: Optional[str] = Field(None, description="Unique public token")
     created_by: str = Field(..., description="Admin ID who created the survey")

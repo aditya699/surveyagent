@@ -5,11 +5,13 @@ import {
   ArrowLeft,
   LogOut,
   Calendar,
+  Clock,
   HelpCircle,
   Copy,
   Check,
   Pencil,
   ExternalLink,
+  MessageSquare,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { getSurvey } from '../api';
@@ -62,7 +64,7 @@ export default function SurveyDetail() {
   }, [id]);
 
   const handleCopy = async () => {
-    const url = `${window.location.origin}/s/${survey.token}`;
+    const url = `${window.location.origin}/interview/${survey.token}`;
     await navigator.clipboard.writeText(url);
     setCopySuccess(true);
     setTimeout(() => setCopySuccess(false), 2000);
@@ -132,9 +134,14 @@ export default function SurveyDetail() {
               Created {formatDate(survey.created_at)}
             </span>
             <span className="flex items-center gap-1.5">
+              <Clock className="w-4 h-4" />
+              {survey.estimated_duration ?? 5} min
+            </span>
+            <span className="flex items-center gap-1.5">
               <HelpCircle className="w-4 h-4" />
               {survey.questions.length} {survey.questions.length === 1 ? 'question' : 'questions'}
             </span>
+            <span className="capitalize">{survey.personality_tone ?? 'friendly'} tone</span>
           </div>
 
           {/* Shareable link */}
@@ -165,6 +172,16 @@ export default function SurveyDetail() {
                   )}
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* Welcome Message */}
+          {survey.welcome_message && (
+            <div>
+              <h3 className="text-sm font-sans text-text-muted mb-2">Welcome Message</h3>
+              <p className="text-sm font-sans text-text-primary leading-relaxed">
+                {survey.welcome_message}
+              </p>
             </div>
           )}
 
@@ -221,6 +238,15 @@ export default function SurveyDetail() {
             >
               <Pencil className="w-4 h-4" />
               Edit Survey
+            </Link>
+            <Link
+              to={`/interview/test/${survey.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-secondary text-sm inline-flex items-center gap-2"
+            >
+              <MessageSquare className="w-4 h-4" />
+              Test Survey
             </Link>
             <Link to="/dashboard" className="btn-secondary text-sm">
               Back to Dashboard

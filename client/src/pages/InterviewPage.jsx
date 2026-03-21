@@ -1,0 +1,215 @@
+import { useState, useEffect, useCallback } from 'react';
+import { useParams, useSearchParams, Navigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { Clock, MessageSquare } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
+import { getInterviewInfo, startInterview, startTestInterview } from '../api';
+import InterviewChat from '../components/interview/InterviewChat';
+import RespondentForm from '../components/interview/RespondentForm';
+import CompletionScreen from '../components/interview/CompletionScreen';
+
+// Phases: loading | info | details | chatting | completed | error
+export default function InterviewPage() {
+  const { token, surveyId } = useParams();
+  const [searchParams] = useSearchParams();
+  const isTestMode = !!surveyId || searchParams.get('test') === 'true';
+  const { isAuthenticated, loading: authLoading } = useAuth();
+
+  const [phase, setPhase] = useState('loading');
+  const [surveyInfo, setSurveyInfo] = useState(null);
+  const [sessionId, setSessionId] = useState(null);
+  const [welcomeMessage, setWelcomeMessage] = useState('');
+  const [error, setError] = useState('');
+  const [starting, setStarting] = useState(false);
+
+  const onComplete = useCallback(() => setPhase('completed'), []);
+
+  // --- Test mode: wait for auth, then start immediately ---
+  useEffect(() => {
+    if (!isTestMode || authLoading) return;
+    if (!isAuthenticated) return; // will redirect below
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await startTestInterview(surveyId);
+        if (cancelled) return;
+        const d = res.data;
+        setSurveyInfo({
+          title: d.survey_title,
+          estimated_duration: d.estimated_duration,
+        });
+        setSessionId(d.session_id);
+        setWelcomeMessage(d.welcome_message);
+        setPhase('chatting');
+      } catch (err) {
+        if (cancelled) return;
+        setError(err.response?.data?.detail || 'Failed to start test session');
+        setPhase('error');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isTestMode, authLoading, isAuthenticated, surveyId]);
+
+  // --- Respondent mode: fetch survey info ---
+  useEffect(() => {
+    if (isTestMode || !token) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await getInterviewInfo(token);
+        if (cancelled) return;
+        setSurveyInfo(res.data);
+        setPhase('info');
+      } catch (err) {
+        if (cancelled) return;
+        setError(err.response?.data?.detail || 'Survey not found');
+        setPhase('error');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isTestMode, token]);
+
+  // --- Start interview (respondent mode) ---
+  const handleStart = async (respondent) => {
+    setStarting(true);
+    try {
+      const res = await startInterview(token, respondent);
+      const d = res.data;
+      setSurveyInfo((prev) => ({ ...prev, title: d.survey_title }));
+      setSessionId(d.session_id);
+      setWelcomeMessage(d.welcome_message);
+      setPhase('chatting');
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to start interview');
+      setPhase('error');
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  // --- Redirect unauthenticated admin to login ---
+  if (isTestMode && !authLoading && !isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // --- Loading spinner ---
+  if (phase === 'loading') {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // --- Error ---
+  if (phase === 'error') {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="card max-w-md text-center">
+          <h2 className="text-xl font-serif text-text-primary mb-2">
+            Something went wrong
+          </h2>
+          <p className="text-sm font-sans text-error">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // --- Info screen (respondent only) ---
+  if (phase === 'info') {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="card max-w-lg w-full text-center"
+        >
+          <h1 className="text-3xl font-serif text-text-primary mb-3">
+            {surveyInfo.title}
+          </h1>
+          {surveyInfo.description && (
+            <p className="text-sm font-sans text-text-muted mb-4 leading-relaxed">
+              {surveyInfo.description}
+            </p>
+          )}
+          <div className="flex items-center justify-center gap-4 text-xs font-sans text-text-muted mb-6">
+            <span className="flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5" />
+              ~{surveyInfo.estimated_duration} min
+            </span>
+            <span className="flex items-center gap-1">
+              <MessageSquare className="w-3.5 h-3.5" />
+              Conversational
+            </span>
+          </div>
+          <button
+            onClick={() => setPhase('details')}
+            className="btn-primary text-sm"
+          >
+            Begin
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // --- Details form (respondent only) ---
+  if (phase === 'details') {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4 py-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="max-w-lg w-full"
+        >
+          <RespondentForm onSubmit={handleStart} loading={starting} />
+        </motion.div>
+      </div>
+    );
+  }
+
+  // --- Chat ---
+  if (phase === 'chatting') {
+    return (
+      <div className="h-screen bg-background flex flex-col">
+        {/* Minimal header */}
+        <header className="shrink-0 bg-white border-b border-card-border px-4 py-3 flex items-center gap-3">
+          <MessageSquare className="w-4 h-4 text-accent" />
+          <h1 className="text-sm font-serif text-text-primary line-clamp-1">
+            {surveyInfo?.title || 'Interview'}
+          </h1>
+          {isTestMode && (
+            <span className="text-[10px] font-sans font-medium bg-accent/10 text-accent px-2 py-0.5 rounded-full">
+              TEST
+            </span>
+          )}
+        </header>
+
+        {/* Chat area fills remaining space */}
+        <div className="flex-1 min-h-0">
+          <InterviewChat
+            sessionId={sessionId}
+            welcomeMessage={welcomeMessage}
+            onComplete={onComplete}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // --- Completed ---
+  if (phase === 'completed') {
+    return (
+      <div className="h-screen bg-background">
+        <CompletionScreen
+          surveyTitle={surveyInfo?.title}
+          isTestMode={isTestMode}
+        />
+      </div>
+    );
+  }
+
+  return null;
+}

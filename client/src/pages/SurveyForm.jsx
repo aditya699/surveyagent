@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, LogOut, Plus, X, Sparkles, Loader2 } from 'lucide-react';
+import { ArrowLeft, LogOut, Plus, X, Sparkles, Loader2, MessageSquare } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { createSurvey, getSurvey, updateSurvey, publishSurvey } from '../api';
 import { streamGenerateQuestions } from '../api/ai';
@@ -17,6 +17,9 @@ export default function SurveyForm() {
   const [goal, setGoal] = useState('');
   const [context, setContext] = useState('');
   const [questions, setQuestions] = useState(['']);
+  const [estimatedDuration, setEstimatedDuration] = useState(5);
+  const [personalityTone, setPersonalityTone] = useState('friendly');
+  const [welcomeMessage, setWelcomeMessage] = useState('');
   const [existingStatus, setExistingStatus] = useState(null);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -41,6 +44,9 @@ export default function SurveyForm() {
         setGoal(s.goal);
         setContext(s.context);
         setQuestions(s.questions.length > 0 ? s.questions : ['']);
+        setEstimatedDuration(s.estimated_duration ?? 5);
+        setPersonalityTone(s.personality_tone ?? 'friendly');
+        setWelcomeMessage(s.welcome_message ?? '');
         setExistingStatus(s.status);
       } catch (err) {
         setError(err.response?.data?.detail || 'Failed to load survey');
@@ -57,6 +63,9 @@ export default function SurveyForm() {
     goal: goal.trim(),
     context: context.trim(),
     questions: questions.map((q) => q.trim()).filter(Boolean),
+    estimated_duration: estimatedDuration,
+    personality_tone: personalityTone,
+    welcome_message: welcomeMessage.trim() || null,
   });
 
   const handleSave = async (e) => {
@@ -94,6 +103,27 @@ export default function SurveyForm() {
       setError(err.response?.data?.detail || 'Failed to publish survey');
     } finally {
       setPublishing(false);
+    }
+  };
+
+  const [testing, setTesting] = useState(false);
+
+  const handleTestChatbot = async () => {
+    setError('');
+    setTesting(true);
+    try {
+      let surveyId = id;
+      if (isEdit) {
+        await updateSurvey(id, buildPayload());
+      } else {
+        const res = await createSurvey(buildPayload());
+        surveyId = res.data.survey.id;
+      }
+      window.open(`/interview/test/${surveyId}`, '_blank');
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to save survey');
+    } finally {
+      setTesting(false);
     }
   };
 
@@ -176,7 +206,7 @@ export default function SurveyForm() {
   }
 
   const isAlreadyPublished = existingStatus === 'published';
-  const canSubmit = title.trim().length > 0 && !saving && !publishing;
+  const canSubmit = title.trim().length > 0 && !saving && !publishing && !testing;
 
   return (
     <div className="min-h-screen bg-background">
@@ -272,6 +302,55 @@ export default function SurveyForm() {
                 rows={3}
                 className="w-full bg-white border border-card-border rounded-lg px-4 py-3 text-sm font-sans text-text-primary placeholder:text-text-muted/40 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-all resize-none"
                 placeholder="Target audience, tone, constraints..."
+              />
+            </div>
+
+            {/* Estimated Duration */}
+            <div>
+              <label htmlFor="estimatedDuration" className="block text-sm font-sans text-text-muted mb-1.5">
+                Estimated Duration (minutes)
+              </label>
+              <input
+                id="estimatedDuration"
+                type="number"
+                min={1}
+                max={60}
+                value={estimatedDuration}
+                onChange={(e) => setEstimatedDuration(Math.max(1, Math.min(60, Number(e.target.value) || 1)))}
+                className="w-32 bg-white border border-card-border rounded-lg px-4 py-3 text-sm font-sans text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-all"
+              />
+            </div>
+
+            {/* Personality Tone */}
+            <div>
+              <label htmlFor="personalityTone" className="block text-sm font-sans text-text-muted mb-1.5">
+                Interviewer Tone
+              </label>
+              <select
+                id="personalityTone"
+                value={personalityTone}
+                onChange={(e) => setPersonalityTone(e.target.value)}
+                className="w-48 bg-white border border-card-border rounded-lg px-4 py-3 text-sm font-sans text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-all"
+              >
+                <option value="professional">Professional</option>
+                <option value="friendly">Friendly</option>
+                <option value="casual">Casual</option>
+                <option value="fun">Fun</option>
+              </select>
+            </div>
+
+            {/* Welcome Message */}
+            <div>
+              <label htmlFor="welcomeMessage" className="block text-sm font-sans text-text-muted mb-1.5">
+                Welcome Message
+              </label>
+              <textarea
+                id="welcomeMessage"
+                value={welcomeMessage}
+                onChange={(e) => setWelcomeMessage(e.target.value)}
+                rows={3}
+                className="w-full bg-white border border-card-border rounded-lg px-4 py-3 text-sm font-sans text-text-primary placeholder:text-text-muted/40 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-all resize-none"
+                placeholder="Leave blank for default: &quot;Hi! Thanks for taking the time. This survey is about {title}...&quot;"
               />
             </div>
 
@@ -410,6 +489,15 @@ export default function SurveyForm() {
                 className="btn-secondary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving ? 'Saving...' : isEdit ? 'Save Changes' : 'Save as Draft'}
+              </button>
+              <button
+                type="button"
+                onClick={handleTestChatbot}
+                disabled={!canSubmit}
+                className="btn-secondary text-sm disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
+              >
+                <MessageSquare className="w-4 h-4" />
+                {testing ? 'Saving...' : 'Test Survey'}
               </button>
               {!isAlreadyPublished && (
                 <button

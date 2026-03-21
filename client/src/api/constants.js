@@ -19,6 +19,13 @@ export const ENDPOINTS = {
     GENERATE_QUESTIONS: `${PREFIX}/ai/generate-questions`,
   },
 
+  INTERVIEW: {
+    INFO:    (token) => `${PREFIX}/interview/${token}/info`,
+    START:   (token) => `${PREFIX}/interview/start/${token}`,
+    MESSAGE: (sessionId) => `${PREFIX}/interview/${sessionId}/message`,
+    TEST:    (surveyId) => `${PREFIX}/interview/test/${surveyId}`,
+  },
+
   SURVEYS: {
     LIST:    `${PREFIX}/surveys`,
     CREATE:  `${PREFIX}/surveys`,

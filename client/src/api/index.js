@@ -24,3 +24,9 @@ export {
   publishSurvey,
 } from './surveys';
 export { streamGenerateQuestions } from './ai';
+export {
+  getInterviewInfo,
+  startInterview,
+  startTestInterview,
+  streamInterviewMessage,
+} from './interview';
