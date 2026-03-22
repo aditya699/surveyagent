@@ -6,10 +6,14 @@ import {
 import ChatThread from './ChatThread';
 import { API_URL, ENDPOINTS } from '../../api/constants';
 
+// Strip partial/complete coverage and abuse tags during streaming so they never flash in the UI
+const COVERAGE_RE = /\[COVERED:[\d,\s]*\]?$/;
+const ABUSE_RE = /\[ABUSE:\s*true\s*\]?$/i;
+
 /**
  * Creates a ChatModelAdapter that bridges assistant-ui to our SSE backend.
  */
-function createAdapter(sessionId, onComplete) {
+function createAdapter(sessionId, onComplete, onTerminated) {
   return {
     async *run({ messages, abortSignal }) {
       // Extract the latest user message
@@ -63,7 +67,7 @@ function createAdapter(sessionId, onComplete) {
             if (parsed.token) {
               fullText += parsed.token;
               yield {
-                content: [{ type: 'text', text: fullText }],
+                content: [{ type: 'text', text: fullText.replace(COVERAGE_RE, '').replace(ABUSE_RE, '') }],
               };
             }
             if (parsed.done) {
@@ -76,6 +80,9 @@ function createAdapter(sessionId, onComplete) {
             }
             if (parsed.type === 'complete') {
               onComplete?.();
+            }
+            if (parsed.type === 'terminated') {
+              onTerminated?.(parsed.reason);
             }
             if (parsed.error) {
               throw new Error(parsed.error);
@@ -100,10 +107,10 @@ function createAdapter(sessionId, onComplete) {
  * Chat wrapper component — mounts only during CHATTING phase.
  * Calls useLocalRuntime unconditionally (hooks rules).
  */
-export default function InterviewChat({ sessionId, welcomeMessage, onComplete }) {
+export default function InterviewChat({ sessionId, welcomeMessage, onComplete, onTerminated }) {
   const adapter = useMemo(
-    () => createAdapter(sessionId, onComplete),
-    [sessionId, onComplete],
+    () => createAdapter(sessionId, onComplete, onTerminated),
+    [sessionId, onComplete, onTerminated],
   );
 
   const initialMessages = useMemo(

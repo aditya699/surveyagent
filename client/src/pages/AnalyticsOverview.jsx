@@ -13,30 +13,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { getAnalyticsOverview } from '../api';
-
-function formatDuration(seconds) {
-  if (seconds == null) return '--';
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.round(seconds % 60);
-  if (mins === 0) return `${secs}s`;
-  return `${mins}m ${secs}s`;
-}
-
-function StatusBadge({ status }) {
-  const isDraft = status === 'draft';
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-sans font-medium ${
-        isDraft ? 'bg-text-muted/10 text-text-muted' : 'bg-success/10 text-success'
-      }`}
-    >
-      <span
-        className={`w-1.5 h-1.5 rounded-full ${isDraft ? 'bg-text-muted' : 'bg-success'}`}
-      />
-      {isDraft ? 'Draft' : 'Published'}
-    </span>
-  );
-}
+import { formatDuration } from '../utils/formatters';
+import StatusBadge from '../components/shared/StatusBadge';
 
 export default function AnalyticsOverview() {
   const { user, logout } = useAuth();

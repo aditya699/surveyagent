@@ -6,24 +6,15 @@ Provides streaming question generation using OpenAI Responses API with GPT-5.4-m
 import json
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
 from server.auth.utils import get_current_user
 from server.core.config import settings
 from server.core.llm import get_openai_client
 from server.core.logging_config import get_logger
 from server.ai.prompts import SYSTEM_PROMPT, build_user_prompt
+from server.ai.schemas import GenerateQuestionsRequest
 
 logger = get_logger(__name__)
 router = APIRouter()
-
-
-class GenerateQuestionsRequest(BaseModel):
-    num_questions: int = Field(default=5, ge=1, le=20)
-    title: str = ""
-    description: str = ""
-    goal: str = ""
-    context: str = ""
-    additional_info: str = ""
 
 
 @router.post("/generate-questions")

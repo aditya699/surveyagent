@@ -2,13 +2,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { CheckCircle, Clock, Pencil, RotateCcw, Rocket, Link as LinkIcon, Check } from 'lucide-react';
-
-function formatDuration(seconds) {
-  if (seconds == null) return null;
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m} min ${s} sec`;
-}
+import { useClipboard } from '../../hooks/useClipboard';
+import { formatDurationLong } from '../../utils/formatters';
 
 export default function CompletionScreen({
   surveyTitle,
@@ -22,7 +17,7 @@ export default function CompletionScreen({
 }) {
   const [publishing, setPublishing] = useState(false);
   const [publishError, setPublishError] = useState('');
-  const [copied, setCopied] = useState(false);
+  const { copied, copy: copyToClipboard } = useClipboard();
 
   const isPublished = surveyStatus === 'published';
 
@@ -39,10 +34,7 @@ export default function CompletionScreen({
   };
 
   const handleCopyLink = () => {
-    const url = `${window.location.origin}/interview/${surveyToken}`;
-    navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    copyToClipboard(`${window.location.origin}/interview/${surveyToken}`);
   };
 
   return (
@@ -61,7 +53,7 @@ export default function CompletionScreen({
         {duration != null && (
           <p className="flex items-center justify-center gap-1.5 text-sm font-sans text-accent mb-3">
             <Clock className="w-4 h-4" />
-            Interview completed in {formatDuration(duration)}
+            Interview completed in {formatDurationLong(duration)}
           </p>
         )}
         <p className="text-sm font-sans text-text-muted leading-relaxed">

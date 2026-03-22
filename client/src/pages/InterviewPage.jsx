@@ -7,14 +7,10 @@ import { getInterviewInfo, startInterview, startTestInterview, publishSurvey } f
 import InterviewChat from '../components/interview/InterviewChat';
 import RespondentForm from '../components/interview/RespondentForm';
 import CompletionScreen from '../components/interview/CompletionScreen';
+import TerminationScreen from '../components/interview/TerminationScreen';
+import { formatTimer } from '../utils/formatters';
 
-function formatTimer(seconds) {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-}
-
-// Phases: loading | info | details | chatting | completed | error
+// Phases: loading | info | details | chatting | completed | terminated | error
 export default function InterviewPage() {
   const { token, surveyId } = useParams();
   const [searchParams] = useSearchParams();
@@ -39,6 +35,13 @@ export default function InterviewPage() {
       setDuration(Math.round((Date.now() - startTimeRef.current) / 1000));
     }
     setPhase('completed');
+  }, []);
+
+  const onTerminated = useCallback((reason) => {
+    if (startTimeRef.current) {
+      setDuration(Math.round((Date.now() - startTimeRef.current) / 1000));
+    }
+    setPhase('terminated');
   }, []);
 
   // Tick the timer every second while chatting
@@ -246,6 +249,7 @@ export default function InterviewPage() {
             sessionId={sessionId}
             welcomeMessage={welcomeMessage}
             onComplete={onComplete}
+            onTerminated={onTerminated}
           />
         </div>
       </div>
@@ -265,6 +269,19 @@ export default function InterviewPage() {
           surveyToken={surveyInfo?.token}
           onTestAgain={handleTestAgain}
           onPublish={handlePublish}
+        />
+      </div>
+    );
+  }
+
+  // --- Terminated (abuse detected) ---
+  if (phase === 'terminated') {
+    return (
+      <div className="h-screen bg-background">
+        <TerminationScreen
+          isTestMode={isTestMode}
+          surveyId={surveyId}
+          onTestAgain={isTestMode ? handleTestAgain : undefined}
         />
       </div>
     );

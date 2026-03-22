@@ -17,22 +17,10 @@ from server.analytics.schemas import (
     InterviewDetailResponse,
 )
 
+from server.analytics.utils import verify_survey_ownership
+
 logger = get_logger(__name__)
 router = APIRouter()
-
-
-async def _verify_survey_ownership(survey_id: str, user_id: str) -> dict:
-    """Verify that the survey belongs to the current user. Returns survey doc or raises 404."""
-    db = await get_db()
-    try:
-        survey = await db["surveys"].find_one(
-            {"_id": ObjectId(survey_id), "created_by": ObjectId(user_id)}
-        )
-    except Exception:
-        raise HTTPException(status_code=404, detail="Survey not found")
-    if not survey:
-        raise HTTPException(status_code=404, detail="Survey not found")
-    return survey
 
 
 @router.get("/surveys", response_model=SurveyOverviewResponse)
@@ -56,7 +44,7 @@ async def analytics_overview(current_user: dict = Depends(get_current_user)):
 async def survey_analytics(survey_id: str, current_user: dict = Depends(get_current_user)):
     """Detailed stats for a single survey."""
     try:
-        survey = await _verify_survey_ownership(survey_id, current_user["user_id"])
+        survey = await verify_survey_ownership(survey_id, current_user["user_id"])
         questions = survey.get("questions", [])
         stats = await get_survey_detail_stats(survey_id, questions)
         return SurveyDetailResponse(
@@ -82,7 +70,7 @@ async def survey_interviews(
 ):
     """List interview sessions for a survey with pagination."""
     try:
-        await _verify_survey_ownership(survey_id, current_user["user_id"])
+        await verify_survey_ownership(survey_id, current_user["user_id"])
         result = await get_interview_list(survey_id, page, page_size)
         return InterviewListResponse(
             message="Interview list retrieved",
@@ -109,7 +97,7 @@ async def interview_detail(interview_id: str, current_user: dict = Depends(get_c
             raise HTTPException(status_code=404, detail="Interview not found")
 
         # Verify ownership through the linked survey
-        await _verify_survey_ownership(interview["survey_id"], current_user["user_id"])
+        await verify_survey_ownership(interview["survey_id"], current_user["user_id"])
 
         # Get survey title
         db = await get_db()

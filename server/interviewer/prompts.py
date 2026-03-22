@@ -33,7 +33,14 @@ At the END of every response, append a metadata tag on its own line in this exac
 [COVERED: 1, 3, 5]
 This lists the 1-based indices of all survey questions that have been sufficiently answered so far.
 If no questions have been covered yet, use: [COVERED: ]
-This tag is required on EVERY response. The backend will strip it before showing your response to the respondent — the respondent must never see it."""
+This tag is required on EVERY response. The backend will strip it before showing your response to the respondent — the respondent must never see it.
+
+ABUSE DETECTION:
+If the respondent is persistently abusive, vulgar, threatening, or clearly trolling:
+1. On the FIRST offense, gently redirect them back to the interview. Do NOT add an abuse tag.
+2. If the behavior continues in a subsequent message, respond with a brief, polite goodbye and append this tag at the END of your response (after the COVERED tag):
+[ABUSE: true]
+Only use this tag when the respondent has been warned once and continues. Never flag off-topic answers, confusion, or mild frustration — those are normal and should be handled with patience."""
 
 
 def build_interviewer_prompt(

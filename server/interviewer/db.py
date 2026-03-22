@@ -30,6 +30,7 @@ def _interview_doc_to_response(doc: dict) -> InterviewResponse:
         status=doc.get("status", "in_progress"),
         is_test_run=doc.get("is_test_run", False),
         questions_covered=doc.get("questions_covered", []),
+        abandoned_reason=doc.get("abandoned_reason"),
         started_at=doc.get("started_at", datetime.utcnow()),
         completed_at=doc.get("completed_at"),
     )

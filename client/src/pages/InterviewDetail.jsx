@@ -7,9 +7,6 @@ import {
   User,
   Mail,
   Clock,
-  CheckCircle2,
-  XCircle,
-  Loader2,
   Calendar,
   HelpCircle,
   Briefcase,
@@ -17,54 +14,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { getInterviewDetail } from '../api';
-
-function formatDuration(seconds) {
-  if (seconds == null) return '--';
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.round(seconds % 60);
-  if (mins === 0) return `${secs}s`;
-  return `${mins}m ${secs}s`;
-}
-
-function formatDate(dateString) {
-  if (!dateString) return '--';
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(new Date(dateString));
-}
-
-function formatTime(dateString) {
-  if (!dateString) return '';
-  return new Intl.DateTimeFormat('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(new Date(dateString));
-}
-
-function InterviewStatusBadge({ status }) {
-  const styles = {
-    completed: 'bg-success/10 text-success',
-    abandoned: 'bg-error/10 text-error',
-    in_progress: 'bg-accent/10 text-accent',
-  };
-  const labels = {
-    completed: 'Completed',
-    abandoned: 'Abandoned',
-    in_progress: 'In Progress',
-  };
-  return (
-    <span className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-sans font-medium ${styles[status] || styles.in_progress}`}>
-      {status === 'completed' && <CheckCircle2 className="w-3 h-3" />}
-      {status === 'abandoned' && <XCircle className="w-3 h-3" />}
-      {status === 'in_progress' && <Loader2 className="w-3 h-3" />}
-      {labels[status] || status}
-    </span>
-  );
-}
+import { formatDuration, formatDateWithTime, formatTime } from '../utils/formatters';
+import InterviewStatusBadge from '../components/shared/InterviewStatusBadge';
 
 export default function InterviewDetail() {
   const { interviewId } = useParams();
@@ -173,7 +124,7 @@ export default function InterviewDetail() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm font-sans">
               <div>
                 <p className="text-text-muted text-xs mb-1">Started</p>
-                <p className="text-text-primary">{formatDate(interview.started_at)}</p>
+                <p className="text-text-primary">{formatDateWithTime(interview.started_at)}</p>
               </div>
               <div>
                 <p className="text-text-muted text-xs mb-1">Duration</p>
@@ -185,7 +136,7 @@ export default function InterviewDetail() {
               </div>
               <div>
                 <p className="text-text-muted text-xs mb-1">Completed</p>
-                <p className="text-text-primary">{interview.completed_at ? formatDate(interview.completed_at) : '--'}</p>
+                <p className="text-text-primary">{interview.completed_at ? formatDateWithTime(interview.completed_at) : '--'}</p>
               </div>
             </div>
 

@@ -32,6 +32,16 @@ class Message(BaseModel):
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="Message timestamp")
 
 
+class StartInterviewRequest(BaseModel):
+    """Request body for starting an interview session."""
+    respondent: Optional[RespondentDetails] = None
+
+
+class SendMessageRequest(BaseModel):
+    """Request body for sending a respondent message."""
+    message: str = Field(..., description="Respondent's message", min_length=1, max_length=5000)
+
+
 class InterviewCreate(BaseModel):
     """
     Deep Technical Context:
@@ -62,6 +72,7 @@ class InterviewInDB(BaseModel):
     status: str = Field("in_progress", description="Session status: in_progress, completed, or abandoned")
     is_test_run: bool = Field(False, description="Whether this is an admin test run")
     questions_covered: List[int] = Field(default_factory=list, description="1-based indices of covered questions")
+    abandoned_reason: Optional[str] = Field(None, description="Reason for abandonment (e.g. 'abuse_detected')")
     started_at: datetime = Field(..., description="Session start timestamp")
     completed_at: Optional[datetime] = Field(None, description="Session end timestamp")
 
@@ -80,6 +91,7 @@ class InterviewResponse(BaseModel):
     status: str = Field(..., description="Session status: in_progress, completed, or abandoned")
     is_test_run: bool = Field(False, description="Whether this is an admin test run")
     questions_covered: List[int] = Field(default_factory=list, description="1-based indices of covered questions")
+    abandoned_reason: Optional[str] = Field(None, description="Reason for abandonment (e.g. 'abuse_detected')")
     started_at: datetime = Field(..., description="Session start timestamp")
     completed_at: Optional[datetime] = Field(None, description="Session end timestamp")
 

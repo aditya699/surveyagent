@@ -1,201 +1,40 @@
-import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, LogOut, Plus, X, Sparkles, Loader2, MessageSquare } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { createSurvey, getSurvey, updateSurvey, publishSurvey } from '../api';
-import { streamGenerateQuestions } from '../api/ai';
+import { useSurveyForm } from '../hooks/useSurveyForm';
+import { useQuestionManager } from '../hooks/useQuestionManager';
+import { useAiGeneration } from '../hooks/useAiGeneration';
 
 export default function SurveyForm() {
   const { id } = useParams();
-  const isEdit = !!id;
-  const navigate = useNavigate();
   const { logout } = useAuth();
 
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [goal, setGoal] = useState('');
-  const [context, setContext] = useState('');
-  const [questions, setQuestions] = useState(['']);
-  const [estimatedDuration, setEstimatedDuration] = useState(5);
-  const [personalityTone, setPersonalityTone] = useState('friendly');
-  const [welcomeMessage, setWelcomeMessage] = useState('');
-  const [existingStatus, setExistingStatus] = useState(null);
-  const [saving, setSaving] = useState(false);
-  const [publishing, setPublishing] = useState(false);
-  const [error, setError] = useState('');
-  const [loadingExisting, setLoadingExisting] = useState(isEdit);
+  const { questions, setQuestions, addQuestion, updateQuestion, removeQuestion } =
+    useQuestionManager();
 
-  // AI generation state
-  const [showAiPanel, setShowAiPanel] = useState(false);
-  const [aiNumQuestions, setAiNumQuestions] = useState(5);
-  const [aiAdditionalInfo, setAiAdditionalInfo] = useState('');
-  const [aiGenerating, setAiGenerating] = useState(false);
-  const [aiError, setAiError] = useState('');
+  const {
+    isEdit,
+    title, setTitle,
+    description, setDescription,
+    goal, setGoal,
+    context, setContext,
+    estimatedDuration, setEstimatedDuration,
+    personalityTone, setPersonalityTone,
+    welcomeMessage, setWelcomeMessage,
+    existingStatus,
+    saving, publishing, testing, error,
+    loadingExisting,
+    handleSave, handlePublish, handleTestChatbot,
+  } = useSurveyForm({ id, setQuestions });
 
-  useEffect(() => {
-    if (!id) return;
-    const fetchSurvey = async () => {
-      try {
-        const res = await getSurvey(id);
-        const s = res.data.survey;
-        setTitle(s.title);
-        setDescription(s.description);
-        setGoal(s.goal);
-        setContext(s.context);
-        setQuestions(s.questions.length > 0 ? s.questions : ['']);
-        setEstimatedDuration(s.estimated_duration ?? 5);
-        setPersonalityTone(s.personality_tone ?? 'friendly');
-        setWelcomeMessage(s.welcome_message ?? '');
-        setExistingStatus(s.status);
-      } catch (err) {
-        setError(err.response?.data?.detail || 'Failed to load survey');
-      } finally {
-        setLoadingExisting(false);
-      }
-    };
-    fetchSurvey();
-  }, [id]);
-
-  const buildPayload = () => ({
-    title: title.trim(),
-    description: description.trim(),
-    goal: goal.trim(),
-    context: context.trim(),
-    questions: questions.map((q) => q.trim()).filter(Boolean),
-    estimated_duration: estimatedDuration,
-    personality_tone: personalityTone,
-    welcome_message: welcomeMessage.trim() || null,
-  });
-
-  const handleSave = async (e) => {
-    e.preventDefault();
-    setError('');
-    setSaving(true);
-    try {
-      if (isEdit) {
-        await updateSurvey(id, buildPayload());
-      } else {
-        await createSurvey(buildPayload());
-      }
-      navigate('/dashboard');
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to save survey');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handlePublish = async () => {
-    setError('');
-    setPublishing(true);
-    try {
-      let surveyId = id;
-      if (isEdit) {
-        await updateSurvey(id, buildPayload());
-      } else {
-        const res = await createSurvey(buildPayload());
-        surveyId = res.data.survey.id;
-      }
-      await publishSurvey(surveyId);
-      navigate(`/surveys/${surveyId}`);
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to publish survey');
-    } finally {
-      setPublishing(false);
-    }
-  };
-
-  const [testing, setTesting] = useState(false);
-
-  const handleTestChatbot = async () => {
-    setError('');
-    setTesting(true);
-    try {
-      let surveyId = id;
-      if (isEdit) {
-        await updateSurvey(id, buildPayload());
-      } else {
-        const res = await createSurvey(buildPayload());
-        surveyId = res.data.survey.id;
-      }
-      window.open(`/interview/test/${surveyId}`, '_blank');
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to save survey');
-    } finally {
-      setTesting(false);
-    }
-  };
-
-  const addQuestion = () => setQuestions([...questions, '']);
-
-  const updateQuestion = (index, value) => {
-    const updated = [...questions];
-    updated[index] = value;
-    setQuestions(updated);
-  };
-
-  const removeQuestion = (index) => {
-    if (questions.length === 1) {
-      // Last question — clear it instead of removing, so the input stays visible
-      setQuestions(['']);
-      return;
-    }
-    setQuestions(questions.filter((_, i) => i !== index));
-  };
-
-  // Track abort controller for cancelling in-flight generation
-  const abortRef = useRef(null);
-
-  const handleAiGenerate = async () => {
-    setAiError('');
-    setAiGenerating(true);
-
-    // Create abort controller for cancellation
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    await streamGenerateQuestions({
-      data: {
-        num_questions: aiNumQuestions,
-        title: title.trim(),
-        description: description.trim(),
-        goal: goal.trim(),
-        context: context.trim(),
-        additional_info: aiAdditionalInfo.trim(),
-      },
-      onQuestion: (question) => {
-        setQuestions((prev) => {
-          // Strip out any empty questions, then append the new one.
-          // Pure function — safe under React StrictMode double-invocation.
-          const nonEmpty = prev.filter((q) => q.trim() !== '');
-          return [...nonEmpty, question];
-        });
-      },
-      onDone: () => {
-        setAiGenerating(false);
-        setShowAiPanel(false);
-        setAiAdditionalInfo('');
-        abortRef.current = null;
-      },
-      onError: (errMsg) => {
-        setAiError(errMsg || 'Failed to generate questions. Please try again.');
-        setAiGenerating(false);
-        abortRef.current = null;
-      },
-      signal: controller.signal,
-    });
-  };
-
-  const handleAiCancel = () => {
-    if (abortRef.current) {
-      abortRef.current.abort();
-      abortRef.current = null;
-    }
-    setAiGenerating(false);
-    setShowAiPanel(false);
-    setAiError('');
-  };
+  const {
+    showAiPanel,
+    aiNumQuestions, setAiNumQuestions,
+    aiAdditionalInfo, setAiAdditionalInfo,
+    aiGenerating, aiError,
+    handleAiGenerate, handleAiCancel, toggleAiPanel,
+  } = useAiGeneration({ title, description, goal, context, setQuestions });
 
   if (loadingExisting) {
     return (
@@ -237,7 +76,7 @@ export default function SurveyForm() {
       {/* Content */}
       <main className="container-max max-w-2xl section-padding">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-          <form onSubmit={handleSave} className="space-y-6">
+          <form onSubmit={(e) => handleSave(e, questions)} className="space-y-6">
             {/* Error */}
             {error && (
               <div className="bg-error/10 border border-error/20 rounded-lg px-4 py-3 text-sm text-error font-sans">
@@ -391,7 +230,7 @@ export default function SurveyForm() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowAiPanel(!showAiPanel)}
+                  onClick={toggleAiPanel}
                   className="flex items-center gap-1.5 text-sm text-accent hover:text-accent-hover transition-colors font-sans"
                 >
                   <Sparkles className="w-4 h-4" />
@@ -492,7 +331,7 @@ export default function SurveyForm() {
               </button>
               <button
                 type="button"
-                onClick={handleTestChatbot}
+                onClick={() => handleTestChatbot(questions)}
                 disabled={!canSubmit}
                 className="btn-secondary text-sm disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
               >
@@ -502,7 +341,7 @@ export default function SurveyForm() {
               {!isAlreadyPublished && (
                 <button
                   type="button"
-                  onClick={handlePublish}
+                  onClick={() => handlePublish(questions)}
                   disabled={!canSubmit}
                   className="btn-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >

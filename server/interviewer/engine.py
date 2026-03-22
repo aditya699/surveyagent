@@ -16,6 +16,9 @@ logger = get_logger(__name__)
 # Regex for the coverage metadata tag: [COVERED: 1, 3, 5] or [COVERED: ]
 COVERAGE_RE = re.compile(r"\[COVERED:\s*([\d,\s]*)\]")
 
+# Regex for the abuse detection tag: [ABUSE: true]
+ABUSE_RE = re.compile(r"\[ABUSE:\s*true\s*\]", re.IGNORECASE)
+
 
 def parse_coverage_tag(text: str) -> tuple[str, list[int]]:
     """
@@ -36,6 +39,18 @@ def parse_coverage_tag(text: str) -> tuple[str, list[int]]:
 
     clean = text[:match.start()] + text[match.end():]
     return clean.strip(), covered
+
+
+def parse_abuse_tag(text: str) -> tuple[str, bool]:
+    """
+    Extract and strip the [ABUSE: true] tag from the LLM response.
+    Returns (clean_text, is_abusive).
+    """
+    match = ABUSE_RE.search(text)
+    if not match:
+        return text, False
+    clean = text[:match.start()] + text[match.end():]
+    return clean.strip(), True
 
 
 async def run_interview_turn(
@@ -91,13 +106,14 @@ async def run_interview_turn(
                 full_response += event.delta
                 yield f"data: {json.dumps({'token': event.delta})}\n\n"
 
-        # Parse coverage tag from the complete response
-        clean_text, questions_covered = parse_coverage_tag(full_response)
+        # Parse abuse tag first, then coverage tag from the cleaned text
+        text_after_abuse, abuse_detected = parse_abuse_tag(full_response)
+        clean_text, questions_covered = parse_coverage_tag(text_after_abuse)
 
         # Send final event with parsed data
-        yield f"data: {json.dumps({'done': True, 'clean_text': clean_text, 'questions_covered': questions_covered})}\n\n"
+        yield f"data: {json.dumps({'done': True, 'clean_text': clean_text, 'questions_covered': questions_covered, 'abuse_detected': abuse_detected})}\n\n"
 
     except Exception as e:
         logger.error(f"Interview engine error: {e}", exc_info=True)
         yield f"data: {json.dumps({'error': str(e)})}\n\n"
-        yield f"data: {json.dumps({'done': True, 'clean_text': '', 'questions_covered': []})}\n\n"
+        yield f"data: {json.dumps({'done': True, 'clean_text': '', 'questions_covered': [], 'abuse_detected': False})}\n\n"

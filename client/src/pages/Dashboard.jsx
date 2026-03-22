@@ -15,31 +15,10 @@ import {
   BarChart3,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { useClipboard } from '../hooks/useClipboard';
 import { getSurveys, deleteSurvey } from '../api';
-
-function formatDate(dateString) {
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(new Date(dateString));
-}
-
-function StatusBadge({ status }) {
-  const isDraft = status === 'draft';
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-sans font-medium ${
-        isDraft ? 'bg-text-muted/10 text-text-muted' : 'bg-success/10 text-success'
-      }`}
-    >
-      <span
-        className={`w-1.5 h-1.5 rounded-full ${isDraft ? 'bg-text-muted' : 'bg-success'}`}
-      />
-      {isDraft ? 'Draft' : 'Published'}
-    </span>
-  );
-}
+import { formatDate } from '../utils/formatters';
+import StatusBadge from '../components/shared/StatusBadge';
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
@@ -49,7 +28,7 @@ export default function Dashboard() {
   const [error, setError] = useState('');
   const [deleteId, setDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
-  const [copySuccess, setCopySuccess] = useState(null);
+  const { copied: copySuccess, copy: copyToClipboard } = useClipboard();
 
   useEffect(() => {
     const fetchSurveys = async () => {
@@ -76,13 +55,6 @@ export default function Dashboard() {
     } finally {
       setDeleting(false);
     }
-  };
-
-  const handleCopy = async (token) => {
-    const url = `${window.location.origin}/interview/${token}`;
-    await navigator.clipboard.writeText(url);
-    setCopySuccess(token);
-    setTimeout(() => setCopySuccess(null), 2000);
   };
 
   return (
@@ -216,10 +188,10 @@ export default function Dashboard() {
                       {window.location.origin}/interview/{survey.token}
                     </span>
                     <button
-                      onClick={() => handleCopy(survey.token)}
+                      onClick={() => copyToClipboard(`${window.location.origin}/interview/${survey.token}`)}
                       className="text-text-muted/60 hover:text-accent transition-colors shrink-0"
                     >
-                      {copySuccess === survey.token ? (
+                      {copySuccess ? (
                         <Check className="w-3.5 h-3.5 text-success" />
                       ) : (
                         <Copy className="w-3.5 h-3.5" />

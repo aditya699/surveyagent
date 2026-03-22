@@ -12,32 +12,12 @@ from server.surveys.schemas import (
     SurveySingleResponse,
     SurveyDeleteResponse,
 )
-from server.surveys.utils import generate_survey_token
+from server.surveys.utils import generate_survey_token, survey_doc_to_response
 from server.core.logging_config import get_logger
 
 logger = get_logger(__name__)
 
 router = APIRouter()
-
-
-def _survey_doc_to_response(doc: dict) -> SurveyResponse:
-    """Convert a MongoDB survey document to a SurveyResponse."""
-    return SurveyResponse(
-        id=str(doc["_id"]),
-        title=doc["title"],
-        description=doc.get("description", ""),
-        goal=doc.get("goal", ""),
-        context=doc.get("context", ""),
-        questions=doc.get("questions", []),
-        estimated_duration=doc.get("estimated_duration", 5),
-        welcome_message=doc.get("welcome_message"),
-        personality_tone=doc.get("personality_tone", "friendly"),
-        status=doc["status"],
-        token=doc.get("token"),
-        created_by=str(doc["created_by"]),
-        created_at=doc["created_at"],
-        updated_at=doc["updated_at"],
-    )
 
 
 @router.post("/", response_model=SurveySingleResponse)
@@ -83,7 +63,7 @@ async def create_survey(
 
         return SurveySingleResponse(
             message="Survey created successfully",
-            survey=_survey_doc_to_response(doc),
+            survey=survey_doc_to_response(doc),
         )
 
     except HTTPException:
@@ -121,7 +101,7 @@ async def get_surveys(
 
         surveys = []
         async for doc in cursor:
-            surveys.append(_survey_doc_to_response(doc))
+            surveys.append(survey_doc_to_response(doc))
 
         logger.info(f"Returned {len(surveys)} surveys for user_id: {user_id}")
 
@@ -174,7 +154,7 @@ async def get_survey(
 
         return SurveySingleResponse(
             message="Survey retrieved successfully",
-            survey=_survey_doc_to_response(doc),
+            survey=survey_doc_to_response(doc),
         )
 
     except HTTPException:
@@ -242,7 +222,7 @@ async def update_survey(
 
         return SurveySingleResponse(
             message="Survey updated successfully",
-            survey=_survey_doc_to_response(doc),
+            survey=survey_doc_to_response(doc),
         )
 
     except HTTPException:
@@ -360,7 +340,7 @@ async def publish_survey(
 
         return SurveySingleResponse(
             message="Survey published successfully",
-            survey=_survey_doc_to_response(doc),
+            survey=survey_doc_to_response(doc),
         )
 
     except HTTPException:

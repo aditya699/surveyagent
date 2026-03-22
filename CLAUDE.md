@@ -4,7 +4,7 @@
 
 SurveyAgent is an open-source AI survey platform that replaces static forms with dynamic conversations. It conducts interviews via text chat, voice, or video avatar. It's self-hostable, LLM-agnostic, and keeps survey data under the user's control.
 
-**Status:** Early development. Auth system, landing page, survey CRUD, AI question generation, interviewer foundation, interviewer engine + routes, and interview chat UI (text) are built. Voice, video, and analytics are not yet implemented.
+**Status:** Early development. Auth system, landing page, survey CRUD, AI question generation, interviewer foundation, interviewer engine + routes, interview chat UI (text), and analytics are built. Voice and video are not yet implemented.
 
 ## Tech Stack
 
@@ -33,18 +33,26 @@ surveyagent/
 │   ├── surveys/
 │   │   ├── routes.py          # CRUD + publish (all Bearer-auth protected)
 │   │   ├── schemas.py         # Pydantic models (SurveyCreate, SurveyResponse, etc.)
-│   │   └── utils.py           # generate_survey_token() via uuid4
+│   │   └── utils.py           # generate_survey_token(), survey_doc_to_response()
 │   ├── interviewer/
 │   │   ├── __init__.py        # Package marker
 │   │   ├── prompts.py         # Interviewer system prompt + build_interviewer_prompt()
-│   │   ├── schemas.py         # Pydantic models (Interview, Message, Respondent)
+│   │   ├── schemas.py         # Pydantic models (Interview, Message, Respondent, request models)
 │   │   ├── db.py              # Interview session CRUD utilities
 │   │   ├── engine.py          # LLM streaming engine + coverage tag parsing
+│   │   ├── utils.py           # build_welcome(), calc_remaining_minutes(), process_stream_result()
 │   │   └── routes.py          # Interview API: start, message, test
-│   └── ai/
+│   ├── ai/
+│   │   ├── __init__.py        # Package marker
+│   │   ├── prompts.py         # SYSTEM_PROMPT + build_user_prompt()
+│   │   ├── schemas.py         # GenerateQuestionsRequest
+│   │   └── routes.py          # SSE streaming question generation endpoint
+│   └── analytics/
 │       ├── __init__.py        # Package marker
-│       ├── prompts.py         # SYSTEM_PROMPT + build_user_prompt()
-│       └── routes.py          # SSE streaming question generation endpoint
+│       ├── routes.py          # Overview, survey detail, interview list/detail
+│       ├── schemas.py         # Analytics response models
+│       ├── db.py              # Aggregation queries
+│       └── utils.py           # verify_survey_ownership()
 ├── client/                    # React frontend
 │   ├── index.html             # Entry HTML with Google Fonts
 │   ├── tailwind.config.js     # Design system (colors, fonts, animations)
@@ -62,18 +70,31 @@ surveyagent/
 │   │   │   ├── surveys.js     # Survey CRUD + publish API functions
 │   │   │   ├── ai.js          # streamGenerateQuestions() via fetch SSE
 │   │   │   └── interview.js   # Interview API: info, start, test, streamMessage
+│   │   ├── utils/
+│   │   │   ├── index.js       # Barrel export
+│   │   │   └── formatters.js  # formatDate, formatDuration, formatTimer, etc.
 │   │   ├── context/
 │   │   │   └── AuthContext.jsx # Auth state, login/register/updateProfile/logout
 │   │   ├── hooks/
-│   │   │   └── useAuth.js     # useContext(AuthContext) wrapper
+│   │   │   ├── index.js       # Barrel export
+│   │   │   ├── useAuth.js     # useContext(AuthContext) wrapper
+│   │   │   ├── useClipboard.js # Copy-to-clipboard hook
+│   │   │   ├── useSurveyForm.js # Survey form state + CRUD
+│   │   │   ├── useQuestionManager.js # Question list CRUD
+│   │   │   └── useAiGeneration.js # AI question generation state
 │   │   ├── components/
+│   │   │   ├── shared/
+│   │   │   │   ├── index.js           # Barrel export
+│   │   │   │   ├── StatusBadge.jsx    # Survey draft/published badge
+│   │   │   │   └── InterviewStatusBadge.jsx # Interview status badge
 │   │   │   ├── auth/
 │   │   │   │   └── ProtectedRoute.jsx  # Auth guard with Outlet
 │   │   │   ├── interview/
 │   │   │   │   ├── ChatThread.jsx      # Chat UI with assistant-ui primitives
 │   │   │   │   ├── InterviewChat.jsx   # Runtime adapter + AssistantRuntimeProvider
 │   │   │   │   ├── RespondentForm.jsx  # Optional respondent details form
-│   │   │   │   └── CompletionScreen.jsx # Thank-you screen after interview
+│   │   │   │   ├── CompletionScreen.jsx # Thank-you screen after interview
+│   │   │   │   └── TerminationScreen.jsx # Abuse termination screen
 │   │   │   └── landing/
 │   │   │       ├── Navbar.jsx       # Fixed floating pill navbar
 │   │   │       ├── Hero.jsx         # Headline + CTAs + Coming Soon badge
@@ -89,14 +110,17 @@ surveyagent/
 │   │   │       ├── FinalCTA.jsx     # Final call-to-action (dark bg)
 │   │   │       └── Footer.jsx       # 4-column footer
 │   │   └── pages/
-│   │       ├── Landing.jsx      # Composes all 13 landing sections
-│   │       ├── Login.jsx        # Glassmorphism login form
-│   │       ├── Register.jsx     # Glassmorphism register form
-│   │       ├── Dashboard.jsx    # Survey list grid with CRUD actions
-│   │       ├── Settings.jsx     # Profile edit (name, org_name)
-│   │       ├── SurveyForm.jsx   # Create/Edit survey + AI generation + Test Survey
-│   │       ├── SurveyDetail.jsx # Read-only survey view with share link + test button
-│   │       └── InterviewPage.jsx # Interview orchestrator (respondent + test modes)
+│   │       ├── Landing.jsx          # Composes all 13 landing sections
+│   │       ├── Login.jsx            # Glassmorphism login form
+│   │       ├── Register.jsx         # Glassmorphism register form
+│   │       ├── Dashboard.jsx        # Survey list grid with CRUD actions
+│   │       ├── Settings.jsx         # Profile edit (name, org_name)
+│   │       ├── SurveyForm.jsx       # Create/Edit survey (uses useSurveyForm + useQuestionManager + useAiGeneration hooks)
+│   │       ├── SurveyDetail.jsx     # Read-only survey view with share link + test button
+│   │       ├── InterviewPage.jsx    # Interview orchestrator (respondent + test modes)
+│   │       ├── AnalyticsOverview.jsx # Global analytics dashboard
+│   │       ├── SurveyAnalytics.jsx  # Per-survey analytics + interview sessions table
+│   │       └── InterviewDetail.jsx  # Interview transcript viewer
 ├── .env                       # Secrets (gitignored)
 ├── .env.example               # Template for .env
 ├── pyproject.toml             # Python deps (uv)
@@ -303,10 +327,57 @@ Requires a `.env` file at the project root (copy `.env.example`).
 - SSE streaming pattern: backend yields `data: {json}\n\n` events, frontend consumes via `fetch()` + `ReadableStream`.
 - React state updaters inside streaming callbacks must be **pure functions** (no mutable closure variables) to survive StrictMode double-invocation.
 
+## Coding Style & File Organization
+
+### Python Backend Module Pattern
+
+Every backend module must follow this structure. Only include files that the module needs.
+
+```
+server/<module>/
+├── __init__.py        # Package marker
+├── schemas.py         # All Pydantic models (request/response/DB) — NEVER inline in routes
+├── routes.py          # Thin route handlers — validate input, call utils/db/engine, return response
+├── utils.py           # Helper functions, constants, doc-to-response converters
+├── db.py              # Database CRUD operations (only if module does direct DB access)
+├── prompts.py         # LLM prompt templates (only if module uses AI)
+└── engine.py          # Core business logic / orchestration (only if complex processing)
+```
+
+**Python rules:**
+- **Routes are thin:** No inline Pydantic models, no inline helper functions, no business logic. Delegate to utils/db/engine.
+- **Public function names:** Functions in utils.py use public names (no underscore prefix) — they are module-level exports.
+- **Schema naming:** Use descriptive names: `XxxRequest`, `XxxResponse`, `XxxInDB`, `XxxCreate`, `XxxUpdate`.
+- **Error handling:** Every route uses `try / except HTTPException: raise / except Exception: log + log_error + raise 500`.
+- **Post-stream processing:** Complex post-stream logic (message saving, coverage updates, auto-completion) belongs in utils, not inline in route generators.
+
+### React Frontend Pattern
+
+```
+client/src/
+├── api/               # API layer — one file per backend module, barrel export via index.js
+├── components/
+│   ├── shared/        # Reusable UI components (badges, modals) with barrel index.js
+│   ├── <feature>/     # Feature-scoped components (interview/, auth/)
+│   └── landing/       # Landing page sections
+├── hooks/             # Custom hooks with barrel index.js
+├── utils/             # Pure utility functions (formatters, validators) with barrel index.js
+├── context/           # React contexts
+└── pages/             # Page components — compose hooks + render JSX, minimal logic
+```
+
+**React rules:**
+- **Pages are thin:** Pages compose hooks and render JSX. Extract state + logic into custom hooks when a page exceeds ~200 lines or has >5 useState calls.
+- **No duplication:** If a function/component is used in 2+ files, extract to `utils/` or `components/shared/`.
+- **Custom hooks:** One hook per file in `hooks/`, `use` prefix, export from `hooks/index.js`.
+- **Shared components:** Reusable UI components go in `components/shared/` with barrel export.
+- **Shared utilities:** Pure functions (formatters, validators, constants) go in `utils/` with barrel export.
+- **Barrel exports:** Each shared directory has an `index.js` for clean imports.
+- **Streaming callbacks:** State updaters inside streaming callbacks must be pure functions (no mutable closure variables) to survive StrictMode double-invocation.
+
 ## What's NOT Built Yet
 
 - Voice interview mode
 - Video avatar interview mode
-- Analytics / reporting
 - Email verification
 - Multi-tenant access control

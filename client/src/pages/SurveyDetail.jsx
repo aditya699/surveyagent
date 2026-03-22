@@ -15,31 +15,10 @@ import {
   BarChart3,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { useClipboard } from '../hooks/useClipboard';
 import { getSurvey } from '../api';
-
-function formatDate(dateString) {
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(new Date(dateString));
-}
-
-function StatusBadge({ status }) {
-  const isDraft = status === 'draft';
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-sans font-medium ${
-        isDraft ? 'bg-text-muted/10 text-text-muted' : 'bg-success/10 text-success'
-      }`}
-    >
-      <span
-        className={`w-1.5 h-1.5 rounded-full ${isDraft ? 'bg-text-muted' : 'bg-success'}`}
-      />
-      {isDraft ? 'Draft' : 'Published'}
-    </span>
-  );
-}
+import { formatDate } from '../utils/formatters';
+import StatusBadge from '../components/shared/StatusBadge';
 
 export default function SurveyDetail() {
   const { id } = useParams();
@@ -48,7 +27,7 @@ export default function SurveyDetail() {
   const [survey, setSurvey] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [copySuccess, setCopySuccess] = useState(false);
+  const { copied: copySuccess, copy: copyToClipboard } = useClipboard();
 
   useEffect(() => {
     const fetchSurvey = async () => {
@@ -63,13 +42,6 @@ export default function SurveyDetail() {
     };
     fetchSurvey();
   }, [id]);
-
-  const handleCopy = async () => {
-    const url = `${window.location.origin}/interview/${survey.token}`;
-    await navigator.clipboard.writeText(url);
-    setCopySuccess(true);
-    setTimeout(() => setCopySuccess(false), 2000);
-  };
 
   if (loading) {
     return (
@@ -157,7 +129,7 @@ export default function SurveyDetail() {
                   </span>
                 </div>
                 <button
-                  onClick={handleCopy}
+                  onClick={() => copyToClipboard(`${window.location.origin}/interview/${survey.token}`)}
                   className="btn-secondary text-sm inline-flex items-center gap-1.5 shrink-0"
                 >
                   {copySuccess ? (
