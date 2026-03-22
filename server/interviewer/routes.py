@@ -22,7 +22,7 @@ from server.interviewer.schemas import (
     StartInterviewRequest,
     SendMessageRequest,
 )
-from server.interviewer.utils import build_welcome, calc_remaining_minutes, process_stream_result
+from server.interviewer.utils import build_welcome, calc_remaining_minutes, process_stream_result, sanitize_user_input
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -145,8 +145,11 @@ async def send_message(
         if interview.status != "in_progress":
             raise HTTPException(status_code=400, detail="Interview session is no longer active")
 
+        # Sanitize user input to prevent tag injection
+        safe_message = sanitize_user_input(body.message)
+
         # Save user message
-        await add_message(session_id, "user", body.message)
+        await add_message(session_id, "user", safe_message)
 
         # Fetch survey for config
         db = await get_db()
@@ -165,7 +168,7 @@ async def send_message(
             {"role": msg.role, "content": msg.content}
             for msg in interview.conversation
         ]
-        conversation.append({"role": "user", "content": body.message})
+        conversation.append({"role": "user", "content": safe_message})
 
         personality = survey.get("personality_tone", "friendly")
         num_questions = len(survey.get("questions", []))

@@ -1,8 +1,9 @@
 """
 Interviewer utility functions — welcome message builder, time calculator,
-and post-stream processing.
+input sanitization, and post-stream processing.
 """
 
+import re
 from datetime import datetime
 from typing import Optional
 
@@ -13,6 +14,14 @@ from server.db.mongo import get_db
 from server.interviewer.db import add_message, update_questions_covered, update_status
 
 logger = get_logger(__name__)
+
+_TAG_RE = re.compile(r'\[(COVERED|ABUSE)\s*:.*?\]', re.IGNORECASE)
+
+
+def sanitize_user_input(text: str) -> str:
+    """Strip [COVERED:...] and [ABUSE:...] tags to prevent tag injection."""
+    return _TAG_RE.sub('', text).strip()
+
 
 DEFAULT_WELCOME = "Hi! Thanks for taking the time. This survey is about {title}. I'll ask you some questions one at a time — just reply naturally."
 
