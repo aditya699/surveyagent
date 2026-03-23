@@ -4,6 +4,19 @@ import uuid
 from server.surveys.schemas import SurveyResponse
 
 
+def normalize_questions(raw: list) -> list[dict]:
+    """Convert legacy string questions to QuestionItem dicts for backward compat."""
+    result = []
+    for q in raw:
+        if isinstance(q, str):
+            result.append({"text": q, "ai_instructions": None})
+        elif isinstance(q, dict):
+            result.append(q)
+        else:
+            result.append({"text": str(q), "ai_instructions": None})
+    return result
+
+
 def survey_doc_to_response(doc: dict) -> SurveyResponse:
     """Convert a MongoDB survey document to a SurveyResponse."""
     return SurveyResponse(
@@ -12,7 +25,7 @@ def survey_doc_to_response(doc: dict) -> SurveyResponse:
         description=doc.get("description", ""),
         goal=doc.get("goal", ""),
         context=doc.get("context", ""),
-        questions=doc.get("questions", []),
+        questions=normalize_questions(doc.get("questions", [])),
         estimated_duration=doc.get("estimated_duration", 5),
         welcome_message=doc.get("welcome_message"),
         personality_tone=doc.get("personality_tone", "friendly"),

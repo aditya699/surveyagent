@@ -12,3 +12,12 @@ class GenerateQuestionsRequest(BaseModel):
     goal: str = ""
     context: str = ""
     additional_info: str = ""
+
+
+class EnhanceFieldRequest(BaseModel):
+    field_name: str = Field(..., pattern=r"^(title|description|goal|context|welcome_message)$")
+    current_value: str = ""
+    title: str = ""
+    description: str = ""
+    goal: str = ""
+    context: str = ""

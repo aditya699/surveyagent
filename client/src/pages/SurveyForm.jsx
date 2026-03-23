@@ -1,17 +1,20 @@
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, LogOut, Plus, X, Sparkles, Loader2, MessageSquare } from 'lucide-react';
+import { ArrowLeft, LogOut, Plus, X, Sparkles, Loader2, MessageSquare, ChevronDown, ChevronRight, BotMessageSquare } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useSurveyForm } from '../hooks/useSurveyForm';
 import { useQuestionManager } from '../hooks/useQuestionManager';
 import { useAiGeneration } from '../hooks/useAiGeneration';
+import { useFieldEnhance } from '../hooks/useFieldEnhance';
 
 export default function SurveyForm() {
   const { id } = useParams();
   const { logout } = useAuth();
 
-  const { questions, setQuestions, addQuestion, updateQuestion, removeQuestion } =
+  const { questions, setQuestions, addQuestion, updateQuestion, updateAiInstructions, removeQuestion } =
     useQuestionManager();
+  const [expandedInstructions, setExpandedInstructions] = useState(new Set());
 
   const {
     isEdit,
@@ -36,6 +39,14 @@ export default function SurveyForm() {
     handleAiGenerate, handleAiCancel, toggleAiPanel,
   } = useAiGeneration({ title, description, goal, context, setQuestions });
 
+  const {
+    enhancingField, enhanceError,
+    enhanceField, cancelEnhance,
+  } = useFieldEnhance({
+    title, description, goal, context, welcomeMessage,
+    setTitle, setDescription, setGoal, setContext, setWelcomeMessage,
+  });
+
   if (loadingExisting) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -45,7 +56,8 @@ export default function SurveyForm() {
   }
 
   const isAlreadyPublished = existingStatus === 'published';
-  const canSubmit = title.trim().length > 0 && !saving && !publishing && !testing;
+  const canSubmit = title.trim().length > 0 && !saving && !publishing && !testing && !enhancingField;
+  const enhanceBusy = !!enhancingField || aiGenerating;
 
   return (
     <div className="min-h-screen bg-background">
@@ -78,17 +90,31 @@ export default function SurveyForm() {
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
           <form onSubmit={(e) => handleSave(e, questions)} className="space-y-6">
             {/* Error */}
-            {error && (
+            {(error || enhanceError) && (
               <div className="bg-error/10 border border-error/20 rounded-lg px-4 py-3 text-sm text-error font-sans">
-                {error}
+                {error || enhanceError}
               </div>
             )}
 
             {/* Title */}
             <div>
-              <label htmlFor="title" className="block text-sm font-sans text-text-muted mb-1.5">
-                Title <span className="text-error">*</span>
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label htmlFor="title" className="text-sm font-sans text-text-muted">
+                  Title <span className="text-error">*</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => enhancingField === 'title' ? cancelEnhance() : enhanceField('title')}
+                  disabled={enhanceBusy && enhancingField !== 'title'}
+                  className="flex items-center gap-1 text-xs text-accent hover:text-accent-hover transition-colors font-sans disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {enhancingField === 'title' ? (
+                    <><Loader2 className="w-3 h-3 animate-spin" /> Cancel</>
+                  ) : (
+                    <><Sparkles className="w-3 h-3" /> Enhance with AI</>
+                  )}
+                </button>
+              </div>
               <input
                 id="title"
                 type="text"
@@ -101,9 +127,23 @@ export default function SurveyForm() {
 
             {/* Description */}
             <div>
-              <label htmlFor="description" className="block text-sm font-sans text-text-muted mb-1.5">
-                Description
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label htmlFor="description" className="text-sm font-sans text-text-muted">
+                  Description
+                </label>
+                <button
+                  type="button"
+                  onClick={() => enhancingField === 'description' ? cancelEnhance() : enhanceField('description')}
+                  disabled={enhanceBusy && enhancingField !== 'description'}
+                  className="flex items-center gap-1 text-xs text-accent hover:text-accent-hover transition-colors font-sans disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {enhancingField === 'description' ? (
+                    <><Loader2 className="w-3 h-3 animate-spin" /> Cancel</>
+                  ) : (
+                    <><Sparkles className="w-3 h-3" /> Enhance with AI</>
+                  )}
+                </button>
+              </div>
               <textarea
                 id="description"
                 value={description}
@@ -116,9 +156,23 @@ export default function SurveyForm() {
 
             {/* Goal */}
             <div>
-              <label htmlFor="goal" className="block text-sm font-sans text-text-muted mb-1.5">
-                Goal
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label htmlFor="goal" className="text-sm font-sans text-text-muted">
+                  Goal
+                </label>
+                <button
+                  type="button"
+                  onClick={() => enhancingField === 'goal' ? cancelEnhance() : enhanceField('goal')}
+                  disabled={enhanceBusy && enhancingField !== 'goal'}
+                  className="flex items-center gap-1 text-xs text-accent hover:text-accent-hover transition-colors font-sans disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {enhancingField === 'goal' ? (
+                    <><Loader2 className="w-3 h-3 animate-spin" /> Cancel</>
+                  ) : (
+                    <><Sparkles className="w-3 h-3" /> Enhance with AI</>
+                  )}
+                </button>
+              </div>
               <textarea
                 id="goal"
                 value={goal}
@@ -131,9 +185,23 @@ export default function SurveyForm() {
 
             {/* Context */}
             <div>
-              <label htmlFor="context" className="block text-sm font-sans text-text-muted mb-1.5">
-                Context
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label htmlFor="context" className="text-sm font-sans text-text-muted">
+                  Context
+                </label>
+                <button
+                  type="button"
+                  onClick={() => enhancingField === 'context' ? cancelEnhance() : enhanceField('context')}
+                  disabled={enhanceBusy && enhancingField !== 'context'}
+                  className="flex items-center gap-1 text-xs text-accent hover:text-accent-hover transition-colors font-sans disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {enhancingField === 'context' ? (
+                    <><Loader2 className="w-3 h-3 animate-spin" /> Cancel</>
+                  ) : (
+                    <><Sparkles className="w-3 h-3" /> Enhance with AI</>
+                  )}
+                </button>
+              </div>
               <textarea
                 id="context"
                 value={context}
@@ -180,9 +248,23 @@ export default function SurveyForm() {
 
             {/* Welcome Message */}
             <div>
-              <label htmlFor="welcomeMessage" className="block text-sm font-sans text-text-muted mb-1.5">
-                Welcome Message
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label htmlFor="welcomeMessage" className="text-sm font-sans text-text-muted">
+                  Welcome Message
+                </label>
+                <button
+                  type="button"
+                  onClick={() => enhancingField === 'welcome_message' ? cancelEnhance() : enhanceField('welcome_message')}
+                  disabled={enhanceBusy && enhancingField !== 'welcome_message'}
+                  className="flex items-center gap-1 text-xs text-accent hover:text-accent-hover transition-colors font-sans disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {enhancingField === 'welcome_message' ? (
+                    <><Loader2 className="w-3 h-3 animate-spin" /> Cancel</>
+                  ) : (
+                    <><Sparkles className="w-3 h-3" /> Enhance with AI</>
+                  )}
+                </button>
+              </div>
               <textarea
                 id="welcomeMessage"
                 value={welcomeMessage}
@@ -197,27 +279,59 @@ export default function SurveyForm() {
             <div>
               <label className="block text-sm font-sans text-text-muted mb-3">Questions</label>
               <div className="space-y-3">
-                {questions.map((q, i) => (
-                  <div key={i} className="flex items-start gap-2">
-                    <span className="text-sm text-text-muted font-sans mt-3 w-6 text-right shrink-0">
-                      {i + 1}.
-                    </span>
-                    <textarea
-                      value={q}
-                      onChange={(e) => updateQuestion(i, e.target.value)}
-                      rows={2}
-                      className="flex-1 bg-white border border-card-border rounded-lg px-4 py-3 text-sm font-sans text-text-primary placeholder:text-text-muted/40 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-all resize-none"
-                      placeholder={`Question ${i + 1}`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeQuestion(i)}
-                      className="mt-2 p-1.5 text-text-muted/40 hover:text-error transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
+                {questions.map((q, i) => {
+                  const isExpanded = expandedInstructions.has(i) || !!q.aiInstructions;
+                  return (
+                    <div key={i} className="flex items-start gap-2">
+                      <span className="text-sm text-text-muted font-sans mt-3 w-6 text-right shrink-0">
+                        {i + 1}.
+                      </span>
+                      <div className="flex-1 space-y-1">
+                        <textarea
+                          value={q.text}
+                          onChange={(e) => updateQuestion(i, e.target.value)}
+                          rows={2}
+                          className="w-full bg-white border border-card-border rounded-lg px-4 py-3 text-sm font-sans text-text-primary placeholder:text-text-muted/40 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-all resize-none"
+                          placeholder={`Question ${i + 1}`}
+                        />
+                        <div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setExpandedInstructions((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(i)) next.delete(i);
+                                else next.add(i);
+                                return next;
+                              });
+                            }}
+                            className="flex items-center gap-1 text-xs text-text-muted hover:text-accent transition-colors font-sans"
+                          >
+                            {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                            <BotMessageSquare className="w-3 h-3" />
+                            AI Instructions
+                          </button>
+                          {isExpanded && (
+                            <input
+                              type="text"
+                              value={q.aiInstructions}
+                              onChange={(e) => updateAiInstructions(i, e.target.value)}
+                              className="w-full mt-1 bg-accent/5 border border-accent/20 rounded-lg px-3 py-2 text-xs font-sans text-text-primary placeholder:text-text-muted/40 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-all"
+                              placeholder="e.g. Drill down on this topic, ask follow-ups / Don't probe, accept as-is"
+                            />
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeQuestion(i)}
+                        className="mt-2 p-1.5 text-text-muted/40 hover:text-error transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
               <div className="flex items-center gap-4 mt-3">
                 <button
@@ -231,7 +345,8 @@ export default function SurveyForm() {
                 <button
                   type="button"
                   onClick={toggleAiPanel}
-                  className="flex items-center gap-1.5 text-sm text-accent hover:text-accent-hover transition-colors font-sans"
+                  disabled={!!enhancingField}
+                  className="flex items-center gap-1.5 text-sm text-accent hover:text-accent-hover transition-colors font-sans disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <Sparkles className="w-4 h-4" />
                   AI Generate Questions

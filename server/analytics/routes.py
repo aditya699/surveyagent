@@ -1,13 +1,19 @@
+import json
+
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from bson import ObjectId
 from server.auth.utils import get_current_user
 from server.db.mongo import get_db, log_error
+from server.core.config import settings
+from server.core.llm import get_openai_client
 from server.core.logging_config import get_logger
 from server.analytics.db import (
     get_overview_stats,
     get_survey_detail_stats,
     get_interview_list,
     get_interview_detail,
+    save_analysis,
 )
 from server.analytics.schemas import (
     SurveyOverviewResponse,
@@ -16,7 +22,7 @@ from server.analytics.schemas import (
     InterviewListResponse,
     InterviewDetailResponse,
 )
-
+from server.analytics.prompts import ANALYSIS_SYSTEM_PROMPT, build_analysis_prompt
 from server.analytics.utils import verify_survey_ownership
 
 logger = get_logger(__name__)
@@ -119,6 +125,7 @@ async def interview_detail(interview_id: str, current_user: dict = Depends(get_c
             started_at=interview["started_at"],
             completed_at=interview["completed_at"],
             duration_seconds=interview["duration_seconds"],
+            analysis=interview.get("analysis"),
         )
     except HTTPException:
         raise
@@ -126,3 +133,89 @@ async def interview_detail(interview_id: str, current_user: dict = Depends(get_c
         logger.error(f"Error fetching interview detail: {e}", exc_info=True)
         await log_error(e, "analytics/routes.py::interview_detail", {"interview_id": interview_id})
         raise HTTPException(status_code=500, detail="Failed to fetch interview detail")
+
+
+@router.post("/interviews/{interview_id}/analyze")
+async def analyze_interview(interview_id: str, current_user: dict = Depends(get_current_user)):
+    """
+    Stream AI analysis of an interview transcript via SSE.
+
+    Each token is sent as: data: {"token": "..."}\n\n
+    Final event: data: [DONE]\n\n
+    The completed analysis JSON is cached in the interview document.
+    """
+    try:
+        interview = await get_interview_detail(interview_id)
+        if not interview:
+            raise HTTPException(status_code=404, detail="Interview not found")
+
+        # Verify ownership through the linked survey
+        survey = await verify_survey_ownership(interview["survey_id"], current_user["user_id"])
+
+        if not interview.get("conversation"):
+            raise HTTPException(status_code=400, detail="Interview has no conversation to analyze")
+
+        user_prompt = build_analysis_prompt(
+            survey=survey,
+            conversation=interview["conversation"],
+            respondent=interview.get("respondent"),
+            questions_covered=interview.get("questions_covered"),
+        )
+
+        client = await get_openai_client()
+
+        async def event_stream():
+            result_buffer = ""
+            try:
+                stream = await client.responses.create(
+                    model=settings.OPENAI_MODEL,
+                    input=[
+                        {"role": "developer", "content": ANALYSIS_SYSTEM_PROMPT},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    stream=True,
+                )
+
+                async for event in stream:
+                    if hasattr(event, "type") and event.type == "response.output_text.delta":
+                        result_buffer += event.delta
+                        yield f"data: {json.dumps({'token': event.delta})}\n\n"
+
+                # Parse and cache the analysis
+                try:
+                    # Strip any accidental markdown fencing
+                    clean = result_buffer.strip()
+                    if clean.startswith("```"):
+                        clean = clean.split("\n", 1)[1] if "\n" in clean else clean[3:]
+                    if clean.endswith("```"):
+                        clean = clean[:-3]
+                    clean = clean.strip()
+
+                    analysis = json.loads(clean)
+                    await save_analysis(interview_id, analysis)
+                except (json.JSONDecodeError, Exception) as parse_err:
+                    logger.warning(f"Failed to parse analysis JSON: {parse_err}")
+
+                yield "data: [DONE]\n\n"
+
+            except Exception as e:
+                logger.error(f"AI interview analysis failed: {e}", exc_info=True)
+                yield f"data: {json.dumps({'error': str(e)})}\n\n"
+                yield "data: [DONE]\n\n"
+
+        return StreamingResponse(
+            event_stream(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error starting interview analysis: {e}", exc_info=True)
+        await log_error(e, "analytics/routes.py::analyze_interview", {"interview_id": interview_id})
+        raise HTTPException(status_code=500, detail="Failed to start interview analysis")

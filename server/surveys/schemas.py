@@ -4,6 +4,12 @@ from datetime import datetime
 from typing import Optional, List
 
 
+class QuestionItem(BaseModel):
+    """A single survey question with optional AI interviewer instructions."""
+    text: str = Field(..., description="The question text", min_length=1)
+    ai_instructions: Optional[str] = Field(None, description="Optional instructions for the AI interviewer on how to handle this question")
+
+
 class SurveyCreate(BaseModel):
     """
     Deep Technical Context:
@@ -16,7 +22,7 @@ class SurveyCreate(BaseModel):
     description: str = Field("", description="Survey description")
     goal: str = Field("", description="Survey goal / objective")
     context: str = Field("", description="Context or background for the survey")
-    questions: List[str] = Field(default_factory=list, description="List of survey questions")
+    questions: List[QuestionItem] = Field(default_factory=list, description="List of survey questions")
     estimated_duration: int = Field(5, description="Estimated interview duration in minutes", ge=1, le=60)
     welcome_message: Optional[str] = Field(None, description="Custom welcome message for respondents", max_length=1000)
     personality_tone: str = Field("friendly", description="Interviewer tone: professional, friendly, casual, or fun")
@@ -34,7 +40,7 @@ class SurveyUpdate(BaseModel):
     description: Optional[str] = Field(None, description="Survey description")
     goal: Optional[str] = Field(None, description="Survey goal / objective")
     context: Optional[str] = Field(None, description="Context or background for the survey")
-    questions: Optional[List[str]] = Field(None, description="List of survey questions")
+    questions: Optional[List[QuestionItem]] = Field(None, description="List of survey questions")
     estimated_duration: Optional[int] = Field(None, description="Estimated interview duration in minutes", ge=1, le=60)
     welcome_message: Optional[str] = Field(None, description="Custom welcome message for respondents", max_length=1000)
     personality_tone: Optional[str] = Field(None, description="Interviewer tone: professional, friendly, casual, or fun")
@@ -52,7 +58,7 @@ class SurveyInDB(BaseModel):
     description: str = Field("", description="Survey description")
     goal: str = Field("", description="Survey goal / objective")
     context: str = Field("", description="Context or background for the survey")
-    questions: List[str] = Field(default_factory=list, description="List of survey questions")
+    questions: List[QuestionItem] = Field(default_factory=list, description="List of survey questions")
     estimated_duration: int = Field(5, description="Estimated interview duration in minutes")
     welcome_message: Optional[str] = Field(None, description="Custom welcome message for respondents")
     personality_tone: str = Field("friendly", description="Interviewer tone: professional, friendly, casual, or fun")
@@ -75,7 +81,7 @@ class SurveyResponse(BaseModel):
     description: str = Field("", description="Survey description")
     goal: str = Field("", description="Survey goal / objective")
     context: str = Field("", description="Context or background for the survey")
-    questions: List[str] = Field(default_factory=list, description="List of survey questions")
+    questions: List[QuestionItem] = Field(default_factory=list, description="List of survey questions")
     estimated_duration: int = Field(5, description="Estimated interview duration in minutes")
     welcome_message: Optional[str] = Field(None, description="Custom welcome message for respondents")
     personality_tone: str = Field("friendly", description="Interviewer tone: professional, friendly, casual, or fun")

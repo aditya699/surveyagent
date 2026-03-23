@@ -10,8 +10,8 @@ from server.auth.utils import get_current_user
 from server.core.config import settings
 from server.core.llm import get_openai_client
 from server.core.logging_config import get_logger
-from server.ai.prompts import SYSTEM_PROMPT, build_user_prompt
-from server.ai.schemas import GenerateQuestionsRequest
+from server.ai.prompts import SYSTEM_PROMPT, build_user_prompt, ENHANCE_SYSTEM_PROMPT, build_enhance_prompt
+from server.ai.schemas import GenerateQuestionsRequest, EnhanceFieldRequest
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -76,6 +76,61 @@ async def generate_questions(
 
         except Exception as e:
             logger.error(f"AI question generation failed: {e}", exc_info=True)
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+            yield "data: [DONE]\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@router.post("/enhance-field")
+async def enhance_field(
+    request: EnhanceFieldRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Stream AI-enhanced content for a single survey field via SSE.
+
+    Each token is sent as: data: {"token": "..."}\n\n
+    Final event: data: [DONE]\n\n
+    """
+    user_prompt = build_enhance_prompt(
+        field_name=request.field_name,
+        current_value=request.current_value,
+        title=request.title,
+        description=request.description,
+        goal=request.goal,
+        context=request.context,
+    )
+
+    client = await get_openai_client()
+
+    async def event_stream():
+        try:
+            stream = await client.responses.create(
+                model=settings.OPENAI_MODEL,
+                input=[
+                    {"role": "developer", "content": ENHANCE_SYSTEM_PROMPT},
+                    {"role": "user", "content": user_prompt},
+                ],
+                stream=True,
+            )
+
+            async for event in stream:
+                if hasattr(event, "type") and event.type == "response.output_text.delta":
+                    yield f"data: {json.dumps({'token': event.delta})}\n\n"
+
+            yield "data: [DONE]\n\n"
+
+        except Exception as e:
+            logger.error(f"AI field enhancement failed: {e}", exc_info=True)
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
             yield "data: [DONE]\n\n"
 

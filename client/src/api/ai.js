@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// AI API — streaming question generation via SSE
+// AI API — streaming question generation + field enhancement via SSE
 // Uses fetch (not Axios) because Axios doesn't support readable streams.
 // ---------------------------------------------------------------------------
 
@@ -76,5 +76,140 @@ export async function streamGenerateQuestions({ data, onQuestion, onDone, onErro
   } catch (err) {
     if (err.name === 'AbortError') return;
     onError?.(err.message || 'Failed to generate questions');
+  }
+}
+
+/**
+ * Stream AI-enhanced content for a single survey field via SSE.
+ *
+ * @param {Object}   data       - { field_name, current_value, title, description, goal, context }
+ * @param {Function} onToken    - Called with each text token as it arrives
+ * @param {Function} onDone     - Called when enhancement is complete
+ * @param {Function} onError    - Called with error message string
+ * @param {AbortSignal} [signal] - Optional AbortSignal for cancellation
+ */
+/**
+ * Stream AI analysis of an interview transcript via SSE.
+ *
+ * @param {string}  interviewId       - Interview session ID
+ * @param {Function} onToken          - Called with each text token as it arrives
+ * @param {Function} onDone           - Called when analysis is complete
+ * @param {Function} onError          - Called with error message string
+ * @param {AbortSignal} [signal]      - Optional AbortSignal for cancellation
+ */
+export async function streamAnalyzeInterview({ interviewId, onToken, onDone, onError, signal }) {
+  const token = localStorage.getItem('access_token');
+
+  try {
+    const res = await fetch(`${API_URL}${ENDPOINTS.ANALYTICS.ANALYZE_INTERVIEW(interviewId)}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      signal,
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Request failed' }));
+      onError?.(err.detail || `HTTP ${res.status}`);
+      return;
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const payload = line.slice(6).trim();
+
+        if (payload === '[DONE]') {
+          onDone?.();
+          return;
+        }
+
+        try {
+          const parsed = JSON.parse(payload);
+          if (parsed.token) onToken?.(parsed.token);
+          if (parsed.error) onError?.(parsed.error);
+        } catch {
+          // skip malformed JSON
+        }
+      }
+    }
+
+    onDone?.();
+  } catch (err) {
+    if (err.name === 'AbortError') return;
+    onError?.(err.message || 'Failed to analyze interview');
+  }
+}
+
+export async function streamEnhanceField({ data, onToken, onDone, onError, signal }) {
+  const token = localStorage.getItem('access_token');
+
+  try {
+    const res = await fetch(`${API_URL}${ENDPOINTS.AI.ENHANCE_FIELD}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(data),
+      signal,
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Request failed' }));
+      onError?.(err.detail || `HTTP ${res.status}`);
+      return;
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const payload = line.slice(6).trim();
+
+        if (payload === '[DONE]') {
+          onDone?.();
+          return;
+        }
+
+        try {
+          const parsed = JSON.parse(payload);
+          if (parsed.token) onToken?.(parsed.token);
+          if (parsed.error) onError?.(parsed.error);
+        } catch {
+          // skip malformed JSON
+        }
+      }
+    }
+
+    onDone?.();
+  } catch (err) {
+    if (err.name === 'AbortError') return;
+    onError?.(err.message || 'Failed to enhance field');
   }
 }

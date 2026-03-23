@@ -23,7 +23,7 @@ export {
   deleteSurvey,
   publishSurvey,
 } from './surveys';
-export { streamGenerateQuestions } from './ai';
+export { streamGenerateQuestions, streamEnhanceField, streamAnalyzeInterview } from './ai';
 export {
   getInterviewInfo,
   startInterview,

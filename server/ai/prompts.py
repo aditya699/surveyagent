@@ -1,7 +1,11 @@
 """
-Prompt templates for AI-powered survey question generation.
+Prompt templates for AI-powered survey question generation and field enhancement.
 """
 
+
+# ---------------------------------------------------------------------------
+# Question generation prompts
+# ---------------------------------------------------------------------------
 
 SYSTEM_PROMPT = """You are a survey design expert. Your job is to generate high-quality survey questions.
 
@@ -39,4 +43,61 @@ def build_user_prompt(
         parts.append(f"Survey context: {context}")
     if additional_info:
         parts.append(f"Additional instructions: {additional_info}")
+    return "\n".join(parts)
+
+
+# ---------------------------------------------------------------------------
+# Field enhancement prompts
+# ---------------------------------------------------------------------------
+
+ENHANCE_SYSTEM_PROMPT = """You are a survey design expert who helps craft compelling survey content.
+Your job is to enhance or generate content for a specific survey field.
+
+RULES:
+1. Output ONLY the enhanced field content. No preamble, no explanation, no quotes, no markdown.
+2. If the user provides a current value, improve it while preserving the original intent.
+3. If no current value is provided, generate appropriate content from scratch using available context.
+4. Keep the output appropriate for the target field type (see instructions below)."""
+
+FIELD_INSTRUCTIONS = {
+    "title": "Generate a concise, clear survey title (one line, under 80 characters). It should be descriptive and engaging.",
+    "description": "Write a clear, informative survey description (2-4 sentences). Explain what the survey covers and why it matters.",
+    "goal": "Write a focused survey goal (1-3 sentences). State what insights or outcomes the survey aims to achieve.",
+    "context": "Write relevant survey context (2-4 sentences). Include target audience, background information, and any constraints.",
+    "welcome_message": "Write a warm, inviting welcome message (2-3 sentences). Greet the respondent and briefly explain what to expect.",
+}
+
+CONTEXT_HIERARCHY = {
+    "title": [],
+    "description": ["title"],
+    "goal": ["title", "description"],
+    "context": ["title", "description", "goal"],
+    "welcome_message": ["title", "description", "goal", "context"],
+}
+
+
+def build_enhance_prompt(
+    field_name: str,
+    current_value: str = "",
+    title: str = "",
+    description: str = "",
+    goal: str = "",
+    context: str = "",
+) -> str:
+    """Build the user prompt for field enhancement."""
+    fields_map = {"title": title, "description": description, "goal": goal, "context": context}
+    allowed = CONTEXT_HIERARCHY[field_name]
+
+    parts = [f"Target field: {field_name}", FIELD_INSTRUCTIONS[field_name]]
+
+    for key in allowed:
+        val = fields_map.get(key, "").strip()
+        if val:
+            parts.append(f"Survey {key}: {val}")
+
+    if current_value.strip():
+        parts.append(f"Current value to improve: {current_value.strip()}")
+    else:
+        parts.append("No current value provided. Generate fresh content.")
+
     return "\n".join(parts)

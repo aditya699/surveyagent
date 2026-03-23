@@ -83,3 +83,4 @@ class InterviewDetailResponse(BaseModel):
     started_at: datetime = Field(..., description="Start timestamp")
     completed_at: Optional[datetime] = Field(None, description="Completion timestamp")
     duration_seconds: Optional[float] = Field(None, description="Duration in seconds")
+    analysis: Optional[Dict[str, Any]] = Field(None, description="Cached AI analysis")

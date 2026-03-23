@@ -4,7 +4,7 @@
 
 SurveyAgent is an open-source AI survey platform that replaces static forms with dynamic conversations. It conducts interviews via text chat, voice, or video avatar. It's self-hostable, LLM-agnostic, and keeps survey data under the user's control.
 
-**Status:** Early development. Auth system, landing page, survey CRUD, AI question generation, interviewer foundation, interviewer engine + routes, interview chat UI (text), and analytics are built. Voice and video are not yet implemented.
+**Status:** Early development. Auth system, landing page, survey CRUD, AI question generation, AI field enhancement, interviewer foundation, interviewer engine + routes, interview chat UI (text), and analytics are built. Voice and video are not yet implemented.
 
 ## Tech Stack
 
@@ -44,9 +44,9 @@ surveyagent/
 │   │   └── routes.py          # Interview API: start, message, test
 │   ├── ai/
 │   │   ├── __init__.py        # Package marker
-│   │   ├── prompts.py         # SYSTEM_PROMPT + build_user_prompt()
-│   │   ├── schemas.py         # GenerateQuestionsRequest
-│   │   └── routes.py          # SSE streaming question generation endpoint
+│   │   ├── prompts.py         # Question generation + field enhancement prompts & builders
+│   │   ├── schemas.py         # GenerateQuestionsRequest, EnhanceFieldRequest
+│   │   └── routes.py          # SSE streaming: question generation + field enhancement
 │   └── analytics/
 │       ├── __init__.py        # Package marker
 │       ├── routes.py          # Overview, survey detail, interview list/detail
@@ -81,7 +81,8 @@ surveyagent/
 │   │   │   ├── useClipboard.js # Copy-to-clipboard hook
 │   │   │   ├── useSurveyForm.js # Survey form state + CRUD
 │   │   │   ├── useQuestionManager.js # Question list CRUD
-│   │   │   └── useAiGeneration.js # AI question generation state
+│   │   │   ├── useAiGeneration.js # AI question generation state
+│   │   │   └── useFieldEnhance.js # AI field enhancement streaming state
 │   │   ├── components/
 │   │   │   ├── shared/
 │   │   │   │   ├── index.js           # Barrel export
@@ -115,7 +116,7 @@ surveyagent/
 │   │       ├── Register.jsx         # Glassmorphism register form
 │   │       ├── Dashboard.jsx        # Survey list grid with CRUD actions
 │   │       ├── Settings.jsx         # Profile edit (name, org_name)
-│   │       ├── SurveyForm.jsx       # Create/Edit survey (uses useSurveyForm + useQuestionManager + useAiGeneration hooks)
+│   │       ├── SurveyForm.jsx       # Create/Edit survey (uses useSurveyForm + useQuestionManager + useAiGeneration + useFieldEnhance hooks)
 │   │       ├── SurveyDetail.jsx     # Read-only survey view with share link + test button
 │   │       ├── InterviewPage.jsx    # Interview orchestrator (respondent + test modes)
 │   │       ├── AnalyticsOverview.jsx # Global analytics dashboard
@@ -156,7 +157,7 @@ Requires a `.env` file at the project root (copy `.env.example`).
 
 ### Survey Management (complete)
 - Full CRUD: create, list, view, edit, delete surveys
-- Survey fields: title, description, goal, context, questions (string array), estimated_duration (int, minutes, default 5), welcome_message (optional string), personality_tone (professional/friendly/casual/fun, default "friendly")
+- Survey fields: title, description, goal, context, questions (array of QuestionItem: {text, ai_instructions}), estimated_duration (int, minutes, default 5), welcome_message (optional string), personality_tone (professional/friendly/casual/fun, default "friendly")
 - Draft → Published workflow with uuid4 token generation
 - Ownership isolation: admins only see their own surveys
 - Dashboard with survey cards (status badge, dates, share link, actions)
@@ -171,6 +172,16 @@ Requires a `.env` file at the project root (copy `.env.example`).
 - Abort support (cancel mid-stream)
 - Generated questions are fully editable (same textarea list as manual questions)
 - Prompts separated into `server/ai/prompts.py`
+
+### AI Field Enhancement (complete)
+- "Enhance with AI" button on each text field (title, description, goal, context, welcome_message) in the survey form
+- Context flows top-to-bottom: enhancing a field sends all filled fields above it as context
+- Streaming SSE — tokens appear character-by-character via `data: {"token": "..."}\n\n`
+- If field has existing content, AI improves it; if empty, AI generates fresh content
+- Single-field-at-a-time constraint — other enhance buttons disabled during streaming
+- Cancel mid-stream support via AbortController
+- `useFieldEnhance` hook manages streaming state, field setters, and abort
+- Mutual exclusion with AI question generation (both disable each other's buttons)
 
 ### Landing Page (complete)
 - 13-section marketing page with scroll animations (Framer Motion)
@@ -251,9 +262,18 @@ Requires a `.env` file at the project root (copy `.env.example`).
 - Prompt asks LLM to output one question per line (no JSON, no numbering) for easy newline-based parsing.
 - `onQuestion` callback uses pure state updater (filters empties + appends) — safe under React StrictMode double-invocation.
 
+### AI Field Enhancement
+- Uses the same OpenAI Responses API streaming pattern as question generation, but emits raw text tokens instead of complete questions.
+- SSE format: `data: {"token": "..."}\n\n` per chunk (not per question). Frontend accumulates tokens character-by-character into the field via `setter(prev => prev + token)`.
+- Context hierarchy is top-to-bottom: title has no context, description gets title, goal gets title+description, etc. Defined in `CONTEXT_HIERARCHY` dict in both `server/ai/prompts.py` and `client/src/hooks/useFieldEnhance.js`.
+- `build_enhance_prompt()` selects context fields based on hierarchy, includes per-field instructions from `FIELD_INSTRUCTIONS` dict.
+- `current_value` is captured before the field is cleared, so the AI knows what to improve (or generates fresh if empty).
+- `useFieldEnhance` hook: one field at a time (`enhancingField` state is null or a field name string). Other enhance buttons and AI question generation are disabled via `enhanceBusy` flag.
+
 ### Interviewer
 - System prompt uses `{remaining_minutes}` and `{personality_tone}` placeholders, formatted at runtime.
 - `personality_tone` controls the LLM's conversational style: professional, friendly, casual, or fun. Stored on the survey, injected into prompt on every turn.
+- Per-question `ai_instructions` (optional) let survey creators control interviewer behavior per question (e.g., "drill down", "don't probe", "ask for examples"). Injected as `[Instructions: ...]` below each question in the prompt. Prompt builder handles both legacy string and new dict question formats via `isinstance` check.
 - `welcome_message` is an optional custom greeting. If blank, default template inserts survey title. Saved as the first assistant message in the session.
 - Coverage tag `[COVERED: 1, 3, 5]` uses 1-based indices matching the numbered question list in the prompt. Backend parses via regex (`parse_coverage_tag()` in `engine.py`) and strips before saving.
 - Conversation history is embedded in the interview document (bounded at ~40 messages), not a separate collection.
@@ -275,7 +295,7 @@ Requires a `.env` file at the project root (copy `.env.example`).
 - Database name: `surveyagent` (configurable via `MONGO_DB_NAME`)
 - Collections: `admins` (user accounts), `surveys` (survey definitions), `interviews` (chat sessions), `error_logs` (error tracking)
 - Admin document fields: `name`, `email`, `password`, `org_name`, `token_version`, `is_active`, `created_at`, `updated_at`, `last_login`
-- Survey document fields: `title`, `description`, `goal`, `context`, `questions`, `estimated_duration`, `welcome_message`, `personality_tone`, `status`, `token`, `created_by`, `created_at`, `updated_at`
+- Survey document fields: `title`, `description`, `goal`, `context`, `questions` (array of {text, ai_instructions}), `estimated_duration`, `welcome_message`, `personality_tone`, `status`, `token`, `created_by`, `created_at`, `updated_at`
 - Interview document fields: `survey_id`, `respondent` (embedded: name, age, gender, occupation, phone_number, email — all optional), `conversation` (list of {role, content, timestamp}), `status` (in_progress/completed/abandoned), `is_test_run`, `questions_covered` (list of ints), `started_at`, `completed_at`
 
 ## API Endpoints
@@ -306,6 +326,7 @@ Requires a `.env` file at the project root (copy `.env.example`).
 | Method | Path                | Auth     | Description                                  |
 |--------|---------------------|----------|----------------------------------------------|
 | POST   | /generate-questions | Bearer   | Stream AI-generated questions via SSE         |
+| POST   | /enhance-field      | Bearer   | Stream AI-enhanced content for a single field  |
 
 ### Interview — `/api/v1/interview`
 

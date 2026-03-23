@@ -45,7 +45,7 @@ async def create_survey(
             "description": survey_data.description.strip(),
             "goal": survey_data.goal.strip(),
             "context": survey_data.context.strip(),
-            "questions": survey_data.questions,
+            "questions": [q.model_dump() for q in survey_data.questions],
             "estimated_duration": survey_data.estimated_duration,
             "welcome_message": survey_data.welcome_message,
             "personality_tone": survey_data.personality_tone,

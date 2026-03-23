@@ -17,6 +17,7 @@ export const ENDPOINTS = {
 
   AI: {
     GENERATE_QUESTIONS: `${PREFIX}/ai/generate-questions`,
+    ENHANCE_FIELD: `${PREFIX}/ai/enhance-field`,
   },
 
   INTERVIEW: {
@@ -36,10 +37,11 @@ export const ENDPOINTS = {
   },
 
   ANALYTICS: {
-    OVERVIEW:         `${PREFIX}/analytics/surveys`,
-    SURVEY:           (id) => `${PREFIX}/analytics/surveys/${id}`,
-    INTERVIEWS:       (id) => `${PREFIX}/analytics/surveys/${id}/interviews`,
-    INTERVIEW_DETAIL: (id) => `${PREFIX}/analytics/interviews/${id}`,
+    OVERVIEW:          `${PREFIX}/analytics/surveys`,
+    SURVEY:            (id) => `${PREFIX}/analytics/surveys/${id}`,
+    INTERVIEWS:        (id) => `${PREFIX}/analytics/surveys/${id}/interviews`,
+    INTERVIEW_DETAIL:  (id) => `${PREFIX}/analytics/interviews/${id}`,
+    ANALYZE_INTERVIEW: (id) => `${PREFIX}/analytics/interviews/${id}/analyze`,
   },
 };
 

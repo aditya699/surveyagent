@@ -27,8 +27,8 @@ export function useAiGeneration({ title, description, goal, context, setQuestion
       },
       onQuestion: (question) => {
         setQuestions((prev) => {
-          const nonEmpty = prev.filter((q) => q.trim() !== '');
-          return [...nonEmpty, question];
+          const nonEmpty = prev.filter((q) => q.text.trim() !== '');
+          return [...nonEmpty, { text: question, aiInstructions: '' }];
         });
       },
       onDone: () => {

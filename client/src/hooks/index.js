@@ -3,3 +3,5 @@ export { useClipboard } from './useClipboard';
 export { useSurveyForm } from './useSurveyForm';
 export { useQuestionManager } from './useQuestionManager';
 export { useAiGeneration } from './useAiGeneration';
+export { useFieldEnhance } from './useFieldEnhance';
+export { useInterviewAnalysis } from './useInterviewAnalysis';

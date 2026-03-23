@@ -121,8 +121,8 @@ export default function SurveyDetail() {
           {survey.status === 'published' && survey.token && (
             <div className="card">
               <label className="block text-sm font-sans text-text-muted mb-2">Shareable link</label>
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2 flex-1 bg-background rounded-lg px-4 py-3">
+              <div className="flex items-center bg-background rounded-lg overflow-hidden">
+                <div className="flex items-center gap-2 flex-1 min-w-0 px-4 py-3">
                   <ExternalLink className="w-4 h-4 text-text-muted/40 shrink-0" />
                   <span className="text-sm font-sans text-text-primary truncate">
                     {window.location.origin}/s/{survey.token}
@@ -130,7 +130,7 @@ export default function SurveyDetail() {
                 </div>
                 <button
                   onClick={() => copyToClipboard(`${window.location.origin}/interview/${survey.token}`)}
-                  className="btn-secondary text-sm inline-flex items-center gap-1.5 shrink-0"
+                  className="inline-flex items-center gap-1.5 px-4 py-3 text-sm font-sans font-medium text-text-muted hover:text-text-primary transition-colors shrink-0 border-l border-card-border"
                 >
                   {copySuccess ? (
                     <>
@@ -191,44 +191,58 @@ export default function SurveyDetail() {
             <div>
               <h3 className="text-sm font-sans text-text-muted mb-3">Questions</h3>
               <ol className="space-y-3">
-                {survey.questions.map((q, i) => (
-                  <li key={i} className="flex gap-3">
-                    <span className="text-sm text-text-muted font-sans w-6 text-right shrink-0">
-                      {i + 1}.
-                    </span>
-                    <span className="text-sm font-sans text-text-primary">{q}</span>
-                  </li>
-                ))}
+                {survey.questions.map((q, i) => {
+                  const text = typeof q === 'string' ? q : q.text;
+                  const instructions = typeof q === 'string' ? null : q.ai_instructions;
+                  return (
+                    <li key={i} className="flex gap-3">
+                      <span className="text-sm text-text-muted font-sans w-6 text-right shrink-0">
+                        {i + 1}.
+                      </span>
+                      <div>
+                        <span className="text-sm font-sans text-text-primary">{text}</span>
+                        {instructions && (
+                          <p className="text-xs text-text-muted font-sans mt-0.5 italic">
+                            AI: {instructions}
+                          </p>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
               </ol>
             </div>
           )}
 
           {/* Actions */}
-          <div className="flex items-center gap-3 pt-4 border-t border-card-border">
+          <div className="flex items-center gap-2 pt-4 border-t border-card-border">
             <Link
               to={`/surveys/${survey.id}/edit`}
-              className="btn-primary text-sm inline-flex items-center gap-2"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-sans font-medium bg-accent text-white hover:bg-accent-hover transition-colors"
             >
-              <Pencil className="w-4 h-4" />
+              <Pencil className="w-3.5 h-3.5" />
               Edit Survey
             </Link>
             <Link
               to={`/interview/test/${survey.id}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-secondary text-sm inline-flex items-center gap-2"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-sans font-medium border border-card-border text-text-primary hover:bg-white transition-colors"
             >
-              <MessageSquare className="w-4 h-4" />
+              <MessageSquare className="w-3.5 h-3.5" />
               Test Survey
             </Link>
             <Link
               to={`/surveys/${survey.id}/analytics`}
-              className="btn-secondary text-sm inline-flex items-center gap-2"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-sans font-medium border border-card-border text-text-primary hover:bg-white transition-colors"
             >
-              <BarChart3 className="w-4 h-4" />
+              <BarChart3 className="w-3.5 h-3.5" />
               Analytics
             </Link>
-            <Link to="/dashboard" className="btn-secondary text-sm">
+            <Link
+              to="/dashboard"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-sans font-medium border border-card-border text-text-muted hover:text-text-primary hover:bg-white transition-colors"
+            >
               Back to Dashboard
             </Link>
           </div>

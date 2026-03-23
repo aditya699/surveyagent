@@ -91,7 +91,16 @@ async def get_overview_stats(admin_id: str) -> list[dict]:
     return results
 
 
-async def get_survey_detail_stats(survey_id: str, questions: list[str]) -> dict:
+def _question_text(q) -> str:
+    """Extract question text from either a string or a QuestionItem dict."""
+    if isinstance(q, str):
+        return q
+    if isinstance(q, dict):
+        return q.get("text", "")
+    return str(q)
+
+
+async def get_survey_detail_stats(survey_id: str, questions: list) -> dict:
     """
     Detailed stats for a single survey including question coverage frequencies.
     Excludes test runs.
@@ -153,7 +162,7 @@ async def get_survey_detail_stats(survey_id: str, questions: list[str]) -> dict:
             "question_frequencies": [
                 {
                     "question_index": i + 1,
-                    "question_text": q,
+                    "question_text": _question_text(q),
                     "times_covered": 0,
                     "coverage_rate": 0.0,
                 }
@@ -179,7 +188,7 @@ async def get_survey_detail_stats(survey_id: str, questions: list[str]) -> dict:
         question_frequencies.append(
             {
                 "question_index": q_idx,
-                "question_text": q,
+                "question_text": _question_text(q),
                 "times_covered": times,
                 "coverage_rate": round((times / total * 100) if total > 0 else 0, 1),
             }
@@ -277,4 +286,14 @@ async def get_interview_detail(interview_id: str) -> dict | None:
         "started_at": doc["started_at"],
         "completed_at": doc.get("completed_at"),
         "duration_seconds": duration,
+        "analysis": doc.get("analysis"),
     }
+
+
+async def save_analysis(interview_id: str, analysis: dict) -> None:
+    """Save AI analysis to the interview document."""
+    db = await get_db()
+    await db["interviews"].update_one(
+        {"_id": ObjectId(interview_id)},
+        {"$set": {"analysis": analysis}},
+    )

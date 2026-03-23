@@ -33,7 +33,12 @@ export function useSurveyForm({ id, setQuestions }) {
         setDescription(s.description);
         setGoal(s.goal);
         setContext(s.context);
-        setQuestions(s.questions.length > 0 ? s.questions : ['']);
+        const normalized = (s.questions || []).map((q) =>
+          typeof q === 'string'
+            ? { text: q, aiInstructions: '' }
+            : { text: q.text, aiInstructions: q.ai_instructions || '' }
+        );
+        setQuestions(normalized.length > 0 ? normalized : [{ text: '', aiInstructions: '' }]);
         setEstimatedDuration(s.estimated_duration ?? 5);
         setPersonalityTone(s.personality_tone ?? 'friendly');
         setWelcomeMessage(s.welcome_message ?? '');
@@ -53,7 +58,12 @@ export function useSurveyForm({ id, setQuestions }) {
       description: description.trim(),
       goal: goal.trim(),
       context: context.trim(),
-      questions: questions.map((q) => q.trim()).filter(Boolean),
+      questions: questions
+        .filter((q) => q.text.trim())
+        .map((q) => ({
+          text: q.text.trim(),
+          ai_instructions: q.aiInstructions?.trim() || null,
+        })),
       estimated_duration: estimatedDuration,
       personality_tone: personalityTone,
       welcome_message: welcomeMessage.trim() || null,
