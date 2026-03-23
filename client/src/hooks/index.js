@@ -5,3 +5,4 @@ export { useQuestionManager } from './useQuestionManager';
 export { useAiGeneration } from './useAiGeneration';
 export { useFieldEnhance } from './useFieldEnhance';
 export { useInterviewAnalysis } from './useInterviewAnalysis';
+export { useTts } from './useTts';

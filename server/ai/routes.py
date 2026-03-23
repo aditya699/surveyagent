@@ -11,7 +11,7 @@ from server.core.config import settings
 from server.core.llm import get_openai_client
 from server.core.logging_config import get_logger
 from server.ai.prompts import SYSTEM_PROMPT, build_user_prompt, ENHANCE_SYSTEM_PROMPT, build_enhance_prompt
-from server.ai.schemas import GenerateQuestionsRequest, EnhanceFieldRequest
+from server.ai.schemas import GenerateQuestionsRequest, EnhanceFieldRequest, SynthesizeSpeechRequest
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -141,5 +141,40 @@ async def enhance_field(
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@router.post("/synthesize-speech")
+async def synthesize_speech(
+    request: SynthesizeSpeechRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Convert text to speech using OpenAI TTS API.
+    Returns audio/mpeg stream.
+    """
+    client = await get_openai_client()
+
+    async def audio_stream():
+        try:
+            async with client.audio.speech.with_streaming_response.create(
+                model="gpt-4o-mini-tts",
+                voice=request.voice,
+                input=request.text,
+                instructions="Read this summary in a clear, professional tone.",
+            ) as response:
+                async for chunk in response.iter_bytes(1024):
+                    yield chunk
+        except Exception as e:
+            logger.error(f"TTS synthesis failed: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail="Speech synthesis failed")
+
+    return StreamingResponse(
+        audio_stream(),
+        media_type="audio/mpeg",
+        headers={
+            "Cache-Control": "no-cache",
+            "Content-Type": "audio/mpeg",
         },
     )

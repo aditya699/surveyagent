@@ -18,6 +18,7 @@ export const ENDPOINTS = {
   AI: {
     GENERATE_QUESTIONS: `${PREFIX}/ai/generate-questions`,
     ENHANCE_FIELD: `${PREFIX}/ai/enhance-field`,
+    SYNTHESIZE_SPEECH: `${PREFIX}/ai/synthesize-speech`,
   },
 
   INTERVIEW: {

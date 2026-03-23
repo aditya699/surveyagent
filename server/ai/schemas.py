@@ -21,3 +21,8 @@ class EnhanceFieldRequest(BaseModel):
     description: str = ""
     goal: str = ""
     context: str = ""
+
+
+class SynthesizeSpeechRequest(BaseModel):
+    text: str = Field(..., min_length=1, max_length=4096)
+    voice: str = Field(default="coral")

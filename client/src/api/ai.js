@@ -155,6 +155,36 @@ export async function streamAnalyzeInterview({ interviewId, onToken, onDone, onE
   }
 }
 
+/**
+ * Synthesize speech from text via OpenAI TTS API.
+ *
+ * @param {Object}   params
+ * @param {string}   params.text          - Text to convert to speech
+ * @param {string}   [params.voice]       - Voice name (default "coral")
+ * @param {AbortSignal} [params.signal]   - Optional AbortSignal for cancellation
+ * @returns {Promise<Response>}           - Fetch Response with audio/mpeg body
+ */
+export async function synthesizeSpeech({ text, voice = 'coral', signal }) {
+  const token = localStorage.getItem('access_token');
+
+  const res = await fetch(`${API_URL}${ENDPOINTS.AI.SYNTHESIZE_SPEECH}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ text, voice }),
+    signal,
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Request failed' }));
+    throw new Error(err.detail || `HTTP ${res.status}`);
+  }
+
+  return res;
+}
+
 export async function streamEnhanceField({ data, onToken, onDone, onError, signal }) {
   const token = localStorage.getItem('access_token');
 

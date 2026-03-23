@@ -33,7 +33,11 @@
       "WebFetch(domain:www.assistant-ui.com)",
       "WebFetch(domain:github.com)",
       "WebSearch",
-      "Bash(find D:Desktop2026surveyagentclientnode_modules@assistant-ui -type f \\\\\\(-name *.css -o -name *theme* -o -name *style* -o -name *.d.ts \\\\\\))"
+      "Bash(find D:Desktop2026surveyagentclientnode_modules@assistant-ui -type f \\\\\\(-name *.css -o -name *theme* -o -name *style* -o -name *.d.ts \\\\\\))",
+      "Bash(find /d/Desktop/2026/surveyagent/server -type f -name \"*.py\" -exec wc -l {})",
+      "Bash(ls -lh /d/Desktop/2026/surveyagent/client/src/**/*.jsx /d/Desktop/2026/surveyagent/client/src/**/*.js)",
+      "Bash(sort -k2)",
+      "Bash(find /d/Desktop/2026/surveyagent/client/src/components -type f -name *.jsx)"
     ]
   }
 }

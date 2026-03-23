@@ -1,7 +1,8 @@
 import { motion } from 'framer-motion';
-import { User, Mail, Calendar, Briefcase, Phone } from 'lucide-react';
+import { User, Mail, Calendar, Briefcase, Phone, Volume2, VolumeX, Loader2 } from 'lucide-react';
 import { scoreColor, scoreBg, sentimentBadge } from './helpers';
 import { formatDuration, formatDateWithTime } from '../../utils/formatters';
+import { useTts } from '../../hooks/useTts';
 import AnalysisEmptyState from './AnalysisEmptyState';
 
 const RESPONDENT_FIELDS = [
@@ -16,6 +17,7 @@ const RESPONDENT_FIELDS = [
 export default function OverviewTab({ interview, analysis }) {
   const respondent = interview.respondent || {};
   const fields = RESPONDENT_FIELDS.filter((f) => respondent[f.key]);
+  const { status: ttsStatus, speak, stop } = useTts();
 
   return (
     <motion.div
@@ -67,7 +69,30 @@ export default function OverviewTab({ interview, analysis }) {
           transition={{ delay: 0.05 }}
           className="card"
         >
-          <p className="text-[10px] font-sans text-text-muted uppercase tracking-widest mb-2">Executive Summary</p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[10px] font-sans text-text-muted uppercase tracking-widest">Executive Summary</p>
+            <button
+              onClick={() => ttsStatus === 'playing' ? stop() : speak(analysis.summary)}
+              disabled={ttsStatus === 'loading'}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-sans transition-colors ${
+                ttsStatus === 'playing'
+                  ? 'bg-accent/10 text-accent'
+                  : ttsStatus === 'error'
+                    ? 'bg-red-50 text-red-500'
+                    : 'text-text-muted hover:text-accent hover:bg-accent/5'
+              } disabled:opacity-50`}
+              title={ttsStatus === 'playing' ? 'Stop' : 'Listen'}
+            >
+              {ttsStatus === 'loading' ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : ttsStatus === 'playing' ? (
+                <VolumeX className="w-3.5 h-3.5" />
+              ) : (
+                <Volume2 className="w-3.5 h-3.5" />
+              )}
+              {ttsStatus === 'loading' ? 'Loading...' : ttsStatus === 'playing' ? 'Stop' : 'Listen'}
+            </button>
+          </div>
           <p className="text-sm font-sans text-text-primary leading-relaxed">{analysis.summary}</p>
         </motion.div>
       )}

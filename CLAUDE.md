@@ -82,7 +82,8 @@ surveyagent/
 │   │   │   ├── useSurveyForm.js # Survey form state + CRUD
 │   │   │   ├── useQuestionManager.js # Question list CRUD
 │   │   │   ├── useAiGeneration.js # AI question generation state
-│   │   │   └── useFieldEnhance.js # AI field enhancement streaming state
+│   │   │   ├── useFieldEnhance.js # AI field enhancement streaming state
+│   │   │   └── useTts.js         # Text-to-speech playback via OpenAI TTS API
 │   │   ├── components/
 │   │   │   ├── shared/
 │   │   │   │   ├── index.js           # Barrel export
