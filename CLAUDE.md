@@ -90,6 +90,17 @@ surveyagent/
 │   │   │   │   └── InterviewStatusBadge.jsx # Interview status badge
 │   │   │   ├── auth/
 │   │   │   │   └── ProtectedRoute.jsx  # Auth guard with Outlet
+│   │   │   ├── analytics/
+│   │   │   │   ├── index.js             # Barrel export
+│   │   │   │   ├── helpers.js           # scoreColor, scoreBg, sentimentBadge, questionStatusBadge
+│   │   │   │   ├── InterviewHeader.jsx  # Compact header: back link + respondent + status + actions
+│   │   │   │   ├── TabBar.jsx           # Horizontal tab bar (Overview/Themes/Questions/Transcript)
+│   │   │   │   ├── OverviewTab.jsx      # Score/sentiment/coverage metrics + summary + session info
+│   │   │   │   ├── ThemesTab.jsx        # Key themes + strengths/concerns/improvements grid
+│   │   │   │   ├── QuestionsTab.jsx     # Per-question analysis cards
+│   │   │   │   ├── TranscriptTab.jsx    # Conversation chat bubbles
+│   │   │   │   ├── AnalysisEmptyState.jsx  # Prompt to run analysis
+│   │   │   │   └── AnalysisStreaming.jsx   # Streaming preview with spinner
 │   │   │   ├── interview/
 │   │   │   │   ├── ChatThread.jsx      # Chat UI with assistant-ui primitives
 │   │   │   │   ├── InterviewChat.jsx   # Runtime adapter + AssistantRuntimeProvider
@@ -121,7 +132,7 @@ surveyagent/
 │   │       ├── InterviewPage.jsx    # Interview orchestrator (respondent + test modes)
 │   │       ├── AnalyticsOverview.jsx # Global analytics dashboard
 │   │       ├── SurveyAnalytics.jsx  # Per-survey analytics + interview sessions table
-│   │       └── InterviewDetail.jsx  # Interview transcript viewer
+│   │       └── InterviewDetail.jsx  # Tabbed interview dashboard (orchestrator for analytics/ components)
 ├── .env                       # Secrets (gitignored)
 ├── .env.example               # Template for .env
 ├── pyproject.toml             # Python deps (uv)
