@@ -8,14 +8,16 @@ Open-source AI survey platform that replaces static forms with dynamic conversat
 - **Survey Builder** — full CRUD with AI-powered question generation and field enhancement (title, description, goal, context, welcome message)
 - **Analytics Dashboard** — per-interview and aggregate survey-level AI analysis with scores, sentiment detection, theme identification, and per-question evaluation
 - **Data Export** — CSV exports (transcripts, bulk responses, summaries) and branded PDF reports (analysis, survey definitions) with one-click download
-- **Text-to-Speech** — listen to executive summaries via OpenAI TTS API
+- **Text-to-Speech** — listen to executive summaries via OpenAI TTS API (gpt-4o-mini-tts)
+- **Landing Page** — 13-section marketing page with scroll animations, responsive navbar, and dark/light section alternation
+- **Auth System** — JWT with token versioning for server-side revocation, auto-refresh with queue pattern, admin registration/login/profile
 
 ## Tech Stack
 
 | Layer | Technologies |
 |-------|-------------|
 | **Backend** | Python 3.12+, FastAPI, Motor (async MongoDB), python-jose (JWT), bcrypt, OpenAI SDK |
-| **Frontend** | React 19, Vite, Tailwind CSS v3, Framer Motion, Lucide React, React Router v7, Axios, assistant-ui, jsPDF |
+| **Frontend** | React 19, Vite, Tailwind CSS v3, Framer Motion, Lucide React, React Router v7, Axios, assistant-ui, jsPDF + jspdf-autotable |
 | **Database** | MongoDB (Atlas or self-hosted) |
 | **AI** | OpenAI Responses API (streaming via SSE) |
 | **Package Managers** | uv (backend), npm (frontend) |
