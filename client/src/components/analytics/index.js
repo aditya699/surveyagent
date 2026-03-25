@@ -6,3 +6,6 @@ export { default as QuestionsTab } from './QuestionsTab';
 export { default as TranscriptTab } from './TranscriptTab';
 export { default as AnalysisEmptyState } from './AnalysisEmptyState';
 export { default as AnalysisStreaming } from './AnalysisStreaming';
+export { default as SurveyOverviewTab } from './SurveyOverviewTab';
+export { default as SurveyQuestionsTab } from './SurveyQuestionsTab';
+export { default as SurveyPatternsTab } from './SurveyPatternsTab';

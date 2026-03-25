@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft,
   LogOut,
@@ -11,11 +11,34 @@ import {
   ChevronLeft,
   ChevronRight,
   User,
+  Sparkles,
+  X,
+  Loader2,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { getSurveyAnalytics, getSurveyInterviews } from '../api';
+import { useSurveyAnalysis } from '../hooks/useSurveyAnalysis';
+import { getSurveyAnalytics, getSurveyInterviews, exportSurveyInterviews } from '../api';
 import { formatDuration, formatDateWithTime } from '../utils/formatters';
+import { exportInterviewsList } from '../utils/export';
+import { exportSurveyAnalysisPDF } from '../utils/pdf';
 import InterviewStatusBadge from '../components/shared/InterviewStatusBadge';
+import { ExportButton } from '../components/shared';
+import {
+  TabBar,
+  ThemesTab,
+  AnalysisEmptyState,
+  AnalysisStreaming,
+  SurveyOverviewTab,
+  SurveyQuestionsTab,
+  SurveyPatternsTab,
+} from '../components/analytics';
+
+const SURVEY_TABS = [
+  { key: 'overview', label: 'Overview' },
+  { key: 'themes', label: 'Themes & Insights' },
+  { key: 'questions', label: 'Questions' },
+  { key: 'patterns', label: 'Patterns' },
+];
 
 export default function SurveyAnalytics() {
   const { id } = useParams();
@@ -30,6 +53,17 @@ export default function SurveyAnalytics() {
   const [loading, setLoading] = useState(true);
   const [interviewsLoading, setInterviewsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [activeTab, setActiveTab] = useState('overview');
+
+  const {
+    analysis,
+    rawStream,
+    analyzing,
+    analysisError,
+    startAnalysis,
+    cancelAnalysis,
+    setAnalysisFromCache,
+  } = useSurveyAnalysis();
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -37,6 +71,9 @@ export default function SurveyAnalytics() {
         const res = await getSurveyAnalytics(id);
         setStats(res.data.stats);
         setTitle(res.data.title);
+        if (res.data.analysis) {
+          setAnalysisFromCache(res.data.analysis);
+        }
       } catch (err) {
         setError(err.response?.data?.detail || 'Failed to load analytics');
       } finally {
@@ -44,7 +81,7 @@ export default function SurveyAnalytics() {
       }
     };
     fetchStats();
-  }, [id]);
+  }, [id, setAnalysisFromCache]);
 
   useEffect(() => {
     const fetchInterviews = async () => {
@@ -63,6 +100,7 @@ export default function SurveyAnalytics() {
   }, [id, page, pageSize]);
 
   const totalPages = Math.ceil(total / pageSize);
+  const hasCompletedInterviews = stats && stats.completed > 0;
 
   if (loading) {
     return (
@@ -108,13 +146,60 @@ export default function SurveyAnalytics() {
           <span className="text-card-border">|</span>
           <h1 className="text-xl font-serif text-text-primary line-clamp-1">{title}</h1>
         </div>
-        <button
-          onClick={logout}
-          className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors font-sans"
-        >
-          <LogOut className="w-4 h-4" />
-          Logout
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Export button */}
+          {stats && stats.total_interviews > 0 && (
+            <ExportButton
+              options={[
+                {
+                  label: 'All Responses (CSV)',
+                  onClick: async () => {
+                    try {
+                      const res = await exportSurveyInterviews(id);
+                      exportInterviewsList(res.data.interviews, title);
+                    } catch (err) {
+                      // silently fail
+                    }
+                  },
+                },
+                ...(analysis
+                  ? [{ label: 'Analysis (PDF)', onClick: () => exportSurveyAnalysisPDF(title, analysis) }]
+                  : []),
+              ]}
+            />
+          )}
+          {/* Analyze button */}
+          {hasCompletedInterviews && (
+            analyzing ? (
+              <button
+                onClick={cancelAnalysis}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-sans font-medium bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+              >
+                <X className="w-3.5 h-3.5" />
+                Cancel
+              </button>
+            ) : (
+              <button
+                onClick={() => startAnalysis(id)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-sans font-medium bg-accent/10 text-accent hover:bg-accent/20 transition-colors"
+              >
+                {analysis ? (
+                  <Sparkles className="w-3.5 h-3.5" />
+                ) : (
+                  <Sparkles className="w-3.5 h-3.5" />
+                )}
+                {analysis ? 'Re-analyze' : 'Analyze All'}
+              </button>
+            )
+          )}
+          <button
+            onClick={logout}
+            className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors font-sans"
+          >
+            <LogOut className="w-4 h-4" />
+            Logout
+          </button>
+        </div>
       </header>
 
       <main className="container-max section-padding">
@@ -189,6 +274,46 @@ export default function SurveyAnalytics() {
                 </div>
               </div>
             )}
+
+            {/* AI Analysis Section */}
+            <div className="mb-8">
+              {analysisError && (
+                <div className="bg-error/10 border border-error/20 rounded-lg px-4 py-3 text-sm text-error font-sans mb-4">
+                  {analysisError}
+                </div>
+              )}
+
+              {analyzing && <AnalysisStreaming rawStream={rawStream} />}
+
+              {!analyzing && analysis && (
+                <>
+                  <div className="rounded-xl border border-card-border bg-white overflow-hidden mb-4">
+                    <TabBar
+                      activeTab={activeTab}
+                      onChange={setActiveTab}
+                      tabs={SURVEY_TABS}
+                    />
+                  </div>
+
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={activeTab}
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      transition={{ duration: 0.15 }}
+                    >
+                      {activeTab === 'overview' && <SurveyOverviewTab analysis={analysis} />}
+                      {activeTab === 'themes' && <ThemesTab analysis={analysis} />}
+                      {activeTab === 'questions' && <SurveyQuestionsTab analysis={analysis} />}
+                      {activeTab === 'patterns' && <SurveyPatternsTab analysis={analysis} />}
+                    </motion.div>
+                  </AnimatePresence>
+                </>
+              )}
+
+              {!analyzing && !analysis && hasCompletedInterviews && <AnalysisEmptyState />}
+            </div>
 
             {/* Interview sessions table */}
             <div className="card">

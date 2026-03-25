@@ -43,6 +43,7 @@ class SurveyDetailResponse(BaseModel):
     survey_id: str = Field(..., description="Survey ID")
     title: str = Field(..., description="Survey title")
     stats: SurveyDetailStats = Field(..., description="Detailed stats")
+    analysis: Optional[Dict[str, Any]] = Field(None, description="Cached aggregate AI analysis")
 
 
 class InterviewListItem(BaseModel):
@@ -63,6 +64,23 @@ class InterviewListResponse(BaseModel):
     page: int = Field(..., description="Current page")
     page_size: int = Field(..., description="Page size")
     interviews: List[InterviewListItem] = Field(..., description="Interview list")
+
+
+class InterviewExportItem(BaseModel):
+    respondent_name: Optional[str] = Field(None, description="Respondent name")
+    respondent_email: Optional[str] = Field(None, description="Respondent email")
+    status: str = Field(..., description="Interview status")
+    duration_seconds: Optional[float] = Field(None, description="Duration in seconds")
+    questions_covered_count: int = Field(0, description="Number of questions covered")
+    started_at: datetime = Field(..., description="Start timestamp")
+    completed_at: Optional[datetime] = Field(None, description="Completion timestamp")
+
+
+class InterviewExportResponse(BaseModel):
+    message: str = Field(..., description="Response message")
+    survey_id: str = Field(..., description="Survey ID")
+    title: str = Field(..., description="Survey title")
+    interviews: List[InterviewExportItem] = Field(..., description="All interview sessions")
 
 
 class MessageItem(BaseModel):

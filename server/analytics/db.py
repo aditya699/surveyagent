@@ -297,3 +297,103 @@ async def save_analysis(interview_id: str, analysis: dict) -> None:
         {"_id": ObjectId(interview_id)},
         {"$set": {"analysis": analysis}},
     )
+
+
+async def get_completed_interviews_for_analysis(survey_id: str) -> list[dict]:
+    """
+    Fetch all completed non-test interviews for a survey.
+    Returns each with conversation, respondent, questions_covered, and cached analysis.
+    """
+    db = await get_db()
+    docs = await db["interviews"].find(
+        {
+            "survey_id": ObjectId(survey_id),
+            "status": "completed",
+            "is_test_run": False,
+        },
+        {
+            "conversation": 1,
+            "respondent": 1,
+            "questions_covered": 1,
+            "analysis": 1,
+            "started_at": 1,
+            "completed_at": 1,
+        },
+    ).sort("started_at", 1).to_list(None)
+
+    results = []
+    for doc in docs:
+        respondent = doc.get("respondent") or {}
+        results.append(
+            {
+                "id": str(doc["_id"]),
+                "respondent": {
+                    "name": respondent.get("name"),
+                    "email": respondent.get("email"),
+                    "age": respondent.get("age"),
+                    "gender": respondent.get("gender"),
+                    "occupation": respondent.get("occupation"),
+                },
+                "conversation": [
+                    {
+                        "role": msg.get("role", ""),
+                        "content": msg.get("content", ""),
+                    }
+                    for msg in doc.get("conversation", [])
+                ],
+                "questions_covered": doc.get("questions_covered", []),
+                "analysis": doc.get("analysis"),
+            }
+        )
+
+    return results
+
+
+async def get_all_interviews_for_export(survey_id: str) -> list[dict]:
+    """
+    Fetch all non-test interviews for a survey with fields needed for CSV export.
+    No pagination — returns all results.
+    """
+    db = await get_db()
+    survey_oid = ObjectId(survey_id)
+
+    docs = await db["interviews"].find(
+        {"survey_id": survey_oid, "is_test_run": False},
+        {
+            "respondent": 1,
+            "status": 1,
+            "questions_covered": 1,
+            "started_at": 1,
+            "completed_at": 1,
+        },
+    ).sort("started_at", -1).to_list(None)
+
+    results = []
+    for doc in docs:
+        respondent = doc.get("respondent") or {}
+        duration = None
+        if doc.get("completed_at") and doc.get("started_at"):
+            duration = round((doc["completed_at"] - doc["started_at"]).total_seconds(), 1)
+
+        results.append(
+            {
+                "respondent_name": respondent.get("name"),
+                "respondent_email": respondent.get("email"),
+                "status": doc.get("status", "in_progress"),
+                "duration_seconds": duration,
+                "questions_covered_count": len(doc.get("questions_covered", [])),
+                "started_at": doc["started_at"],
+                "completed_at": doc.get("completed_at"),
+            }
+        )
+
+    return results
+
+
+async def save_survey_analysis(survey_id: str, analysis: dict) -> None:
+    """Save aggregate AI analysis to the survey document."""
+    db = await get_db()
+    await db["surveys"].update_one(
+        {"_id": ObjectId(survey_id)},
+        {"$set": {"analysis": analysis}},
+    )

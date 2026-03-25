@@ -18,7 +18,9 @@ import { useAuth } from '../hooks/useAuth';
 import { useClipboard } from '../hooks/useClipboard';
 import { getSurvey } from '../api';
 import { formatDate } from '../utils/formatters';
+import { exportSurveyDefinitionPDF } from '../utils/pdf';
 import StatusBadge from '../components/shared/StatusBadge';
+import { ExportButton } from '../components/shared';
 
 export default function SurveyDetail() {
   const { id } = useParams();
@@ -239,6 +241,9 @@ export default function SurveyDetail() {
               <BarChart3 className="w-3.5 h-3.5" />
               Analytics
             </Link>
+            <ExportButton
+              options={[{ label: 'Export Survey (PDF)', onClick: () => exportSurveyDefinitionPDF(survey) }]}
+            />
             <Link
               to="/dashboard"
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-sans font-medium border border-card-border text-text-muted hover:text-text-primary hover:bg-white transition-colors"

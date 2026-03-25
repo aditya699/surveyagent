@@ -18,3 +18,7 @@ export function getSurveyInterviews(surveyId, page = 1, pageSize = 20) {
 export function getInterviewDetail(interviewId) {
   return api.get(ENDPOINTS.ANALYTICS.INTERVIEW_DETAIL(interviewId));
 }
+
+export function exportSurveyInterviews(surveyId) {
+  return api.get(ENDPOINTS.ANALYTICS.EXPORT_INTERVIEWS(surveyId));
+}

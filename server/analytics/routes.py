@@ -13,7 +13,10 @@ from server.analytics.db import (
     get_survey_detail_stats,
     get_interview_list,
     get_interview_detail,
+    get_all_interviews_for_export,
     save_analysis,
+    get_completed_interviews_for_analysis,
+    save_survey_analysis,
 )
 from server.analytics.schemas import (
     SurveyOverviewResponse,
@@ -21,8 +24,14 @@ from server.analytics.schemas import (
     SurveyDetailStats,
     InterviewListResponse,
     InterviewDetailResponse,
+    InterviewExportResponse,
 )
-from server.analytics.prompts import ANALYSIS_SYSTEM_PROMPT, build_analysis_prompt
+from server.analytics.prompts import (
+    ANALYSIS_SYSTEM_PROMPT,
+    build_analysis_prompt,
+    SURVEY_ANALYSIS_SYSTEM_PROMPT,
+    build_survey_analysis_prompt,
+)
 from server.analytics.utils import verify_survey_ownership
 
 logger = get_logger(__name__)
@@ -58,6 +67,7 @@ async def survey_analytics(survey_id: str, current_user: dict = Depends(get_curr
             survey_id=survey_id,
             title=survey["title"],
             stats=SurveyDetailStats(**stats),
+            analysis=survey.get("analysis"),
         )
     except HTTPException:
         raise
@@ -92,6 +102,26 @@ async def survey_interviews(
         logger.error(f"Error fetching interview list: {e}", exc_info=True)
         await log_error(e, "analytics/routes.py::survey_interviews", {"survey_id": survey_id})
         raise HTTPException(status_code=500, detail="Failed to fetch interview list")
+
+
+@router.get("/surveys/{survey_id}/interviews/export", response_model=InterviewExportResponse)
+async def export_survey_interviews(survey_id: str, current_user: dict = Depends(get_current_user)):
+    """Export all interview sessions for a survey (no pagination)."""
+    try:
+        survey = await verify_survey_ownership(survey_id, current_user["user_id"])
+        interviews = await get_all_interviews_for_export(survey_id)
+        return InterviewExportResponse(
+            message="Interview export retrieved",
+            survey_id=survey_id,
+            title=survey["title"],
+            interviews=interviews,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error exporting interviews: {e}", exc_info=True)
+        await log_error(e, "analytics/routes.py::export_survey_interviews", {"survey_id": survey_id})
+        raise HTTPException(status_code=500, detail="Failed to export interviews")
 
 
 @router.get("/interviews/{interview_id}", response_model=InterviewDetailResponse)
@@ -219,3 +249,87 @@ async def analyze_interview(interview_id: str, current_user: dict = Depends(get_
         logger.error(f"Error starting interview analysis: {e}", exc_info=True)
         await log_error(e, "analytics/routes.py::analyze_interview", {"interview_id": interview_id})
         raise HTTPException(status_code=500, detail="Failed to start interview analysis")
+
+
+@router.post("/surveys/{survey_id}/analyze")
+async def analyze_survey(survey_id: str, current_user: dict = Depends(get_current_user)):
+    """
+    Stream aggregate AI analysis of all completed interviews for a survey via SSE.
+
+    Each token is sent as: data: {"token": "..."}\n\n
+    Final event: data: [DONE]\n\n
+    The completed analysis JSON is cached in the survey document.
+    """
+    try:
+        survey = await verify_survey_ownership(survey_id, current_user["user_id"])
+
+        interviews = await get_completed_interviews_for_analysis(survey_id)
+        if not interviews:
+            raise HTTPException(status_code=400, detail="No completed interviews to analyze")
+
+        # Separate into analyzed (have cached analysis) and raw
+        analyzed = [iv for iv in interviews if iv.get("analysis")]
+        raw = [iv for iv in interviews if not iv.get("analysis")]
+
+        user_prompt = build_survey_analysis_prompt(
+            survey=survey,
+            analyzed_interviews=analyzed,
+            raw_interviews=raw,
+        )
+
+        client = await get_openai_client()
+
+        async def event_stream():
+            result_buffer = ""
+            try:
+                stream = await client.responses.create(
+                    model=settings.OPENAI_MODEL,
+                    input=[
+                        {"role": "developer", "content": SURVEY_ANALYSIS_SYSTEM_PROMPT},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    stream=True,
+                )
+
+                async for event in stream:
+                    if hasattr(event, "type") and event.type == "response.output_text.delta":
+                        result_buffer += event.delta
+                        yield f"data: {json.dumps({'token': event.delta})}\n\n"
+
+                # Parse and cache the analysis
+                try:
+                    clean = result_buffer.strip()
+                    if clean.startswith("```"):
+                        clean = clean.split("\n", 1)[1] if "\n" in clean else clean[3:]
+                    if clean.endswith("```"):
+                        clean = clean[:-3]
+                    clean = clean.strip()
+
+                    analysis = json.loads(clean)
+                    await save_survey_analysis(survey_id, analysis)
+                except (json.JSONDecodeError, Exception) as parse_err:
+                    logger.warning(f"Failed to parse survey analysis JSON: {parse_err}")
+
+                yield "data: [DONE]\n\n"
+
+            except Exception as e:
+                logger.error(f"AI survey analysis failed: {e}", exc_info=True)
+                yield f"data: {json.dumps({'error': str(e)})}\n\n"
+                yield "data: [DONE]\n\n"
+
+        return StreamingResponse(
+            event_stream(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error starting survey analysis: {e}", exc_info=True)
+        await log_error(e, "analytics/routes.py::analyze_survey", {"survey_id": survey_id})
+        raise HTTPException(status_code=500, detail="Failed to start survey analysis")

@@ -1,7 +1,10 @@
 import { Link } from 'react-router-dom';
 import { ArrowLeft, LogOut, User, Sparkles, RefreshCw, X, Loader2 } from 'lucide-react';
 import InterviewStatusBadge from '../shared/InterviewStatusBadge';
+import ExportButton from '../shared/ExportButton';
 import { formatDuration } from '../../utils/formatters';
+import { exportInterviewTranscript } from '../../utils/export';
+import { exportInterviewAnalysisPDF } from '../../utils/pdf';
 
 export default function InterviewHeader({
   interview,
@@ -54,7 +57,17 @@ export default function InterviewHeader({
           <span>{interview.questions_covered?.length || 0} questions covered</span>
         </div>
 
-        {/* Action button */}
+        {/* Export + Action buttons */}
+        <div className="flex items-center gap-2 shrink-0">
+          <ExportButton
+            options={[
+              { label: 'Transcript (CSV)', onClick: () => exportInterviewTranscript(interview) },
+              ...(analysis
+                ? [{ label: 'Analysis (PDF)', onClick: () => exportInterviewAnalysisPDF(interview, analysis) }]
+                : []),
+            ]}
+          />
+        </div>
         <div className="shrink-0">
           {analyzing ? (
             <button

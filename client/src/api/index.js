@@ -35,4 +35,5 @@ export {
   getSurveyAnalytics,
   getSurveyInterviews,
   getInterviewDetail,
+  exportSurveyInterviews,
 } from './analytics';

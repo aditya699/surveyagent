@@ -14,7 +14,9 @@ import {
 import { useAuth } from '../hooks/useAuth';
 import { getAnalyticsOverview } from '../api';
 import { formatDuration } from '../utils/formatters';
+import { exportSurveySummary } from '../utils/export';
 import StatusBadge from '../components/shared/StatusBadge';
+import { ExportButton } from '../components/shared';
 
 export default function AnalyticsOverview() {
   const { user, logout } = useAuth();
@@ -63,6 +65,11 @@ export default function AnalyticsOverview() {
           <h1 className="text-xl font-serif text-text-primary">Analytics</h1>
         </div>
         <div className="flex items-center gap-4">
+          {surveys.length > 0 && (
+            <ExportButton
+              options={[{ label: 'Export Summary (CSV)', onClick: () => exportSurveySummary(surveys) }]}
+            />
+          )}
           <span className="text-sm text-text-muted font-sans">{user?.name}</span>
           <Link
             to="/settings"

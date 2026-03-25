@@ -231,6 +231,21 @@ Requires a `.env` file at the project root (copy `.env.example`).
 - SurveyForm "Test Survey" saves the survey first (creates if new, updates if existing), then opens `/interview/test/{surveyId}` in a new tab
 - Shareable survey link format: `/interview/{token}` (used in both Dashboard and SurveyDetail)
 
+### Analytics (complete)
+- Analytics overview page showing all surveys with aggregate stats (total interviews, completion rate, avg duration)
+- Per-survey analytics page with stat cards, question coverage bars, and paginated interview sessions table
+- Per-interview detail page with tabbed dashboard: Overview, Themes & Insights, Questions, Transcript
+- AI-powered interview analysis via streaming SSE — scores quality (1-10), detects sentiment, identifies themes/strengths/concerns/improvements, evaluates each question
+- Analysis cached in interview document's `analysis` field, loadable on page revisit
+- **Aggregate survey-level LLM analysis**: synthesizes ALL completed interviews for a survey into a single analysis
+  - Two-tier prompt: uses cached per-interview analyses (compact) when available, falls back to raw transcripts
+  - Produces overall score, dominant sentiment, executive summary, consensus/divergence points, per-question aggregate findings, respondent patterns
+  - Cached in survey document's `analysis` field
+  - Tabbed dashboard on SurveyAnalytics page: Overview, Themes & Insights, Questions, Patterns
+  - Reuses `ThemesTab`, `AnalysisEmptyState`, `AnalysisStreaming` from interview analysis; new `SurveyOverviewTab`, `SurveyQuestionsTab`, `SurveyPatternsTab`
+- Text-to-speech for executive summaries via OpenAI TTS API
+- `TabBar` component accepts optional `tabs` prop for different tab configurations (interview vs survey analysis)
+
 ### Frontend Infrastructure (complete)
 - API layer: Axios client, endpoint constants, form helpers, interceptors, barrel exports
 - AI streaming via native `fetch()` (Axios doesn't support ReadableStream)
@@ -348,6 +363,17 @@ Requires a `.env` file at the project root (copy `.env.example`).
 | POST   | /start/{survey_token}   | None     | Start interview session for published survey         |
 | POST   | /{session_id}/message   | None     | Send respondent message, stream AI response via SSE  |
 | POST   | /test/{survey_id}       | Bearer   | Start admin test session (works with draft surveys)  |
+
+### Analytics — `/api/v1/analytics`
+
+| Method | Path                              | Auth     | Description                                            |
+|--------|-----------------------------------|----------|--------------------------------------------------------|
+| GET    | /surveys                          | Bearer   | Overview stats across all admin's surveys              |
+| GET    | /surveys/{id}                     | Bearer   | Detailed stats for a single survey (includes analysis) |
+| GET    | /surveys/{id}/interviews          | Bearer   | Paginated interview list for a survey                  |
+| POST   | /surveys/{id}/analyze             | Bearer   | Stream aggregate AI analysis of all interviews via SSE |
+| GET    | /interviews/{id}                  | Bearer   | Full interview detail with conversation                |
+| POST   | /interviews/{id}/analyze          | Bearer   | Stream AI analysis of single interview via SSE         |
 
 ## Conventions
 

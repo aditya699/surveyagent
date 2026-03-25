@@ -29,3 +29,12 @@ export function questionStatusBadge(status) {
   };
   return map[status] || map.not_covered;
 }
+
+export function qualityBadge(quality) {
+  const map = {
+    well_answered: { cls: 'bg-green-100 text-green-700', label: 'Well Answered' },
+    partially_answered: { cls: 'bg-amber-100 text-amber-700', label: 'Partially Answered' },
+    poorly_answered: { cls: 'bg-red-100 text-red-700', label: 'Poorly Answered' },
+  };
+  return map[quality] || { cls: 'bg-gray-100 text-gray-500', label: quality || 'Unknown' };
+}

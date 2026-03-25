@@ -185,6 +185,73 @@ export async function synthesizeSpeech({ text, voice = 'coral', signal }) {
   return res;
 }
 
+/**
+ * Stream aggregate AI analysis of all interviews for a survey via SSE.
+ *
+ * @param {string}  surveyId          - Survey ID
+ * @param {Function} onToken          - Called with each text token as it arrives
+ * @param {Function} onDone           - Called when analysis is complete
+ * @param {Function} onError          - Called with error message string
+ * @param {AbortSignal} [signal]      - Optional AbortSignal for cancellation
+ */
+export async function streamAnalyzeSurvey({ surveyId, onToken, onDone, onError, signal }) {
+  const token = localStorage.getItem('access_token');
+
+  try {
+    const res = await fetch(`${API_URL}${ENDPOINTS.ANALYTICS.ANALYZE_SURVEY(surveyId)}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      signal,
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Request failed' }));
+      onError?.(err.detail || `HTTP ${res.status}`);
+      return;
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const payload = line.slice(6).trim();
+
+        if (payload === '[DONE]') {
+          onDone?.();
+          return;
+        }
+
+        try {
+          const parsed = JSON.parse(payload);
+          if (parsed.token) onToken?.(parsed.token);
+          if (parsed.error) onError?.(parsed.error);
+        } catch {
+          // skip malformed JSON
+        }
+      }
+    }
+
+    onDone?.();
+  } catch (err) {
+    if (err.name === 'AbortError') return;
+    onError?.(err.message || 'Failed to analyze survey');
+  }
+}
+
 export async function streamEnhanceField({ data, onToken, onDone, onError, signal }) {
   const token = localStorage.getItem('access_token');
 

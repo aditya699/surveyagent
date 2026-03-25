@@ -43,6 +43,8 @@ export const ENDPOINTS = {
     INTERVIEWS:        (id) => `${PREFIX}/analytics/surveys/${id}/interviews`,
     INTERVIEW_DETAIL:  (id) => `${PREFIX}/analytics/interviews/${id}`,
     ANALYZE_INTERVIEW: (id) => `${PREFIX}/analytics/interviews/${id}/analyze`,
+    ANALYZE_SURVEY:    (id) => `${PREFIX}/analytics/surveys/${id}/analyze`,
+    EXPORT_INTERVIEWS: (id) => `${PREFIX}/analytics/surveys/${id}/interviews/export`,
   },
 };
 
