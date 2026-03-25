@@ -4,12 +4,12 @@
 
 SurveyAgent is an open-source AI survey platform that replaces static forms with dynamic conversations. It conducts interviews via text chat, voice, or video avatar. It's self-hostable, LLM-agnostic, and keeps survey data under the user's control.
 
-**Status:** Early development. Auth system, landing page, survey CRUD, AI question generation, AI field enhancement, interviewer foundation, interviewer engine + routes, interview chat UI (text), and analytics are built. Voice and video are not yet implemented.
+**Status:** Early development. Auth system, landing page, survey CRUD, AI question generation, AI field enhancement, interviewer foundation, interviewer engine + routes, interview chat UI (text), analytics, and data export are built. Voice and video are not yet implemented.
 
 ## Tech Stack
 
 - **Backend:** Python 3.12+, FastAPI, Motor (async MongoDB), python-jose (JWT), bcrypt, OpenAI SDK
-- **Frontend:** React 19, Vite, Tailwind CSS v3, Framer Motion, Lucide React, React Router v7, Axios, assistant-ui (chat primitives)
+- **Frontend:** React 19, Vite, Tailwind CSS v3, Framer Motion, Lucide React, React Router v7, Axios, assistant-ui (chat primitives), jsPDF + jspdf-autotable (PDF export)
 - **Database:** MongoDB (Atlas or self-hosted)
 - **AI:** OpenAI Responses API (gpt-5.4-mini), streaming via SSE
 - **Package Manager:** `uv` (backend), `npm` (frontend)
@@ -49,9 +49,10 @@ surveyagent/
 │   │   └── routes.py          # SSE streaming: question generation + field enhancement
 │   └── analytics/
 │       ├── __init__.py        # Package marker
-│       ├── routes.py          # Overview, survey detail, interview list/detail
-│       ├── schemas.py         # Analytics response models
-│       ├── db.py              # Aggregation queries
+│       ├── routes.py          # Overview, survey detail, interview list/detail, analysis SSE, export
+│       ├── schemas.py         # Analytics response models (incl. export models)
+│       ├── db.py              # Aggregation queries + bulk export query
+│       ├── prompts.py         # Interview + survey analysis LLM prompts
 │       └── utils.py           # verify_survey_ownership()
 ├── client/                    # React frontend
 │   ├── index.html             # Entry HTML with Google Fonts
@@ -69,10 +70,13 @@ surveyagent/
 │   │   │   ├── interceptors.js # Bearer token + 401 refresh queue pattern
 │   │   │   ├── surveys.js     # Survey CRUD + publish API functions
 │   │   │   ├── ai.js          # streamGenerateQuestions() via fetch SSE
+│   │   │   ├── analytics.js   # Analytics + export API functions
 │   │   │   └── interview.js   # Interview API: info, start, test, streamMessage
 │   │   ├── utils/
 │   │   │   ├── index.js       # Barrel export
-│   │   │   └── formatters.js  # formatDate, formatDuration, formatTimer, etc.
+│   │   │   ├── formatters.js  # formatDate, formatDuration, formatTimer, etc.
+│   │   │   ├── export.js      # CSV export utilities (transcript, responses, summary)
+│   │   │   └── pdf.js         # Branded PDF export (jsPDF + autoTable) for analysis & survey reports
 │   │   ├── context/
 │   │   │   └── AuthContext.jsx # Auth state, login/register/updateProfile/logout
 │   │   ├── hooks/
@@ -83,12 +87,15 @@ surveyagent/
 │   │   │   ├── useQuestionManager.js # Question list CRUD
 │   │   │   ├── useAiGeneration.js # AI question generation state
 │   │   │   ├── useFieldEnhance.js # AI field enhancement streaming state
+│   │   │   ├── useInterviewAnalysis.js # Interview analysis streaming state
+│   │   │   ├── useSurveyAnalysis.js   # Survey aggregate analysis streaming state
 │   │   │   └── useTts.js         # Text-to-speech playback via OpenAI TTS API
 │   │   ├── components/
 │   │   │   ├── shared/
 │   │   │   │   ├── index.js           # Barrel export
 │   │   │   │   ├── StatusBadge.jsx    # Survey draft/published badge
-│   │   │   │   └── InterviewStatusBadge.jsx # Interview status badge
+│   │   │   │   ├── InterviewStatusBadge.jsx # Interview status badge
+│   │   │   │   └── ExportButton.jsx  # Reusable export dropdown (CSV/PDF)
 │   │   │   ├── auth/
 │   │   │   │   └── ProtectedRoute.jsx  # Auth guard with Outlet
 │   │   │   ├── analytics/
@@ -101,7 +108,10 @@ surveyagent/
 │   │   │   │   ├── QuestionsTab.jsx     # Per-question analysis cards
 │   │   │   │   ├── TranscriptTab.jsx    # Conversation chat bubbles
 │   │   │   │   ├── AnalysisEmptyState.jsx  # Prompt to run analysis
-│   │   │   │   └── AnalysisStreaming.jsx   # Streaming preview with spinner
+│   │   │   │   ├── AnalysisStreaming.jsx   # Streaming preview with spinner
+│   │   │   │   ├── SurveyOverviewTab.jsx   # Survey-level score/sentiment/summary
+│   │   │   │   ├── SurveyQuestionsTab.jsx  # Per-question aggregate findings
+│   │   │   │   └── SurveyPatternsTab.jsx   # Respondent engagement patterns
 │   │   │   ├── interview/
 │   │   │   │   ├── ChatThread.jsx      # Chat UI with assistant-ui primitives
 │   │   │   │   ├── InterviewChat.jsx   # Runtime adapter + AssistantRuntimeProvider
@@ -246,6 +256,16 @@ Requires a `.env` file at the project root (copy `.env.example`).
 - Text-to-speech for executive summaries via OpenAI TTS API
 - `TabBar` component accepts optional `tabs` prop for different tab configurations (interview vs survey analysis)
 
+### Data Export (complete)
+- Export buttons on 4 pages: Interview Detail, Survey Analytics, Survey Detail, Analytics Overview
+- **CSV exports**: interview transcripts, bulk interview responses (via dedicated backend endpoint), analytics summary
+- **PDF exports**: branded reports with accent color headers, score badges, section layouts, autoTable tables, page footers
+- Uses `jsPDF` + `jspdf-autotable` (imported as `autoTable(doc, {...})` function form, NOT `doc.autoTable()`)
+- Reusable `ExportButton` dropdown component: single option renders as button, multiple options renders dropdown with click-outside-to-close
+- Backend `GET /surveys/{id}/interviews/export` endpoint returns all non-test interviews without pagination for bulk CSV export
+- Export utilities split into `utils/export.js` (CSV) and `utils/pdf.js` (PDF) — both are pure functions, no React dependencies
+- PDF design: accent bar header, score circle badges (green/gold/red), bullet lists, key-value pairs, autoTable for question analysis + transcripts
+
 ### Frontend Infrastructure (complete)
 - API layer: Axios client, endpoint constants, form helpers, interceptors, barrel exports
 - AI streaming via native `fetch()` (Axios doesn't support ReadableStream)
@@ -322,8 +342,8 @@ Requires a `.env` file at the project root (copy `.env.example`).
 - Database name: `surveyagent` (configurable via `MONGO_DB_NAME`)
 - Collections: `admins` (user accounts), `surveys` (survey definitions), `interviews` (chat sessions), `error_logs` (error tracking)
 - Admin document fields: `name`, `email`, `password`, `org_name`, `token_version`, `is_active`, `created_at`, `updated_at`, `last_login`
-- Survey document fields: `title`, `description`, `goal`, `context`, `questions` (array of {text, ai_instructions}), `estimated_duration`, `welcome_message`, `personality_tone`, `status`, `token`, `created_by`, `created_at`, `updated_at`
-- Interview document fields: `survey_id`, `respondent` (embedded: name, age, gender, occupation, phone_number, email — all optional), `conversation` (list of {role, content, timestamp}), `status` (in_progress/completed/abandoned), `is_test_run`, `questions_covered` (list of ints), `started_at`, `completed_at`
+- Survey document fields: `title`, `description`, `goal`, `context`, `questions` (array of {text, ai_instructions}), `estimated_duration`, `welcome_message`, `personality_tone`, `status`, `token`, `created_by`, `created_at`, `updated_at`, `analysis` (cached aggregate AI analysis, optional)
+- Interview document fields: `survey_id`, `respondent` (embedded: name, age, gender, occupation, phone_number, email — all optional), `conversation` (list of {role, content, timestamp}), `status` (in_progress/completed/abandoned), `is_test_run`, `questions_covered` (list of ints), `started_at`, `completed_at`, `analysis` (cached AI analysis, optional)
 
 ## API Endpoints
 
@@ -354,6 +374,7 @@ Requires a `.env` file at the project root (copy `.env.example`).
 |--------|---------------------|----------|----------------------------------------------|
 | POST   | /generate-questions | Bearer   | Stream AI-generated questions via SSE         |
 | POST   | /enhance-field      | Bearer   | Stream AI-enhanced content for a single field  |
+| POST   | /synthesize-speech  | Bearer   | Generate TTS audio via OpenAI TTS API          |
 
 ### Interview — `/api/v1/interview`
 
@@ -371,6 +392,7 @@ Requires a `.env` file at the project root (copy `.env.example`).
 | GET    | /surveys                          | Bearer   | Overview stats across all admin's surveys              |
 | GET    | /surveys/{id}                     | Bearer   | Detailed stats for a single survey (includes analysis) |
 | GET    | /surveys/{id}/interviews          | Bearer   | Paginated interview list for a survey                  |
+| GET    | /surveys/{id}/interviews/export   | Bearer   | All interviews for bulk export (no pagination)         |
 | POST   | /surveys/{id}/analyze             | Bearer   | Stream aggregate AI analysis of all interviews via SSE |
 | GET    | /interviews/{id}                  | Bearer   | Full interview detail with conversation                |
 | POST   | /interviews/{id}/analyze          | Bearer   | Stream AI analysis of single interview via SSE         |

@@ -1,73 +1,145 @@
 # SurveyAgent
 
-AI-powered conversational survey platform where an AI chatbot conducts interviews with respondents via text, voice, or video avatar.
+Open-source AI survey platform that replaces static forms with dynamic conversations. An AI interviewer conducts interviews with respondents via text chat, adapting follow-up questions in real time. Self-hostable, LLM-agnostic, and keeps all survey data under your control.
+
+## Features
+
+- **AI Interviewer** — conversational interviews via text chat with configurable personality tone, per-question AI instructions, time-aware pacing, and automatic question coverage tracking
+- **Survey Builder** — full CRUD with AI-powered question generation and field enhancement (title, description, goal, context, welcome message)
+- **Analytics Dashboard** — per-interview and aggregate survey-level AI analysis with scores, sentiment detection, theme identification, and per-question evaluation
+- **Data Export** — CSV exports (transcripts, bulk responses, summaries) and branded PDF reports (analysis, survey definitions) with one-click download
+- **Text-to-Speech** — listen to executive summaries via OpenAI TTS API
 
 ## Tech Stack
 
-- **Backend**: FastAPI + Motor (async MongoDB) + OpenAI
-- **Auth**: JWT (python-jose) + bcrypt (passlib)
-- **Package Manager**: uv (dev) / pip (deployment)
+| Layer | Technologies |
+|-------|-------------|
+| **Backend** | Python 3.12+, FastAPI, Motor (async MongoDB), python-jose (JWT), bcrypt, OpenAI SDK |
+| **Frontend** | React 19, Vite, Tailwind CSS v3, Framer Motion, Lucide React, React Router v7, Axios, assistant-ui, jsPDF |
+| **Database** | MongoDB (Atlas or self-hosted) |
+| **AI** | OpenAI Responses API (streaming via SSE) |
+| **Package Managers** | uv (backend), npm (frontend) |
 
-## Project Structure
-
-```
-server/
-├── main.py              # FastAPI app entry point with CORS, router includes
-├── core/
-│   ├── config.py        # pydantic-settings (MONGO_URI, OPENAI_API_KEY, JWT_SECRET_KEY, etc.)
-│   ├── llm.py           # AsyncOpenAI client singleton
-│   └── logging_config.py
-├── db/
-│   └── mongo.py         # Motor async MongoDB connection + log_error helper
-├── auth/
-│   ├── routes.py        # register, login, refresh, /me, update-profile
-│   ├── schemas.py       # Pydantic schemas (AdminInDB, TokenResponse, AdminProfile, etc.)
-│   └── utils.py         # JWT create/verify, get_current_user dependency, password hashing
-```
-
-## Setup
+## Getting Started
 
 ### Prerequisites
 
 - Python 3.12+
+- Node.js 18+
 - MongoDB (Atlas or local)
 - [uv](https://docs.astral.sh/uv/) (recommended) or pip
+- OpenAI API key
 
-### Development (uv)
+### Setup
 
 ```bash
 # Clone the repo
 git clone https://github.com/aditya699/surveyagent.git
 cd surveyagent
 
-# Install dependencies
-uv sync
-
-# Copy .env.example to .env and fill in your values
+# Copy .env.example and fill in your values
 cp .env.example .env
-
-# Run the server
-uv run uvicorn server.main:app --reload
 ```
 
-### Deployment (pip)
+### Run Backend
 
 ```bash
-pip install -r requirements.txt
-uvicorn server.main:app --host 0.0.0.0 --port 8000
+uv sync
+uv run uvicorn server.main:app --reload --port 8001
+```
+
+### Run Frontend
+
+```bash
+cd client
+npm install
+npm run dev    # http://localhost:5174
+```
+
+## Project Structure
+
+```
+surveyagent/
+├── server/                     # FastAPI backend
+│   ├── main.py                 # App factory, CORS, lifespan, router mount
+│   ├── core/                   # Config, logging, LLM client
+│   ├── db/                     # MongoDB connection + error logging
+│   ├── auth/                   # JWT auth (register, login, refresh, profile)
+│   ├── surveys/                # Survey CRUD + publish
+│   ├── interviewer/            # AI interviewer engine, prompts, session management
+│   ├── ai/                     # Question generation, field enhancement, TTS
+│   └── analytics/              # Stats, AI analysis (interview + survey), export
+├── client/                     # React frontend
+│   └── src/
+│       ├── api/                # Axios client, endpoint constants, API functions
+│       ├── components/         # Shared, analytics, interview, landing components
+│       ├── hooks/              # Custom hooks (auth, forms, AI streaming, analysis)
+│       ├── utils/              # Formatters, CSV export, PDF export
+│       ├── context/            # Auth context
+│       └── pages/              # Page components
+├── .env.example                # Environment variable template
+├── pyproject.toml              # Python dependencies
+└── uv.lock                     # Lockfile
 ```
 
 ## API Endpoints
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/` | No | Root health check |
-| GET | `/health` | No | Health status |
-| POST | `/api/v1/auth/register` | No | Register new admin |
-| POST | `/api/v1/auth/login` | No | Login with email + password |
-| POST | `/api/v1/auth/refresh` | No | Refresh JWT tokens |
-| GET | `/api/v1/auth/me` | JWT | Get current user profile |
-| PUT | `/api/v1/auth/update-profile` | JWT | Update name / org_name |
+### Auth — `/api/v1/auth`
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | /register | None | Create admin account |
+| POST | /login | None | Authenticate, return tokens |
+| POST | /refresh | None | Rotate JWT tokens |
+| GET | /me | Bearer | Get current admin profile |
+| PUT | /update-profile | Bearer | Update name / org_name |
+
+### Surveys — `/api/v1/surveys`
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | / | Bearer | Create survey (draft) |
+| GET | / | Bearer | List all surveys |
+| GET | /{id} | Bearer | Get single survey |
+| PUT | /{id} | Bearer | Update survey |
+| DELETE | /{id} | Bearer | Delete survey |
+| POST | /{id}/publish | Bearer | Publish + generate share token |
+
+### AI — `/api/v1/ai`
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | /generate-questions | Bearer | Stream AI-generated questions via SSE |
+| POST | /enhance-field | Bearer | Stream AI-enhanced field content via SSE |
+| POST | /synthesize-speech | Bearer | Generate TTS audio |
+
+### Interview — `/api/v1/interview`
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | /{token}/info | None | Survey info for landing page |
+| POST | /start/{token} | None | Start interview session |
+| POST | /{session_id}/message | None | Send message, stream AI response via SSE |
+| POST | /test/{survey_id} | Bearer | Start admin test session |
+
+### Analytics — `/api/v1/analytics`
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | /surveys | Bearer | Overview stats across all surveys |
+| GET | /surveys/{id} | Bearer | Detailed stats for a survey |
+| GET | /surveys/{id}/interviews | Bearer | Paginated interview list |
+| GET | /surveys/{id}/interviews/export | Bearer | Bulk interview export (no pagination) |
+| POST | /surveys/{id}/analyze | Bearer | Stream aggregate AI analysis via SSE |
+| GET | /interviews/{id} | Bearer | Full interview detail |
+| POST | /interviews/{id}/analyze | Bearer | Stream AI analysis via SSE |
+
+## What's Not Built Yet
+
+- Voice interview mode
+- Video avatar interview mode
+- Email verification
+- Multi-tenant access control
 
 ## License
 
