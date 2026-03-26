@@ -13,6 +13,7 @@ export function useSurveyForm({ id, setQuestions }) {
   const [estimatedDuration, setEstimatedDuration] = useState(5);
   const [personalityTone, setPersonalityTone] = useState('friendly');
   const [welcomeMessage, setWelcomeMessage] = useState('');
+  const [webhookUrl, setWebhookUrl] = useState('');
   const [existingStatus, setExistingStatus] = useState(null);
 
   const [saving, setSaving] = useState(false);
@@ -42,6 +43,7 @@ export function useSurveyForm({ id, setQuestions }) {
         setEstimatedDuration(s.estimated_duration ?? 5);
         setPersonalityTone(s.personality_tone ?? 'friendly');
         setWelcomeMessage(s.welcome_message ?? '');
+        setWebhookUrl(s.webhook_url ?? '');
         setExistingStatus(s.status);
       } catch (err) {
         if (!cancelled) setError(err.response?.data?.detail || 'Failed to load survey');
@@ -67,8 +69,9 @@ export function useSurveyForm({ id, setQuestions }) {
       estimated_duration: estimatedDuration,
       personality_tone: personalityTone,
       welcome_message: welcomeMessage.trim() || null,
+      webhook_url: webhookUrl.trim() || null,
     }),
-    [title, description, goal, context, estimatedDuration, personalityTone, welcomeMessage],
+    [title, description, goal, context, estimatedDuration, personalityTone, welcomeMessage, webhookUrl],
   );
 
   const handleSave = useCallback(
@@ -146,6 +149,7 @@ export function useSurveyForm({ id, setQuestions }) {
     estimatedDuration, setEstimatedDuration,
     personalityTone, setPersonalityTone,
     welcomeMessage, setWelcomeMessage,
+    webhookUrl, setWebhookUrl,
     existingStatus,
     saving, publishing, testing, error,
     loadingExisting,

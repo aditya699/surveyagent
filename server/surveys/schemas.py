@@ -26,6 +26,7 @@ class SurveyCreate(BaseModel):
     estimated_duration: int = Field(5, description="Estimated interview duration in minutes", ge=1, le=60)
     welcome_message: Optional[str] = Field(None, description="Custom welcome message for respondents", max_length=1000)
     personality_tone: str = Field("friendly", description="Interviewer tone: professional, friendly, casual, or fun")
+    webhook_url: Optional[str] = Field(None, description="Webhook URL to POST interview results on completion", max_length=2000)
 
 
 class SurveyUpdate(BaseModel):
@@ -44,6 +45,7 @@ class SurveyUpdate(BaseModel):
     estimated_duration: Optional[int] = Field(None, description="Estimated interview duration in minutes", ge=1, le=60)
     welcome_message: Optional[str] = Field(None, description="Custom welcome message for respondents", max_length=1000)
     personality_tone: Optional[str] = Field(None, description="Interviewer tone: professional, friendly, casual, or fun")
+    webhook_url: Optional[str] = Field(None, description="Webhook URL to POST interview results on completion", max_length=2000)
 
 
 class SurveyInDB(BaseModel):
@@ -62,6 +64,7 @@ class SurveyInDB(BaseModel):
     estimated_duration: int = Field(5, description="Estimated interview duration in minutes")
     welcome_message: Optional[str] = Field(None, description="Custom welcome message for respondents")
     personality_tone: str = Field("friendly", description="Interviewer tone: professional, friendly, casual, or fun")
+    webhook_url: Optional[str] = Field(None, description="Webhook URL to POST interview results on completion")
     status: str = Field("draft", description="Survey status: draft or published")
     token: Optional[str] = Field(None, description="Unique public token, generated on publish")
     created_by: str = Field(..., description="Admin ObjectId who created the survey")
@@ -85,6 +88,7 @@ class SurveyResponse(BaseModel):
     estimated_duration: int = Field(5, description="Estimated interview duration in minutes")
     welcome_message: Optional[str] = Field(None, description="Custom welcome message for respondents")
     personality_tone: str = Field("friendly", description="Interviewer tone: professional, friendly, casual, or fun")
+    webhook_url: Optional[str] = Field(None, description="Webhook URL to POST interview results on completion")
     status: str = Field(..., description="Survey status: draft or published")
     token: Optional[str] = Field(None, description="Unique public token")
     created_by: str = Field(..., description="Admin ID who created the survey")

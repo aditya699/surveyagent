@@ -25,6 +25,7 @@ export default function SurveyForm() {
     estimatedDuration, setEstimatedDuration,
     personalityTone, setPersonalityTone,
     welcomeMessage, setWelcomeMessage,
+    webhookUrl, setWebhookUrl,
     existingStatus,
     saving, publishing, testing, error,
     loadingExisting,
@@ -273,6 +274,24 @@ export default function SurveyForm() {
                 className="w-full bg-white border border-card-border rounded-lg px-4 py-3 text-sm font-sans text-text-primary placeholder:text-text-muted/40 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-all resize-none"
                 placeholder="Leave blank for default: &quot;Hi! Thanks for taking the time. This survey is about {title}...&quot;"
               />
+            </div>
+
+            {/* Webhook URL */}
+            <div>
+              <label htmlFor="webhookUrl" className="block text-sm font-sans text-text-muted mb-1.5">
+                Webhook URL <span className="text-text-muted/50">(optional)</span>
+              </label>
+              <input
+                id="webhookUrl"
+                type="url"
+                value={webhookUrl}
+                onChange={(e) => setWebhookUrl(e.target.value)}
+                className="w-full bg-white border border-card-border rounded-lg px-4 py-3 text-sm font-sans text-text-primary placeholder:text-text-muted/40 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-all"
+                placeholder="https://hooks.slack.com/services/..."
+              />
+              <p className="mt-1 text-xs text-text-muted/60 font-sans">
+                We'll POST interview results to this URL when an interview completes.
+              </p>
             </div>
 
             {/* Questions */}

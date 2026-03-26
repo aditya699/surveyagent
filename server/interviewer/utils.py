@@ -1,12 +1,15 @@
 """
 Interviewer utility functions — welcome message builder, time calculator,
-input sanitization, and post-stream processing.
+input sanitization, post-stream processing, and webhook dispatch.
 """
 
+import asyncio
+import json
 import re
 from datetime import datetime
 from typing import Optional
 
+import httpx
 from bson import ObjectId
 
 from server.core.logging_config import get_logger
@@ -73,6 +76,57 @@ async def process_stream_result(
     )
     if should_complete:
         await update_status(session_id, "completed")
+        asyncio.create_task(fire_webhook(session_id))
         return 'data: {"type": "complete"}\n\n'
 
     return None
+
+
+async def fire_webhook(session_id: str) -> None:
+    """Fire-and-forget POST to the survey's webhook_url on interview completion."""
+    try:
+        db = await get_db()
+        interview = await db["interviews"].find_one({"_id": ObjectId(session_id)})
+        if not interview:
+            return
+
+        if interview.get("is_test_run"):
+            return
+
+        survey = await db["surveys"].find_one({"_id": interview["survey_id"]})
+        if not survey:
+            return
+
+        webhook_url = survey.get("webhook_url")
+        if not webhook_url:
+            return
+
+        respondent = interview.get("respondent") or {}
+        payload = {
+            "event": "interview.completed",
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "survey": {
+                "id": str(survey["_id"]),
+                "title": survey.get("title", ""),
+            },
+            "interview": {
+                "id": session_id,
+                "status": interview.get("status", "completed"),
+                "is_test_run": False,
+                "questions_covered": len(interview.get("questions_covered", [])),
+                "total_questions": len(survey.get("questions", [])),
+                "started_at": interview.get("started_at", "").isoformat() + "Z" if interview.get("started_at") else None,
+                "completed_at": interview.get("completed_at", "").isoformat() + "Z" if interview.get("completed_at") else None,
+            },
+            "respondent": {
+                "name": respondent.get("name"),
+                "email": respondent.get("email"),
+            },
+        }
+
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.post(webhook_url, json=payload)
+            logger.info(f"Webhook fired - session: {session_id}, url: {webhook_url}, status: {resp.status_code}")
+
+    except Exception as e:
+        logger.warning(f"Webhook failed - session: {session_id}, error: {e}")
