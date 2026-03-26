@@ -9,6 +9,9 @@ from server.core.config import settings
 setup_logging()
 logger = get_logger(__name__)
 
+# Register LLM providers
+import server.core.providers  # noqa: F401
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

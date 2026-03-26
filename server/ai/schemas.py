@@ -5,6 +5,9 @@ AI module Pydantic schemas.
 from pydantic import BaseModel, Field
 
 
+from typing import Optional
+
+
 class GenerateQuestionsRequest(BaseModel):
     num_questions: int = Field(default=5, ge=1, le=20)
     title: str = ""
@@ -12,6 +15,8 @@ class GenerateQuestionsRequest(BaseModel):
     goal: str = ""
     context: str = ""
     additional_info: str = ""
+    llm_provider: Optional[str] = Field(None, description="LLM provider: openai, anthropic, or gemini")
+    llm_model: Optional[str] = Field(None, description="Model name override")
 
 
 class EnhanceFieldRequest(BaseModel):
@@ -21,6 +26,8 @@ class EnhanceFieldRequest(BaseModel):
     description: str = ""
     goal: str = ""
     context: str = ""
+    llm_provider: Optional[str] = Field(None, description="LLM provider: openai, anthropic, or gemini")
+    llm_model: Optional[str] = Field(None, description="Model name override")
 
 
 class SynthesizeSpeechRequest(BaseModel):

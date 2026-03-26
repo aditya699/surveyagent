@@ -14,6 +14,8 @@ export function useSurveyForm({ id, setQuestions }) {
   const [personalityTone, setPersonalityTone] = useState('friendly');
   const [welcomeMessage, setWelcomeMessage] = useState('');
   const [webhookUrl, setWebhookUrl] = useState('');
+  const [llmProvider, setLlmProvider] = useState('');
+  const [llmModel, setLlmModel] = useState('');
   const [existingStatus, setExistingStatus] = useState(null);
 
   const [saving, setSaving] = useState(false);
@@ -44,6 +46,8 @@ export function useSurveyForm({ id, setQuestions }) {
         setPersonalityTone(s.personality_tone ?? 'friendly');
         setWelcomeMessage(s.welcome_message ?? '');
         setWebhookUrl(s.webhook_url ?? '');
+        setLlmProvider(s.llm_provider ?? '');
+        setLlmModel(s.llm_model ?? '');
         setExistingStatus(s.status);
       } catch (err) {
         if (!cancelled) setError(err.response?.data?.detail || 'Failed to load survey');
@@ -70,8 +74,10 @@ export function useSurveyForm({ id, setQuestions }) {
       personality_tone: personalityTone,
       welcome_message: welcomeMessage.trim() || null,
       webhook_url: webhookUrl.trim() || null,
+      llm_provider: llmProvider || null,
+      llm_model: llmModel.trim() || null,
     }),
-    [title, description, goal, context, estimatedDuration, personalityTone, welcomeMessage, webhookUrl],
+    [title, description, goal, context, estimatedDuration, personalityTone, welcomeMessage, webhookUrl, llmProvider, llmModel],
   );
 
   const handleSave = useCallback(
@@ -150,6 +156,8 @@ export function useSurveyForm({ id, setQuestions }) {
     personalityTone, setPersonalityTone,
     welcomeMessage, setWelcomeMessage,
     webhookUrl, setWebhookUrl,
+    llmProvider, setLlmProvider,
+    llmModel, setLlmModel,
     existingStatus,
     saving, publishing, testing, error,
     loadingExisting,

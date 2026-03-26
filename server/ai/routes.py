@@ -1,6 +1,6 @@
 """
 AI routes for SurveyAgent.
-Provides streaming question generation using OpenAI Responses API with GPT-5.4-mini.
+Provides streaming question generation and field enhancement via pluggable LLM providers.
 """
 
 import json
@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from server.auth.utils import get_current_user
 from server.core.config import settings
-from server.core.llm import get_openai_client
+from server.core.llm import get_openai_client, get_provider
 from server.core.logging_config import get_logger
 from server.ai.prompts import SYSTEM_PROMPT, build_user_prompt, ENHANCE_SYSTEM_PROMPT, build_enhance_prompt
 from server.ai.schemas import GenerateQuestionsRequest, EnhanceFieldRequest, SynthesizeSpeechRequest
@@ -38,34 +38,29 @@ async def generate_questions(
         additional_info=request.additional_info,
     )
 
-    client = await get_openai_client()
+    provider = await get_provider(request.llm_provider or "openai")
+    model = request.llm_model or provider.default_model
 
     async def event_stream():
         try:
-            stream = await client.responses.create(
-                model=settings.OPENAI_MODEL,
-                input=[
-                    {"role": "developer", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": user_prompt},
-                ],
-                stream=True,
-            )
-
             # Buffer tokens and emit a complete question each time we hit a newline
             buffer = ""
             question_count = 0
 
-            async for event in stream:
-                if hasattr(event, "type") and event.type == "response.output_text.delta":
-                    buffer += event.delta
+            async for delta in provider.stream_text(
+                model=model,
+                system_prompt=SYSTEM_PROMPT,
+                messages=[{"role": "user", "content": user_prompt}],
+            ):
+                buffer += delta
 
-                    # Check if we have one or more complete lines
-                    while "\n" in buffer:
-                        line, buffer = buffer.split("\n", 1)
-                        line = line.strip()
-                        if line and question_count < request.num_questions:
-                            question_count += 1
-                            yield f"data: {json.dumps({'question': line})}\n\n"
+                # Check if we have one or more complete lines
+                while "\n" in buffer:
+                    line, buffer = buffer.split("\n", 1)
+                    line = line.strip()
+                    if line and question_count < request.num_questions:
+                        question_count += 1
+                        yield f"data: {json.dumps({'question': line})}\n\n"
 
             # Flush any remaining content in the buffer (last question may not end with \n)
             remaining = buffer.strip()
@@ -110,22 +105,17 @@ async def enhance_field(
         context=request.context,
     )
 
-    client = await get_openai_client()
+    provider = await get_provider(request.llm_provider or "openai")
+    model = request.llm_model or provider.default_model
 
     async def event_stream():
         try:
-            stream = await client.responses.create(
-                model=settings.OPENAI_MODEL,
-                input=[
-                    {"role": "developer", "content": ENHANCE_SYSTEM_PROMPT},
-                    {"role": "user", "content": user_prompt},
-                ],
-                stream=True,
-            )
-
-            async for event in stream:
-                if hasattr(event, "type") and event.type == "response.output_text.delta":
-                    yield f"data: {json.dumps({'token': event.delta})}\n\n"
+            async for delta in provider.stream_text(
+                model=model,
+                system_prompt=ENHANCE_SYSTEM_PROMPT,
+                messages=[{"role": "user", "content": user_prompt}],
+            ):
+                yield f"data: {json.dumps({'token': delta})}\n\n"
 
             yield "data: [DONE]\n\n"
 

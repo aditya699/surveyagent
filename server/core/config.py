@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     MONGO_DB_NAME: str = "surveyagent"
     OPENAI_API_KEY: str
     OPENAI_MODEL: str = "gpt-5.4-mini"
+    ANTHROPIC_API_KEY: str | None = None
+    ANTHROPIC_MODEL: str = "claude-sonnet-4-6"
+    GEMINI_API_KEY: str | None = None
+    GEMINI_MODEL: str = "gemini-3.1-pro-preview"
     JWT_SECRET_KEY: str
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 1 * 24 * 60  # 1 day in minutes

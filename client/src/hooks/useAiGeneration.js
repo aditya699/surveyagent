@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { streamGenerateQuestions } from '../api/ai';
 
-export function useAiGeneration({ title, description, goal, context, setQuestions }) {
+export function useAiGeneration({ title, description, goal, context, setQuestions, llmProvider, llmModel }) {
   const [showAiPanel, setShowAiPanel] = useState(false);
   const [aiNumQuestions, setAiNumQuestions] = useState(5);
   const [aiAdditionalInfo, setAiAdditionalInfo] = useState('');
@@ -24,6 +24,8 @@ export function useAiGeneration({ title, description, goal, context, setQuestion
         goal: goal.trim(),
         context: context.trim(),
         additional_info: aiAdditionalInfo.trim(),
+        llm_provider: llmProvider || null,
+        llm_model: llmModel?.trim() || null,
       },
       onQuestion: (question) => {
         setQuestions((prev) => {
@@ -44,7 +46,7 @@ export function useAiGeneration({ title, description, goal, context, setQuestion
       },
       signal: controller.signal,
     });
-  }, [aiNumQuestions, aiAdditionalInfo, title, description, goal, context, setQuestions]);
+  }, [aiNumQuestions, aiAdditionalInfo, title, description, goal, context, setQuestions, llmProvider, llmModel]);
 
   const handleAiCancel = useCallback(() => {
     if (abortRef.current) {

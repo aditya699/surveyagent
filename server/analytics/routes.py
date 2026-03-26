@@ -6,7 +6,7 @@ from bson import ObjectId
 from server.auth.utils import get_current_user
 from server.db.mongo import get_db, log_error
 from server.core.config import settings
-from server.core.llm import get_openai_client
+from server.core.llm import get_provider
 from server.core.logging_config import get_logger
 from server.analytics.db import (
     get_overview_stats,
@@ -192,24 +192,20 @@ async def analyze_interview(interview_id: str, current_user: dict = Depends(get_
             questions_covered=interview.get("questions_covered"),
         )
 
-        client = await get_openai_client()
+        provider_name = survey.get("llm_provider") or "openai"
+        provider = await get_provider(provider_name)
+        model = survey.get("llm_model") or provider.default_model
 
         async def event_stream():
             result_buffer = ""
             try:
-                stream = await client.responses.create(
-                    model=settings.OPENAI_MODEL,
-                    input=[
-                        {"role": "developer", "content": ANALYSIS_SYSTEM_PROMPT},
-                        {"role": "user", "content": user_prompt},
-                    ],
-                    stream=True,
-                )
-
-                async for event in stream:
-                    if hasattr(event, "type") and event.type == "response.output_text.delta":
-                        result_buffer += event.delta
-                        yield f"data: {json.dumps({'token': event.delta})}\n\n"
+                async for delta in provider.stream_text(
+                    model=model,
+                    system_prompt=ANALYSIS_SYSTEM_PROMPT,
+                    messages=[{"role": "user", "content": user_prompt}],
+                ):
+                    result_buffer += delta
+                    yield f"data: {json.dumps({'token': delta})}\n\n"
 
                 # Parse and cache the analysis
                 try:
@@ -277,24 +273,20 @@ async def analyze_survey(survey_id: str, current_user: dict = Depends(get_curren
             raw_interviews=raw,
         )
 
-        client = await get_openai_client()
+        provider_name = survey.get("llm_provider") or "openai"
+        provider = await get_provider(provider_name)
+        model = survey.get("llm_model") or provider.default_model
 
         async def event_stream():
             result_buffer = ""
             try:
-                stream = await client.responses.create(
-                    model=settings.OPENAI_MODEL,
-                    input=[
-                        {"role": "developer", "content": SURVEY_ANALYSIS_SYSTEM_PROMPT},
-                        {"role": "user", "content": user_prompt},
-                    ],
-                    stream=True,
-                )
-
-                async for event in stream:
-                    if hasattr(event, "type") and event.type == "response.output_text.delta":
-                        result_buffer += event.delta
-                        yield f"data: {json.dumps({'token': event.delta})}\n\n"
+                async for delta in provider.stream_text(
+                    model=model,
+                    system_prompt=SURVEY_ANALYSIS_SYSTEM_PROMPT,
+                    messages=[{"role": "user", "content": user_prompt}],
+                ):
+                    result_buffer += delta
+                    yield f"data: {json.dumps({'token': delta})}\n\n"
 
                 # Parse and cache the analysis
                 try:

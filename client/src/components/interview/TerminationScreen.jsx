@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ShieldAlert, Pencil, RotateCcw } from 'lucide-react';
+import { ShieldAlert, Pencil, RotateCcw, Home } from 'lucide-react';
 
 export default function TerminationScreen({ isTestMode, surveyId, onTestAgain }) {
   return (
@@ -22,7 +22,7 @@ export default function TerminationScreen({ isTestMode, surveyId, onTestAgain })
             : 'This interview was ended due to inappropriate or abusive language. Please maintain a respectful tone when participating in surveys.'}
         </p>
 
-        {isTestMode && (
+        {isTestMode ? (
           <div className="flex gap-2.5 mt-6">
             <Link
               to={`/surveys/${surveyId}/edit`}
@@ -38,6 +38,16 @@ export default function TerminationScreen({ isTestMode, surveyId, onTestAgain })
               <RotateCcw className="w-3.5 h-3.5" />
               Test Again
             </button>
+          </div>
+        ) : (
+          <div className="mt-6">
+            <Link
+              to="/"
+              className="btn-secondary text-sm inline-flex items-center justify-center gap-2"
+            >
+              <Home className="w-3.5 h-3.5" />
+              Back to Home
+            </Link>
           </div>
         )}
       </div>

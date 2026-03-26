@@ -12,6 +12,7 @@ const CONTEXT_HIERARCHY = {
 export function useFieldEnhance({
   title, description, goal, context, welcomeMessage,
   setTitle, setDescription, setGoal, setContext, setWelcomeMessage,
+  llmProvider, llmModel,
 }) {
   const [enhancingField, setEnhancingField] = useState(null);
   const [enhanceError, setEnhanceError] = useState('');
@@ -51,6 +52,8 @@ export function useFieldEnhance({
         field_name: fieldName,
         current_value: currentValue.trim(),
         ...contextData,
+        llm_provider: llmProvider || null,
+        llm_model: llmModel?.trim() || null,
       },
       onToken: (token) => {
         setter((prev) => prev + token);
@@ -67,7 +70,8 @@ export function useFieldEnhance({
       signal: controller.signal,
     });
   }, [title, description, goal, context, welcomeMessage,
-      setTitle, setDescription, setGoal, setContext, setWelcomeMessage]);
+      setTitle, setDescription, setGoal, setContext, setWelcomeMessage,
+      llmProvider, llmModel]);
 
   const cancelEnhance = useCallback(() => {
     if (abortRef.current) {

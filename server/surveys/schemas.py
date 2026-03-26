@@ -27,6 +27,8 @@ class SurveyCreate(BaseModel):
     welcome_message: Optional[str] = Field(None, description="Custom welcome message for respondents", max_length=1000)
     personality_tone: str = Field("friendly", description="Interviewer tone: professional, friendly, casual, or fun")
     webhook_url: Optional[str] = Field(None, description="Webhook URL to POST interview results on completion", max_length=2000)
+    llm_provider: Optional[str] = Field(None, description="LLM provider: openai, anthropic, or gemini")
+    llm_model: Optional[str] = Field(None, description="Model name (e.g. gpt-5.4-mini, claude-sonnet-4-6, gemini-3.1-pro-preview)")
 
 
 class SurveyUpdate(BaseModel):
@@ -46,6 +48,8 @@ class SurveyUpdate(BaseModel):
     welcome_message: Optional[str] = Field(None, description="Custom welcome message for respondents", max_length=1000)
     personality_tone: Optional[str] = Field(None, description="Interviewer tone: professional, friendly, casual, or fun")
     webhook_url: Optional[str] = Field(None, description="Webhook URL to POST interview results on completion", max_length=2000)
+    llm_provider: Optional[str] = Field(None, description="LLM provider: openai, anthropic, or gemini")
+    llm_model: Optional[str] = Field(None, description="Model name (e.g. gpt-5.4-mini, claude-sonnet-4-6, gemini-3.1-pro-preview)")
 
 
 class SurveyInDB(BaseModel):
@@ -65,6 +69,8 @@ class SurveyInDB(BaseModel):
     welcome_message: Optional[str] = Field(None, description="Custom welcome message for respondents")
     personality_tone: str = Field("friendly", description="Interviewer tone: professional, friendly, casual, or fun")
     webhook_url: Optional[str] = Field(None, description="Webhook URL to POST interview results on completion")
+    llm_provider: Optional[str] = Field(None, description="LLM provider: openai, anthropic, or gemini")
+    llm_model: Optional[str] = Field(None, description="Model name (e.g. gpt-5.4-mini, claude-sonnet-4-6, gemini-3.1-pro-preview)")
     status: str = Field("draft", description="Survey status: draft or published")
     token: Optional[str] = Field(None, description="Unique public token, generated on publish")
     created_by: str = Field(..., description="Admin ObjectId who created the survey")
@@ -89,6 +95,8 @@ class SurveyResponse(BaseModel):
     welcome_message: Optional[str] = Field(None, description="Custom welcome message for respondents")
     personality_tone: str = Field("friendly", description="Interviewer tone: professional, friendly, casual, or fun")
     webhook_url: Optional[str] = Field(None, description="Webhook URL to POST interview results on completion")
+    llm_provider: Optional[str] = Field(None, description="LLM provider: openai, anthropic, or gemini")
+    llm_model: Optional[str] = Field(None, description="Model name (e.g. gpt-5.4-mini, claude-sonnet-4-6, gemini-3.1-pro-preview)")
     status: str = Field(..., description="Survey status: draft or published")
     token: Optional[str] = Field(None, description="Unique public token")
     created_by: str = Field(..., description="Admin ID who created the survey")

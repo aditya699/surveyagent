@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { CheckCircle, Clock, Pencil, RotateCcw, Rocket, Link as LinkIcon, Check } from 'lucide-react';
+import { CheckCircle, Clock, Pencil, RotateCcw, Rocket, Link as LinkIcon, Check, Home } from 'lucide-react';
 import { useClipboard } from '../../hooks/useClipboard';
 import { formatDurationLong } from '../../utils/formatters';
 
@@ -62,7 +62,7 @@ export default function CompletionScreen({
             : 'Thank you for taking the time to share your thoughts. Your responses have been recorded.'}
         </p>
 
-        {isTestMode && (
+        {isTestMode ? (
           <div className="flex flex-col gap-2.5 mt-6">
             <div className="flex gap-2.5">
               <Link
@@ -112,6 +112,16 @@ export default function CompletionScreen({
             {publishError && (
               <p className="text-xs font-sans text-error">{publishError}</p>
             )}
+          </div>
+        ) : (
+          <div className="mt-6">
+            <Link
+              to="/"
+              className="btn-secondary text-sm inline-flex items-center justify-center gap-2"
+            >
+              <Home className="w-3.5 h-3.5" />
+              Back to Home
+            </Link>
           </div>
         )}
       </div>

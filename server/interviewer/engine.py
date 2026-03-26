@@ -6,8 +6,7 @@ import json
 import re
 from typing import AsyncGenerator
 
-from server.core.config import settings
-from server.core.llm import get_openai_client
+from server.core.llm import get_provider
 from server.core.logging_config import get_logger
 from server.interviewer.prompts import build_interviewer_prompt
 
@@ -85,26 +84,23 @@ async def run_interview_turn(
     if remaining_minutes <= 0:
         system_prompt += "\n\nURGENT: Time is up. Wrap up immediately — thank the respondent and end the interview. Do not ask any new questions."
 
-    # Build messages array for OpenAI Responses API
-    messages = [{"role": "developer", "content": system_prompt}]
-    for msg in conversation:
-        messages.append({"role": msg["role"], "content": msg["content"]})
+    # Build messages for the provider (system prompt is passed separately)
+    messages = [{"role": msg["role"], "content": msg["content"]} for msg in conversation]
 
-    client = await get_openai_client()
+    provider_name = survey.get("llm_provider") or "openai"
+    provider = await get_provider(provider_name)
+    model = survey.get("llm_model") or provider.default_model
 
     try:
-        stream = await client.responses.create(
-            model=settings.OPENAI_MODEL,
-            input=messages,
-            stream=True,
-        )
-
         full_response = ""
 
-        async for event in stream:
-            if hasattr(event, "type") and event.type == "response.output_text.delta":
-                full_response += event.delta
-                yield f"data: {json.dumps({'token': event.delta})}\n\n"
+        async for delta in provider.stream_text(
+            model=model,
+            system_prompt=system_prompt,
+            messages=messages,
+        ):
+            full_response += delta
+            yield f"data: {json.dumps({'token': delta})}\n\n"
 
         # Parse abuse tag first, then coverage tag from the cleaned text
         text_after_abuse, abuse_detected = parse_abuse_tag(full_response)

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, LogOut, Plus, X, Sparkles, Loader2, MessageSquare, ChevronDown, ChevronRight, BotMessageSquare } from 'lucide-react';
+import { ArrowLeft, LogOut, Plus, X, Sparkles, Loader2, MessageSquare, ChevronDown, ChevronRight, BotMessageSquare, Cpu } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useSurveyForm } from '../hooks/useSurveyForm';
 import { useQuestionManager } from '../hooks/useQuestionManager';
@@ -26,6 +26,8 @@ export default function SurveyForm() {
     personalityTone, setPersonalityTone,
     welcomeMessage, setWelcomeMessage,
     webhookUrl, setWebhookUrl,
+    llmProvider, setLlmProvider,
+    llmModel, setLlmModel,
     existingStatus,
     saving, publishing, testing, error,
     loadingExisting,
@@ -38,7 +40,7 @@ export default function SurveyForm() {
     aiAdditionalInfo, setAiAdditionalInfo,
     aiGenerating, aiError,
     handleAiGenerate, handleAiCancel, toggleAiPanel,
-  } = useAiGeneration({ title, description, goal, context, setQuestions });
+  } = useAiGeneration({ title, description, goal, context, setQuestions, llmProvider, llmModel });
 
   const {
     enhancingField, enhanceError,
@@ -46,6 +48,7 @@ export default function SurveyForm() {
   } = useFieldEnhance({
     title, description, goal, context, welcomeMessage,
     setTitle, setDescription, setGoal, setContext, setWelcomeMessage,
+    llmProvider, llmModel,
   });
 
   if (loadingExisting) {
@@ -292,6 +295,54 @@ export default function SurveyForm() {
               <p className="mt-1 text-xs text-text-muted/60 font-sans">
                 We'll POST interview results to this URL when an interview completes.
               </p>
+            </div>
+
+            {/* LLM Configuration */}
+            <div className="border border-card-border rounded-lg p-4 space-y-4 bg-white/50">
+              <div className="flex items-center gap-2 mb-1">
+                <Cpu className="w-4 h-4 text-accent" />
+                <span className="text-sm font-sans font-medium text-text-primary">LLM Configuration</span>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="llmProvider" className="block text-sm font-sans text-text-muted mb-1.5">
+                    Provider
+                  </label>
+                  <select
+                    id="llmProvider"
+                    value={llmProvider}
+                    onChange={(e) => {
+                      setLlmProvider(e.target.value);
+                      setLlmModel('');
+                    }}
+                    className="w-full bg-white border border-card-border rounded-lg px-4 py-3 text-sm font-sans text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-all"
+                  >
+                    <option value="">OpenAI (Default)</option>
+                    <option value="anthropic">Anthropic</option>
+                    <option value="gemini">Google Gemini</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="llmModel" className="block text-sm font-sans text-text-muted mb-1.5">
+                    Model
+                  </label>
+                  <input
+                    id="llmModel"
+                    type="text"
+                    value={llmModel}
+                    onChange={(e) => setLlmModel(e.target.value)}
+                    className="w-full bg-white border border-card-border rounded-lg px-4 py-3 text-sm font-sans text-text-primary placeholder:text-text-muted/40 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-all"
+                    placeholder={
+                      llmProvider === 'anthropic' ? 'claude-sonnet-4-6' :
+                      llmProvider === 'gemini' ? 'gemini-3.1-pro-preview' :
+                      'gpt-5.4-mini'
+                    }
+                  />
+                  <p className="mt-1 text-xs text-text-muted/60 font-sans">
+                    Leave blank to use the default model for the selected provider.
+                  </p>
+                </div>
+              </div>
             </div>
 
             {/* Questions */}

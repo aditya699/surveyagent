@@ -50,6 +50,8 @@ async def create_survey(
             "welcome_message": survey_data.welcome_message,
             "personality_tone": survey_data.personality_tone,
             "webhook_url": survey_data.webhook_url,
+            "llm_provider": survey_data.llm_provider,
+            "llm_model": survey_data.llm_model,
             "status": "draft",
             "token": None,
             "created_by": ObjectId(user_id),
