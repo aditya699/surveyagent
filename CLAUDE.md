@@ -4,11 +4,11 @@
 
 SurveyAgent is an open-source AI survey platform that replaces static forms with dynamic conversations. It conducts interviews via text chat, voice, or video avatar. It's self-hostable, LLM-agnostic, and keeps survey data under the user's control.
 
-**Status:** Early development. Auth system, landing page, survey CRUD, AI question generation, AI field enhancement, interviewer foundation, interviewer engine + routes, interview chat UI (text), analytics, and data export are built. Voice and video are not yet implemented.
+**Status:** Early development. Auth system, landing page, survey CRUD, AI question generation, AI field enhancement, interviewer foundation, interviewer engine + routes, interview chat UI (text), analytics, data export, and webhooks are built. Voice and video are not yet implemented.
 
 ## Tech Stack
 
-- **Backend:** Python 3.12+, FastAPI, Motor (async MongoDB), python-jose (JWT), bcrypt, OpenAI SDK
+- **Backend:** Python 3.12+, FastAPI, Motor (async MongoDB), python-jose (JWT), bcrypt, OpenAI SDK, httpx (webhooks)
 - **Frontend:** React 19, Vite, Tailwind CSS v3, Framer Motion, Lucide React, React Router v7, Axios, assistant-ui (chat primitives), jsPDF + jspdf-autotable (PDF export)
 - **Database:** MongoDB (Atlas or self-hosted)
 - **AI:** OpenAI Responses API (gpt-5.4-mini), streaming via SSE
@@ -179,7 +179,7 @@ Requires a `.env` file at the project root (copy `.env.example`).
 
 ### Survey Management (complete)
 - Full CRUD: create, list, view, edit, delete surveys
-- Survey fields: title, description, goal, context, questions (array of QuestionItem: {text, ai_instructions}), estimated_duration (int, minutes, default 5), welcome_message (optional string), personality_tone (professional/friendly/casual/fun, default "friendly")
+- Survey fields: title, description, goal, context, questions (array of QuestionItem: {text, ai_instructions}), estimated_duration (int, minutes, default 5), welcome_message (optional string), personality_tone (professional/friendly/casual/fun, default "friendly"), webhook_url (optional string, max 2000 chars)
 - Draft → Published workflow with uuid4 token generation
 - Ownership isolation: admins only see their own surveys
 - Dashboard with survey cards (status badge, dates, share link, actions)
@@ -266,6 +266,14 @@ Requires a `.env` file at the project root (copy `.env.example`).
 - Export utilities split into `utils/export.js` (CSV) and `utils/pdf.js` (PDF) — both are pure functions, no React dependencies
 - PDF design: accent bar header, score circle badges (green/gold/red), bullet lists, key-value pairs, autoTable for question analysis + transcripts
 
+### Webhooks (complete)
+- Optional `webhook_url` field on surveys — POST interview results to external URLs (e.g., Slack) on interview completion
+- Fire-and-forget via `asyncio.create_task()` — doesn't block SSE response to respondent
+- Payload: event type, timestamp, survey id/title, interview id/status/questions covered/timestamps, respondent name/email
+- Skips test runs (admin test sessions don't trigger webhooks)
+- Uses `httpx.AsyncClient` with 10s timeout; failures logged but never break interview flow
+- Frontend: URL input field in survey form between Welcome Message and Questions
+
 ### Frontend Infrastructure (complete)
 - API layer: Axios client, endpoint constants, form helpers, interceptors, barrel exports
 - AI streaming via native `fetch()` (Axios doesn't support ReadableStream)
@@ -338,11 +346,18 @@ Requires a `.env` file at the project root (copy `.env.example`).
 - Two routes resolve to one component: `/interview/:token` (respondent) and `/interview/test/:surveyId` (admin). Component uses `useParams()` to detect which route matched.
 - Test route listed before token route in App.jsx so `/interview/test/xxx` matches the static `test` segment first.
 
+### Webhooks
+- `webhook_url` is stored on the survey document. When an interview completes, `fire_webhook()` in `server/interviewer/utils.py` is called via `asyncio.create_task()`.
+- Webhook fetches the interview + survey docs from MongoDB, builds the payload, and POSTs via `httpx.AsyncClient` with a 10s timeout.
+- Test runs (`is_test_run=True`) are skipped — only real respondent interviews trigger webhooks.
+- Errors are caught and logged (`logger.warning`) but never propagate — webhook failures must not break the interview flow.
+- No retry logic in v1. Payload is metadata-only (no transcript).
+
 ### MongoDB
 - Database name: `surveyagent` (configurable via `MONGO_DB_NAME`)
 - Collections: `admins` (user accounts), `surveys` (survey definitions), `interviews` (chat sessions), `error_logs` (error tracking)
 - Admin document fields: `name`, `email`, `password`, `org_name`, `token_version`, `is_active`, `created_at`, `updated_at`, `last_login`
-- Survey document fields: `title`, `description`, `goal`, `context`, `questions` (array of {text, ai_instructions}), `estimated_duration`, `welcome_message`, `personality_tone`, `status`, `token`, `created_by`, `created_at`, `updated_at`, `analysis` (cached aggregate AI analysis, optional)
+- Survey document fields: `title`, `description`, `goal`, `context`, `questions` (array of {text, ai_instructions}), `estimated_duration`, `welcome_message`, `personality_tone`, `webhook_url` (optional), `status`, `token`, `created_by`, `created_at`, `updated_at`, `analysis` (cached aggregate AI analysis, optional)
 - Interview document fields: `survey_id`, `respondent` (embedded: name, age, gender, occupation, phone_number, email — all optional), `conversation` (list of {role, content, timestamp}), `status` (in_progress/completed/abandoned), `is_test_run`, `questions_covered` (list of ints), `started_at`, `completed_at`, `analysis` (cached AI analysis, optional)
 
 ## API Endpoints
