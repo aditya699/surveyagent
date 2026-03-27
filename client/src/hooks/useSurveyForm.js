@@ -16,6 +16,8 @@ export function useSurveyForm({ id, setQuestions }) {
   const [webhookUrl, setWebhookUrl] = useState('');
   const [llmProvider, setLlmProvider] = useState('');
   const [llmModel, setLlmModel] = useState('');
+  const [visibility, setVisibility] = useState('private');
+  const [teamIds, setTeamIds] = useState([]);
   const [existingStatus, setExistingStatus] = useState(null);
 
   const [saving, setSaving] = useState(false);
@@ -48,6 +50,8 @@ export function useSurveyForm({ id, setQuestions }) {
         setWebhookUrl(s.webhook_url ?? '');
         setLlmProvider(s.llm_provider ?? '');
         setLlmModel(s.llm_model ?? '');
+        setVisibility(s.visibility ?? 'private');
+        setTeamIds(s.team_ids ?? []);
         setExistingStatus(s.status);
       } catch (err) {
         if (!cancelled) setError(err.response?.data?.detail || 'Failed to load survey');
@@ -76,8 +80,10 @@ export function useSurveyForm({ id, setQuestions }) {
       webhook_url: webhookUrl.trim() || null,
       llm_provider: llmProvider || null,
       llm_model: llmModel.trim() || null,
+      visibility,
+      team_ids: visibility === 'team' ? teamIds : [],
     }),
-    [title, description, goal, context, estimatedDuration, personalityTone, welcomeMessage, webhookUrl, llmProvider, llmModel],
+    [title, description, goal, context, estimatedDuration, personalityTone, welcomeMessage, webhookUrl, llmProvider, llmModel, visibility, teamIds],
   );
 
   const handleSave = useCallback(
@@ -158,6 +164,8 @@ export function useSurveyForm({ id, setQuestions }) {
     webhookUrl, setWebhookUrl,
     llmProvider, setLlmProvider,
     llmModel, setLlmModel,
+    visibility, setVisibility,
+    teamIds, setTeamIds,
     existingStatus,
     saving, publishing, testing, error,
     loadingExisting,

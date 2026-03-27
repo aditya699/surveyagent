@@ -19,6 +19,7 @@ import { useClipboard } from '../hooks/useClipboard';
 import { getSurveys, deleteSurvey } from '../api';
 import { formatDate } from '../utils/formatters';
 import StatusBadge from '../components/shared/StatusBadge';
+import VisibilityBadge from '../components/shared/VisibilityBadge';
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
@@ -165,8 +166,16 @@ export default function Dashboard() {
                   >
                     {survey.title}
                   </Link>
-                  <StatusBadge status={survey.status} />
+                  <div className="flex items-center gap-1.5">
+                    <VisibilityBadge visibility={survey.visibility} />
+                    <StatusBadge status={survey.status} />
+                  </div>
                 </div>
+
+                {/* Creator (for shared surveys) */}
+                {survey.created_by_name && survey.created_by !== user?.user_id && (
+                  <p className="text-xs text-accent/70 font-sans mb-1">by {survey.created_by_name}</p>
+                )}
 
                 {/* Description */}
                 {survey.description && (

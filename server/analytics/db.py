@@ -5,17 +5,19 @@ from server.core.logging_config import get_logger
 logger = get_logger(__name__)
 
 
-async def get_overview_stats(admin_id: str) -> list[dict]:
+async def get_overview_stats(current_user: dict) -> list[dict]:
     """
-    Aggregate interview stats grouped by survey for all surveys owned by admin.
-    Returns list of dicts with survey_id, title, status, and interview counts.
+    Aggregate interview stats grouped by survey for all surveys visible to user.
+    Uses visibility-based query instead of simple created_by filter.
     Excludes test runs.
     """
+    from server.surveys.utils import build_visibility_query
+
     db = await get_db()
 
-    # Get all surveys for this admin
+    query = await build_visibility_query(current_user)
     surveys = await db["surveys"].find(
-        {"created_by": ObjectId(admin_id)},
+        query,
         {"title": 1, "status": 1},
     ).to_list(None)
 

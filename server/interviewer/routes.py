@@ -256,12 +256,13 @@ async def test_interview(
 
         db = await get_db()
 
-        # Fetch survey with ownership check
-        survey = await db["surveys"].find_one({
-            "_id": survey_oid,
-            "created_by": ObjectId(user_id),
-        })
+        # Fetch survey with visibility-based access check
+        from server.surveys.utils import check_survey_access
+        survey = await db["surveys"].find_one({"_id": survey_oid})
         if not survey:
+            raise HTTPException(status_code=404, detail="Survey not found")
+        has_access = await check_survey_access(survey, current_user)
+        if not has_access:
             raise HTTPException(status_code=404, detail="Survey not found")
 
         # Create test session

@@ -12,7 +12,12 @@ from server.surveys.schemas import (
     SurveySingleResponse,
     SurveyDeleteResponse,
 )
-from server.surveys.utils import generate_survey_token, survey_doc_to_response
+from server.surveys.utils import (
+    generate_survey_token,
+    survey_doc_to_response,
+    check_survey_access,
+    build_visibility_query,
+)
 from server.core.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -25,19 +30,38 @@ async def create_survey(
     survey_data: SurveyCreate,
     current_user: dict = Depends(get_current_user),
 ) -> SurveySingleResponse:
-    """
-    Deep Technical Context:
-    - Creates a new survey in draft status
-    - created_by is set from the authenticated admin's user_id
-    - Token is null until published
-    - Accepts JSON body (not form data)
-    """
+    """Create a new survey in draft status."""
     try:
         user_id = current_user["user_id"]
+        org_id = current_user.get("org_id")
         logger.info(f"Survey creation attempt by user_id: {user_id}")
+
+        # Validate visibility
+        if survey_data.visibility not in ("private", "team", "org"):
+            raise HTTPException(status_code=400, detail="Visibility must be private, team, or org")
+
+        if survey_data.visibility == "team" and not survey_data.team_ids:
+            raise HTTPException(status_code=400, detail="Team visibility requires at least one team")
 
         db = await get_db()
         surveys_collection = db["surveys"]
+
+        # Convert team_ids to ObjectIds
+        team_oids = []
+        if survey_data.team_ids:
+            for tid in survey_data.team_ids:
+                try:
+                    team_oids.append(ObjectId(tid))
+                except Exception:
+                    raise HTTPException(status_code=400, detail=f"Invalid team ID: {tid}")
+
+            # Validate teams belong to user's org
+            if org_id:
+                valid_count = await db["teams"].count_documents(
+                    {"_id": {"$in": team_oids}, "org_id": ObjectId(org_id)}
+                )
+                if valid_count != len(team_oids):
+                    raise HTTPException(status_code=400, detail="One or more team IDs are invalid")
 
         now = datetime.utcnow()
         doc = {
@@ -52,6 +76,9 @@ async def create_survey(
             "webhook_url": survey_data.webhook_url,
             "llm_provider": survey_data.llm_provider,
             "llm_model": survey_data.llm_model,
+            "visibility": survey_data.visibility,
+            "team_ids": team_oids,
+            "org_id": ObjectId(org_id) if org_id else None,
             "status": "draft",
             "token": None,
             "created_by": ObjectId(user_id),
@@ -62,7 +89,7 @@ async def create_survey(
         result = await surveys_collection.insert_one(doc)
         doc["_id"] = result.inserted_id
 
-        logger.info(f"Survey created - id: {result.inserted_id}, user_id: {user_id}")
+        logger.info(f"Survey created - id: {result.inserted_id}, visibility: {survey_data.visibility}")
 
         return SurveySingleResponse(
             message="Survey created successfully",
@@ -72,12 +99,8 @@ async def create_survey(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Survey creation error - user_id: {current_user.get('user_id')} - {str(e)}", exc_info=True)
-        await log_error(
-            error=e,
-            location="create_survey",
-            additional_info={"user_id": current_user.get("user_id")},
-        )
+        logger.error(f"Survey creation error - {str(e)}", exc_info=True)
+        await log_error(e, "create_survey", {"user_id": current_user.get("user_id")})
         raise HTTPException(status_code=500, detail="Failed to create survey")
 
 
@@ -85,12 +108,7 @@ async def create_survey(
 async def get_surveys(
     current_user: dict = Depends(get_current_user),
 ) -> SurveyListResponse:
-    """
-    Deep Technical Context:
-    - Returns all surveys owned by the current admin
-    - Filters by created_by to enforce ownership isolation
-    - Sorted by created_at descending (newest first)
-    """
+    """Return all surveys visible to the current user based on visibility rules."""
     try:
         user_id = current_user["user_id"]
         logger.info(f"Fetching surveys for user_id: {user_id}")
@@ -98,12 +116,27 @@ async def get_surveys(
         db = await get_db()
         surveys_collection = db["surveys"]
 
-        cursor = surveys_collection.find(
-            {"created_by": ObjectId(user_id)}
-        ).sort("created_at", -1)
+        query = await build_visibility_query(current_user)
+        cursor = surveys_collection.find(query).sort("created_at", -1)
+
+        # Collect creator IDs to batch-fetch names
+        docs = []
+        creator_ids = set()
+        async for doc in cursor:
+            docs.append(doc)
+            creator_ids.add(doc["created_by"])
+
+        # Fetch creator names
+        creator_map = {}
+        if creator_ids:
+            creators = await db["admins"].find(
+                {"_id": {"$in": list(creator_ids)}}, {"name": 1}
+            ).to_list(None)
+            creator_map = {c["_id"]: c["name"] for c in creators}
 
         surveys = []
-        async for doc in cursor:
+        for doc in docs:
+            doc["created_by_name"] = creator_map.get(doc["created_by"])
             surveys.append(survey_doc_to_response(doc))
 
         logger.info(f"Returned {len(surveys)} surveys for user_id: {user_id}")
@@ -117,12 +150,8 @@ async def get_surveys(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Get surveys error - user_id: {current_user.get('user_id')} - {str(e)}", exc_info=True)
-        await log_error(
-            error=e,
-            location="get_surveys",
-            additional_info={"user_id": current_user.get("user_id")},
-        )
+        logger.error(f"Get surveys error - {str(e)}", exc_info=True)
+        await log_error(e, "get_surveys", {"user_id": current_user.get("user_id")})
         raise HTTPException(status_code=500, detail="Failed to retrieve surveys")
 
 
@@ -131,11 +160,7 @@ async def get_survey(
     survey_id: str,
     current_user: dict = Depends(get_current_user),
 ) -> SurveySingleResponse:
-    """
-    Deep Technical Context:
-    - Returns a single survey by ID
-    - Validates ObjectId format and ownership (created_by must match current user)
-    """
+    """Return a single survey if the user has access."""
     try:
         user_id = current_user["user_id"]
         logger.info(f"Fetching survey {survey_id} for user_id: {user_id}")
@@ -146,14 +171,18 @@ async def get_survey(
             raise HTTPException(status_code=400, detail="Invalid survey ID format")
 
         db = await get_db()
-        surveys_collection = db["surveys"]
-
-        doc = await surveys_collection.find_one(
-            {"_id": survey_oid, "created_by": ObjectId(user_id)}
-        )
+        doc = await db["surveys"].find_one({"_id": survey_oid})
 
         if not doc:
             raise HTTPException(status_code=404, detail="Survey not found")
+
+        has_access = await check_survey_access(doc, current_user)
+        if not has_access:
+            raise HTTPException(status_code=404, detail="Survey not found")
+
+        # Add creator name
+        creator = await db["admins"].find_one({"_id": doc["created_by"]}, {"name": 1})
+        doc["created_by_name"] = creator["name"] if creator else None
 
         return SurveySingleResponse(
             message="Survey retrieved successfully",
@@ -163,12 +192,8 @@ async def get_survey(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Get survey error - survey_id: {survey_id}, user_id: {current_user.get('user_id')} - {str(e)}", exc_info=True)
-        await log_error(
-            error=e,
-            location="get_survey",
-            additional_info={"survey_id": survey_id, "user_id": current_user.get("user_id")},
-        )
+        logger.error(f"Get survey error - {str(e)}", exc_info=True)
+        await log_error(e, "get_survey", {"survey_id": survey_id})
         raise HTTPException(status_code=500, detail="Failed to retrieve survey")
 
 
@@ -178,13 +203,7 @@ async def update_survey(
     survey_data: SurveyUpdate,
     current_user: dict = Depends(get_current_user),
 ) -> SurveySingleResponse:
-    """
-    Deep Technical Context:
-    - Updates survey fields that are provided (partial update)
-    - Only the owning admin can update their survey
-    - Cannot change status via this endpoint (use publish endpoint)
-    - Updates the updated_at timestamp
-    """
+    """Update a survey. Only the creator can update."""
     try:
         user_id = current_user["user_id"]
         logger.info(f"Updating survey {survey_id} for user_id: {user_id}")
@@ -194,10 +213,11 @@ async def update_survey(
         except Exception:
             raise HTTPException(status_code=400, detail="Invalid survey ID format")
 
-        # Build update dict from provided fields only
         update_data = {}
         for field, value in survey_data.model_dump(exclude_unset=True).items():
-            if isinstance(value, str):
+            if field == "team_ids" and value is not None:
+                update_data["team_ids"] = [ObjectId(tid) for tid in value]
+            elif isinstance(value, str):
                 update_data[field] = value.strip()
             else:
                 update_data[field] = value
@@ -208,9 +228,7 @@ async def update_survey(
         update_data["updated_at"] = datetime.utcnow()
 
         db = await get_db()
-        surveys_collection = db["surveys"]
-
-        result = await surveys_collection.update_one(
+        result = await db["surveys"].update_one(
             {"_id": survey_oid, "created_by": ObjectId(user_id)},
             {"$set": update_data},
         )
@@ -218,10 +236,8 @@ async def update_survey(
         if result.matched_count == 0:
             raise HTTPException(status_code=404, detail="Survey not found")
 
-        # Fetch updated document
-        doc = await surveys_collection.find_one({"_id": survey_oid})
-
-        logger.info(f"Survey updated - id: {survey_id}, fields: {list(update_data.keys())}")
+        doc = await db["surveys"].find_one({"_id": survey_oid})
+        logger.info(f"Survey updated - id: {survey_id}")
 
         return SurveySingleResponse(
             message="Survey updated successfully",
@@ -231,12 +247,8 @@ async def update_survey(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Update survey error - survey_id: {survey_id}, user_id: {current_user.get('user_id')} - {str(e)}", exc_info=True)
-        await log_error(
-            error=e,
-            location="update_survey",
-            additional_info={"survey_id": survey_id, "user_id": current_user.get("user_id")},
-        )
+        logger.error(f"Update survey error - {str(e)}", exc_info=True)
+        await log_error(e, "update_survey", {"survey_id": survey_id})
         raise HTTPException(status_code=500, detail="Failed to update survey")
 
 
@@ -245,15 +257,11 @@ async def delete_survey(
     survey_id: str,
     current_user: dict = Depends(get_current_user),
 ) -> SurveyDeleteResponse:
-    """
-    Deep Technical Context:
-    - Permanently deletes a survey by ID
-    - Only the owning admin can delete their survey
-    - Returns 404 if survey doesn't exist or doesn't belong to the user
-    """
+    """Delete a survey. Creator or Owner/Admin can delete."""
     try:
         user_id = current_user["user_id"]
-        logger.info(f"Deleting survey {survey_id} for user_id: {user_id}")
+        role = current_user.get("role", "member")
+        org_id = current_user.get("org_id")
 
         try:
             survey_oid = ObjectId(survey_id)
@@ -261,31 +269,31 @@ async def delete_survey(
             raise HTTPException(status_code=400, detail="Invalid survey ID format")
 
         db = await get_db()
-        surveys_collection = db["surveys"]
 
-        result = await surveys_collection.delete_one(
-            {"_id": survey_oid, "created_by": ObjectId(user_id)}
-        )
+        # Creator can always delete; Owner/Admin can delete any org survey
+        query = {"_id": survey_oid}
+        if role in ("owner", "admin") and org_id:
+            query["$or"] = [
+                {"created_by": ObjectId(user_id)},
+                {"org_id": ObjectId(org_id)},
+            ]
+        else:
+            query["created_by"] = ObjectId(user_id)
+
+        result = await db["surveys"].delete_one(query)
 
         if result.deleted_count == 0:
             raise HTTPException(status_code=404, detail="Survey not found")
 
-        logger.info(f"Survey deleted - id: {survey_id}, user_id: {user_id}")
+        logger.info(f"Survey deleted - id: {survey_id}")
 
-        return SurveyDeleteResponse(
-            message="Survey deleted successfully",
-            id=survey_id,
-        )
+        return SurveyDeleteResponse(message="Survey deleted successfully", id=survey_id)
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Delete survey error - survey_id: {survey_id}, user_id: {current_user.get('user_id')} - {str(e)}", exc_info=True)
-        await log_error(
-            error=e,
-            location="delete_survey",
-            additional_info={"survey_id": survey_id, "user_id": current_user.get("user_id")},
-        )
+        logger.error(f"Delete survey error - {str(e)}", exc_info=True)
+        await log_error(e, "delete_survey", {"survey_id": survey_id})
         raise HTTPException(status_code=500, detail="Failed to delete survey")
 
 
@@ -294,16 +302,9 @@ async def publish_survey(
     survey_id: str,
     current_user: dict = Depends(get_current_user),
 ) -> SurveySingleResponse:
-    """
-    Deep Technical Context:
-    - Sets survey status to "published" and generates a unique token via uuid4
-    - Only the owning admin can publish their survey
-    - If already published, returns 400
-    - Token is used as the public-facing survey link identifier
-    """
+    """Publish a survey. Only the creator can publish."""
     try:
         user_id = current_user["user_id"]
-        logger.info(f"Publishing survey {survey_id} for user_id: {user_id}")
 
         try:
             survey_oid = ObjectId(survey_id)
@@ -311,10 +312,7 @@ async def publish_survey(
             raise HTTPException(status_code=400, detail="Invalid survey ID format")
 
         db = await get_db()
-        surveys_collection = db["surveys"]
-
-        # Fetch survey to check current status
-        doc = await surveys_collection.find_one(
+        doc = await db["surveys"].find_one(
             {"_id": survey_oid, "created_by": ObjectId(user_id)}
         )
 
@@ -324,21 +322,13 @@ async def publish_survey(
         if doc["status"] == "published":
             raise HTTPException(status_code=400, detail="Survey is already published")
 
-        # Generate token and publish
         token = generate_survey_token()
-
-        await surveys_collection.update_one(
+        await db["surveys"].update_one(
             {"_id": survey_oid},
-            {"$set": {
-                "status": "published",
-                "token": token,
-                "updated_at": datetime.utcnow(),
-            }},
+            {"$set": {"status": "published", "token": token, "updated_at": datetime.utcnow()}},
         )
 
-        # Fetch updated document
-        doc = await surveys_collection.find_one({"_id": survey_oid})
-
+        doc = await db["surveys"].find_one({"_id": survey_oid})
         logger.info(f"Survey published - id: {survey_id}, token: {token}")
 
         return SurveySingleResponse(
@@ -349,10 +339,6 @@ async def publish_survey(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Publish survey error - survey_id: {survey_id}, user_id: {current_user.get('user_id')} - {str(e)}", exc_info=True)
-        await log_error(
-            error=e,
-            location="publish_survey",
-            additional_info={"survey_id": survey_id, "user_id": current_user.get("user_id")},
-        )
+        logger.error(f"Publish survey error - {str(e)}", exc_info=True)
+        await log_error(e, "publish_survey", {"survey_id": survey_id})
         raise HTTPException(status_code=500, detail="Failed to publish survey")

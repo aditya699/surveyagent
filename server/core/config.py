@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 1 * 24 * 60  # 1 day in minutes
     JWT_REFRESH_TOKEN_EXPIRE_MINUTES: int = 14 * 24 * 60  # 14 days in minutes
+    RESEND_API_KEY: str | None = None
+    FRONTEND_URL: str = "http://localhost:5174"
     ENABLE_DOCS: bool = True  # Set to False in production
 
     model_config = SettingsConfigDict(

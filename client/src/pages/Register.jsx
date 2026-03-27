@@ -25,8 +25,12 @@ export default function Register() {
     setError('');
     setIsLoading(true);
     try {
-      await register(name, email, password, orgName);
-      navigate('/dashboard');
+      const result = await register(name, email, password, orgName);
+      if (result?.email_verified === false) {
+        navigate('/verify-email', { state: { email } });
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
       const detail = err.response?.data?.detail;
       setError(detail || 'Registration failed. Please try again.');

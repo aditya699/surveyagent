@@ -43,7 +43,7 @@ class GeminiProvider(LLMProvider):
                 parts=[types.Part(text=msg["content"])],
             ))
 
-        async for chunk in self._client.aio.models.generate_content_stream(
+        async for chunk in await self._client.aio.models.generate_content_stream(
             model=model,
             contents=contents,
             config=types.GenerateContentConfig(

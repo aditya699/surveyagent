@@ -46,6 +46,36 @@ export const ENDPOINTS = {
     ANALYZE_SURVEY:    (id) => `${PREFIX}/analytics/surveys/${id}/analyze`,
     EXPORT_INTERVIEWS: (id) => `${PREFIX}/analytics/surveys/${id}/interviews/export`,
   },
+
+  OTP: {
+    VERIFY: `${PREFIX}/auth/verify-otp`,
+    RESEND: `${PREFIX}/auth/resend-otp`,
+  },
+
+  INVITE: {
+    SEND:     `${PREFIX}/auth/invite`,
+    INFO:     (token) => `${PREFIX}/auth/invite/${token}`,
+    REGISTER: `${PREFIX}/auth/register-invite`,
+  },
+
+  ORG: {
+    GET:            `${PREFIX}/org`,
+    UPDATE:         `${PREFIX}/org`,
+    MEMBERS:        `${PREFIX}/org/members`,
+    MEMBER_ROLE:    (userId) => `${PREFIX}/org/members/${userId}/role`,
+    REMOVE_MEMBER:  (userId) => `${PREFIX}/org/members/${userId}`,
+    TRANSFER:       `${PREFIX}/org/transfer-ownership`,
+  },
+
+  TEAMS: {
+    LIST:           `${PREFIX}/teams`,
+    CREATE:         `${PREFIX}/teams`,
+    DETAIL:         (id) => `${PREFIX}/teams/${id}`,
+    UPDATE:         (id) => `${PREFIX}/teams/${id}`,
+    DELETE:         (id) => `${PREFIX}/teams/${id}`,
+    ADD_MEMBER:     (id) => `${PREFIX}/teams/${id}/members`,
+    REMOVE_MEMBER:  (id, userId) => `${PREFIX}/teams/${id}/members/${userId}`,
+  },
 };
 
 export const FORM_HEADERS = {

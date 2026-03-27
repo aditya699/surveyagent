@@ -4,7 +4,7 @@
 
 SurveyAgent is an open-source AI survey platform that replaces static forms with dynamic conversations. It conducts interviews via text chat, voice, or video avatar. It's self-hostable, LLM-agnostic, and keeps survey data under the user's control.
 
-**Status:** Early development. Auth system, landing page, survey CRUD, AI question generation, AI field enhancement, interviewer foundation, interviewer engine + routes, interview chat UI (text), analytics, data export, and webhooks are built. Voice and video are not yet implemented.
+**Status:** Early development. Auth system, landing page, survey CRUD, AI question generation, AI field enhancement, interviewer foundation, interviewer engine + routes, interview chat UI (text), analytics, data export, webhooks, and multi-tenant org support (orgs, roles, teams, email OTP verification, invite system, survey visibility) are built. Voice and video are not yet implemented.
 
 ## Tech Stack
 
@@ -471,9 +471,61 @@ client/src/
 - **Barrel exports:** Each shared directory has an `index.js` for clean imports.
 - **Streaming callbacks:** State updaters inside streaming callbacks must be pure functions (no mutable closure variables) to survive StrictMode double-invocation.
 
+### Multi-Tenant Org Support (complete)
+- **Organizations**: Auto-created on signup, users become Owner. Org name, slug, member list.
+- **Roles**: Owner (full control), Admin (invite + team management), Member (create surveys). All roles can create surveys.
+- **Email Verification (OTP)**: 6-digit OTP sent via Resend after signup. Must verify before accessing protected routes. 10-min expiry, rate-limited resend (3 per 10 min).
+- **Invite System**: Owner/Admin can invite via email (Resend). Invitee gets link → registers with name+password → lands in org as assigned role. 7-day invite expiry.
+- **Teams & Sub-Teams**: Teams inside orgs, sub-teams one level deep. Members can belong to multiple teams. Only Owner/Admin can manage.
+- **Survey Visibility**: Private (creator only), Team (team + sub-teams), Org (everyone in org). Chosen at survey creation.
+- **Access Control**: Org isolation — users never see another org's data. Visibility query uses `$or` with created_by, org+visibility, and team membership.
+- **Migration Script**: `scripts/migrate_multi_tenant.py` — creates orgs for existing admins, sets visibility=private on existing surveys, creates all indexes.
+
+### Multi-Tenant Architecture Decisions
+- **New collections**: `orgs`, `teams`, `invites`, `otp_codes` — all with appropriate indexes and TTL where needed
+- **Admin doc extended**: `org_id`, `role`, `email_verified` fields added
+- **Survey doc extended**: `org_id`, `visibility`, `team_ids` fields added
+- **Email via Resend**: `server/email/service.py` uses httpx to POST to Resend API. Branded HTML templates in `templates.py`. From: `noreply@getsurveyagent.com`
+- **`get_current_user` enforces email verification**: Returns 403 `email_not_verified` for unverified users on all protected routes
+- **Survey visibility query**: `build_visibility_query()` in `server/surveys/utils.py` builds `$or` query combining created_by, org+org visibility, and org+team+team_ids visibility
+- **Team inheritance**: `get_user_team_ids()` returns user's direct teams PLUS parent teams of any sub-teams they belong to
+- **Analytics updated**: `verify_survey_ownership` → `verify_survey_access`, `get_overview_stats` accepts full `current_user` dict
+- **Frontend pages**: VerifyEmail, InviteAccept, OrgSettings, TeamManagement. Settings page links to org/team management.
+- **Survey form**: Visibility selector (Private/Team/Org) with team multi-select when Team is chosen
+
+### Multi-Tenant API Endpoints
+
+#### Organization — `/api/v1/org`
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | / | Bearer | Get current org |
+| PUT | / | Bearer (Owner) | Update org name |
+| GET | /members | Bearer | List org members |
+| PUT | /members/{user_id}/role | Bearer (Owner) | Change role |
+| DELETE | /members/{user_id} | Bearer (Owner/Admin) | Remove member |
+| POST | /transfer-ownership | Bearer (Owner) | Transfer ownership |
+
+#### Teams — `/api/v1/teams`
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | / | Bearer (Owner/Admin) | Create team |
+| GET | / | Bearer | List teams (nested) |
+| GET | /{team_id} | Bearer | Get team detail |
+| PUT | /{team_id} | Bearer (Owner/Admin) | Update team |
+| DELETE | /{team_id} | Bearer (Owner/Admin) | Delete team + sub-teams |
+| POST | /{team_id}/members | Bearer (Owner/Admin) | Add member |
+| DELETE | /{team_id}/members/{user_id} | Bearer (Owner/Admin) | Remove member |
+
+#### Auth (new endpoints)
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | /auth/verify-otp | None | Verify 6-digit OTP |
+| POST | /auth/resend-otp | None | Resend OTP |
+| POST | /auth/register-invite | None | Register via invite |
+| POST | /auth/invite | Bearer (Owner/Admin) | Send invite email |
+| GET | /auth/invite/{token} | None | Get invite info |
+
 ## What's NOT Built Yet
 
 - Voice interview mode
 - Video avatar interview mode
-- Email verification
-- Multi-tenant access control

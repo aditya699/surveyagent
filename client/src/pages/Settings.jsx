@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, User, Building2, LogOut, Check } from 'lucide-react';
+import { ArrowLeft, User, Building2, LogOut, Check, Users, ChevronRight } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { RoleBadge } from '../components/shared';
 
 export default function Settings() {
   const { user, updateProfile, logout } = useAuth();
@@ -66,6 +67,32 @@ export default function Settings() {
       {/* Content */}
       <main className="container-max max-w-2xl section-padding">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+          {/* Role badge */}
+          {user?.role && (
+            <div className="flex items-center gap-2 mb-6">
+              <span className="text-sm text-text-muted font-sans">Your role:</span>
+              <RoleBadge role={user.role} />
+            </div>
+          )}
+
+          {/* Quick links to org/team settings */}
+          <div className="grid grid-cols-2 gap-3 mb-8">
+            <Link to="/settings/org" className="card p-4 hover:border-accent/30 transition-colors flex items-center justify-between group">
+              <div className="flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-accent" />
+                <span className="text-sm font-sans text-text-primary">Organization</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-text-muted/40 group-hover:text-accent transition-colors" />
+            </Link>
+            <Link to="/settings/teams" className="card p-4 hover:border-accent/30 transition-colors flex items-center justify-between group">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-accent" />
+                <span className="text-sm font-sans text-text-primary">Teams</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-text-muted/40 group-hover:text-accent transition-colors" />
+            </Link>
+          </div>
+
           <h2 className="text-2xl font-serif text-text-primary mb-1">Profile</h2>
           <p className="text-sm text-text-muted font-sans mb-8">
             Update your name and organization.

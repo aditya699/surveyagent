@@ -29,6 +29,8 @@ class SurveyCreate(BaseModel):
     webhook_url: Optional[str] = Field(None, description="Webhook URL to POST interview results on completion", max_length=2000)
     llm_provider: Optional[str] = Field(None, description="LLM provider: openai, anthropic, or gemini")
     llm_model: Optional[str] = Field(None, description="Model name (e.g. gpt-5.4-mini, claude-sonnet-4-6, gemini-3.1-pro-preview)")
+    visibility: str = Field("private", description="Survey visibility: private, team, or org")
+    team_ids: List[str] = Field(default_factory=list, description="Team IDs for team visibility")
 
 
 class SurveyUpdate(BaseModel):
@@ -50,6 +52,8 @@ class SurveyUpdate(BaseModel):
     webhook_url: Optional[str] = Field(None, description="Webhook URL to POST interview results on completion", max_length=2000)
     llm_provider: Optional[str] = Field(None, description="LLM provider: openai, anthropic, or gemini")
     llm_model: Optional[str] = Field(None, description="Model name (e.g. gpt-5.4-mini, claude-sonnet-4-6, gemini-3.1-pro-preview)")
+    visibility: Optional[str] = Field(None, description="Survey visibility: private, team, or org")
+    team_ids: Optional[List[str]] = Field(None, description="Team IDs for team visibility")
 
 
 class SurveyInDB(BaseModel):
@@ -100,6 +104,10 @@ class SurveyResponse(BaseModel):
     status: str = Field(..., description="Survey status: draft or published")
     token: Optional[str] = Field(None, description="Unique public token")
     created_by: str = Field(..., description="Admin ID who created the survey")
+    created_by_name: Optional[str] = Field(None, description="Creator's name (for shared surveys)")
+    org_id: Optional[str] = Field(None, description="Organization ID")
+    visibility: str = Field("private", description="Survey visibility: private, team, or org")
+    team_ids: List[str] = Field(default_factory=list, description="Team IDs for team visibility")
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
 

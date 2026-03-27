@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, LogOut, Plus, X, Sparkles, Loader2, MessageSquare, ChevronDown, ChevronRight, BotMessageSquare, Cpu } from 'lucide-react';
+import { ArrowLeft, LogOut, Plus, X, Sparkles, Loader2, MessageSquare, ChevronDown, ChevronRight, BotMessageSquare, Cpu, Lock, Users, Building2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useSurveyForm } from '../hooks/useSurveyForm';
 import { useQuestionManager } from '../hooks/useQuestionManager';
 import { useAiGeneration } from '../hooks/useAiGeneration';
 import { useFieldEnhance } from '../hooks/useFieldEnhance';
+import { getTeams } from '../api';
 
 export default function SurveyForm() {
   const { id } = useParams();
@@ -28,11 +29,18 @@ export default function SurveyForm() {
     webhookUrl, setWebhookUrl,
     llmProvider, setLlmProvider,
     llmModel, setLlmModel,
+    visibility, setVisibility,
+    teamIds, setTeamIds,
     existingStatus,
     saving, publishing, testing, error,
     loadingExisting,
     handleSave, handlePublish, handleTestChatbot,
   } = useSurveyForm({ id, setQuestions });
+
+  const [teams, setTeams] = useState([]);
+  useEffect(() => {
+    getTeams().then((res) => setTeams(res.data.teams || [])).catch(() => {});
+  }, []);
 
   const {
     showAiPanel,
@@ -278,6 +286,89 @@ export default function SurveyForm() {
                 placeholder="Leave blank for default: &quot;Hi! Thanks for taking the time. This survey is about {title}...&quot;"
               />
             </div>
+
+            {/* Visibility */}
+            <div>
+              <label className="block text-sm font-sans text-text-muted mb-1.5">Visibility</label>
+              <div className="flex gap-2">
+                {[
+                  { value: 'private', icon: Lock, label: 'Private' },
+                  { value: 'team', icon: Users, label: 'Team' },
+                  { value: 'org', icon: Building2, label: 'Org' },
+                ].map(({ value, icon: Icon, label }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setVisibility(value)}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-sans transition-all ${
+                      visibility === value
+                        ? 'border-accent bg-accent/10 text-accent'
+                        : 'border-card-border bg-white text-text-muted hover:border-accent/30'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1 text-xs text-text-muted/60 font-sans">
+                {visibility === 'private' && 'Only you can see this survey.'}
+                {visibility === 'team' && 'Everyone in the selected teams can see this survey.'}
+                {visibility === 'org' && 'Everyone in your organization can see this survey.'}
+              </p>
+            </div>
+
+            {/* Team selector (when team visibility) */}
+            {visibility === 'team' && (
+              <div>
+                <label className="block text-sm font-sans text-text-muted mb-1.5">
+                  Select Teams
+                </label>
+                <div className="space-y-2">
+                  {teams.length === 0 ? (
+                    <p className="text-xs text-text-muted/60 font-sans">No teams found. Create teams in Settings first.</p>
+                  ) : (
+                    teams.map((team) => (
+                      <div key={team.id}>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={teamIds.includes(team.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setTeamIds([...teamIds, team.id]);
+                              } else {
+                                setTeamIds(teamIds.filter((id) => id !== team.id));
+                              }
+                            }}
+                            className="rounded border-card-border text-accent focus:ring-accent"
+                          />
+                          <span className="text-sm text-text-primary font-sans">{team.name}</span>
+                        </label>
+                        {/* Sub-teams */}
+                        {team.sub_teams?.map((sub) => (
+                          <label key={sub.id} className="flex items-center gap-2 cursor-pointer ml-6 mt-1">
+                            <input
+                              type="checkbox"
+                              checked={teamIds.includes(sub.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setTeamIds([...teamIds, sub.id]);
+                                } else {
+                                  setTeamIds(teamIds.filter((id) => id !== sub.id));
+                                }
+                              }}
+                              className="rounded border-card-border text-accent focus:ring-accent"
+                            />
+                            <span className="text-sm text-text-muted font-sans">{sub.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Webhook URL */}
             <div>

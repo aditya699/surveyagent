@@ -1,7 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { Download, ChevronDown } from 'lucide-react';
 
-export default function ExportButton({ options, className = '' }) {
+export default function ExportButton({ options, className = '', size = 'sm' }) {
+  const sizeClasses = size === 'md'
+    ? 'px-4 py-2 rounded-lg text-sm'
+    : 'px-3 py-1.5 rounded-full text-xs';
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -21,7 +24,7 @@ export default function ExportButton({ options, className = '' }) {
     return (
       <button
         onClick={options[0].onClick}
-        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-sans font-medium border border-card-border text-text-muted hover:text-text-primary hover:bg-white transition-colors ${className}`}
+        className={`inline-flex items-center gap-1.5 ${sizeClasses} font-sans font-medium border border-card-border text-text-muted hover:text-text-primary hover:bg-white transition-colors ${className}`}
       >
         <Download className="w-3.5 h-3.5" />
         {options[0].label}
@@ -34,7 +37,7 @@ export default function ExportButton({ options, className = '' }) {
     <div ref={ref} className={`relative ${className}`}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-sans font-medium border border-card-border text-text-muted hover:text-text-primary hover:bg-white transition-colors"
+        className={`inline-flex items-center gap-1.5 ${sizeClasses} font-sans font-medium border border-card-border text-text-muted hover:text-text-primary hover:bg-white transition-colors`}
       >
         <Download className="w-3.5 h-3.5" />
         Export

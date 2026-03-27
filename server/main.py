@@ -73,6 +73,12 @@ app.include_router(interview_router, prefix="/api/v1/interview", tags=["Intervie
 from server.analytics.routes import router as analytics_router
 app.include_router(analytics_router, prefix="/api/v1/analytics", tags=["Analytics"])
 
+from server.orgs.routes import router as org_router
+app.include_router(org_router, prefix="/api/v1/org", tags=["Organization"])
+
+from server.teams.routes import router as teams_router
+app.include_router(teams_router, prefix="/api/v1/teams", tags=["Teams"])
+
 
 @app.get("/")
 async def root():

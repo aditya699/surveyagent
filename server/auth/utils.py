@@ -1,4 +1,6 @@
 # auth/utils.py
+import random
+import string
 from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
 from fastapi import HTTPException, Header, Request
@@ -10,6 +12,11 @@ from server.core.config import settings
 from server.core.logging_config import get_logger
 
 logger = get_logger(__name__)
+
+
+def generate_otp() -> str:
+    """Generate a 6-digit numeric OTP code."""
+    return "".join(random.choices(string.digits, k=6))
 
 
 # Password hashing helpers (using bcrypt directly — passlib is incompatible with bcrypt 4.1+)
@@ -274,9 +281,24 @@ async def get_current_user(authorization: str = Header(None)) -> Dict[str, Any]:
                 detail="User not found or account deactivated"
             )
 
+        # Enforce email verification for all protected routes
+        if not admin.get("email_verified", True):
+            raise HTTPException(
+                status_code=403,
+                detail="email_not_verified"
+            )
+
         # Convert ObjectId to string for JSON serialization
         admin["_id"] = str(admin["_id"])
         admin["user_id"] = str(admin["_id"])
+
+        # Convert org_id ObjectId to string if present
+        if admin.get("org_id"):
+            admin["org_id"] = str(admin["org_id"])
+
+        # Ensure role and email_verified are present
+        admin.setdefault("role", "owner")
+        admin.setdefault("email_verified", True)
 
         # Enrich with JWT claims
         admin.update({

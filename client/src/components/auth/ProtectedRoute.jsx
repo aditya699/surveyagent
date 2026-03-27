@@ -2,7 +2,7 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 
 export default function ProtectedRoute() {
-  const { isAuthenticated, loading } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
 
   if (loading) {
     return (
@@ -14,6 +14,11 @@ export default function ProtectedRoute() {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Redirect unverified users to OTP page
+  if (user && user.email_verified === false) {
+    return <Navigate to="/verify-email" state={{ email: user.email }} replace />;
   }
 
   return <Outlet />;

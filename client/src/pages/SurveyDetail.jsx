@@ -242,11 +242,12 @@ export default function SurveyDetail() {
               Analytics
             </Link>
             <ExportButton
+              size="md"
               options={[{ label: 'Export Survey (PDF)', onClick: () => exportSurveyDefinitionPDF(survey) }]}
             />
             <Link
               to="/dashboard"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-sans font-medium border border-card-border text-text-muted hover:text-text-primary hover:bg-white transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-sans font-medium border border-card-border text-text-primary hover:bg-white transition-colors"
             >
               Back to Dashboard
             </Link>

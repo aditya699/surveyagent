@@ -32,7 +32,7 @@ from server.analytics.prompts import (
     SURVEY_ANALYSIS_SYSTEM_PROMPT,
     build_survey_analysis_prompt,
 )
-from server.analytics.utils import verify_survey_ownership
+from server.analytics.utils import verify_survey_access
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -42,7 +42,7 @@ router = APIRouter()
 async def analytics_overview(current_user: dict = Depends(get_current_user)):
     """Overview stats across all the admin's surveys."""
     try:
-        stats = await get_overview_stats(current_user["user_id"])
+        stats = await get_overview_stats(current_user)
         return SurveyOverviewResponse(
             message="Analytics overview retrieved",
             surveys=stats,
@@ -59,7 +59,7 @@ async def analytics_overview(current_user: dict = Depends(get_current_user)):
 async def survey_analytics(survey_id: str, current_user: dict = Depends(get_current_user)):
     """Detailed stats for a single survey."""
     try:
-        survey = await verify_survey_ownership(survey_id, current_user["user_id"])
+        survey = await verify_survey_access(survey_id, current_user)
         questions = survey.get("questions", [])
         stats = await get_survey_detail_stats(survey_id, questions)
         return SurveyDetailResponse(
@@ -86,7 +86,7 @@ async def survey_interviews(
 ):
     """List interview sessions for a survey with pagination."""
     try:
-        await verify_survey_ownership(survey_id, current_user["user_id"])
+        await verify_survey_access(survey_id, current_user)
         result = await get_interview_list(survey_id, page, page_size)
         return InterviewListResponse(
             message="Interview list retrieved",
@@ -108,7 +108,7 @@ async def survey_interviews(
 async def export_survey_interviews(survey_id: str, current_user: dict = Depends(get_current_user)):
     """Export all interview sessions for a survey (no pagination)."""
     try:
-        survey = await verify_survey_ownership(survey_id, current_user["user_id"])
+        survey = await verify_survey_access(survey_id, current_user)
         interviews = await get_all_interviews_for_export(survey_id)
         return InterviewExportResponse(
             message="Interview export retrieved",
@@ -133,7 +133,7 @@ async def interview_detail(interview_id: str, current_user: dict = Depends(get_c
             raise HTTPException(status_code=404, detail="Interview not found")
 
         # Verify ownership through the linked survey
-        await verify_survey_ownership(interview["survey_id"], current_user["user_id"])
+        await verify_survey_access(interview["survey_id"], current_user)
 
         # Get survey title
         db = await get_db()
@@ -180,7 +180,7 @@ async def analyze_interview(interview_id: str, current_user: dict = Depends(get_
             raise HTTPException(status_code=404, detail="Interview not found")
 
         # Verify ownership through the linked survey
-        survey = await verify_survey_ownership(interview["survey_id"], current_user["user_id"])
+        survey = await verify_survey_access(interview["survey_id"], current_user)
 
         if not interview.get("conversation"):
             raise HTTPException(status_code=400, detail="Interview has no conversation to analyze")
@@ -257,7 +257,7 @@ async def analyze_survey(survey_id: str, current_user: dict = Depends(get_curren
     The completed analysis JSON is cached in the survey document.
     """
     try:
-        survey = await verify_survey_ownership(survey_id, current_user["user_id"])
+        survey = await verify_survey_access(survey_id, current_user)
 
         interviews = await get_completed_interviews_for_analysis(survey_id)
         if not interviews:
