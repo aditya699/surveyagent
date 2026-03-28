@@ -27,7 +27,7 @@ logger = get_logger(__name__)
 router = APIRouter()
 
 
-@router.post("/", response_model=TeamResponse)
+@router.post("", response_model=TeamResponse)
 async def create_team_endpoint(
     data: TeamCreate,
     current_user: dict = Depends(get_current_user),
@@ -62,7 +62,7 @@ async def create_team_endpoint(
         raise HTTPException(status_code=500, detail="Failed to create team")
 
 
-@router.get("/", response_model=TeamListResponse)
+@router.get("", response_model=TeamListResponse)
 async def list_teams(current_user: dict = Depends(get_current_user)) -> TeamListResponse:
     """List all teams in the org (nested structure)."""
     try:

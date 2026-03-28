@@ -4,14 +4,15 @@
 
 SurveyAgent is an open-source AI survey platform that replaces static forms with dynamic conversations. It conducts interviews via text chat, voice, or video avatar. It's self-hostable, LLM-agnostic, and keeps survey data under the user's control.
 
-**Status:** Early development. Auth system, landing page, survey CRUD, AI question generation, AI field enhancement, interviewer foundation, interviewer engine + routes, interview chat UI (text), analytics, data export, webhooks, and multi-tenant org support (orgs, roles, teams, email OTP verification, invite system, survey visibility) are built. Voice and video are not yet implemented.
+**Status:** Early development. Auth system, landing page, survey CRUD, AI question generation, AI field enhancement, interviewer foundation, interviewer engine + routes, interview chat UI (text), analytics, data export, webhooks, multi-tenant org support (orgs, roles, teams, email OTP verification, invite system, survey visibility), email notifications on interview completion, custom analytics instructions, and Docker containerization are built. Voice and video are not yet implemented.
 
 ## Tech Stack
 
-- **Backend:** Python 3.12+, FastAPI, Motor (async MongoDB), python-jose (JWT), bcrypt, OpenAI SDK, httpx (webhooks)
+- **Backend:** Python 3.12+, FastAPI, Motor (async MongoDB), python-jose (JWT), bcrypt, OpenAI SDK, httpx (webhooks), Resend (email)
 - **Frontend:** React 19, Vite, Tailwind CSS v3, Framer Motion, Lucide React, React Router v7, Axios, assistant-ui (chat primitives), jsPDF + jspdf-autotable (PDF export)
 - **Database:** MongoDB (Atlas or self-hosted)
 - **AI:** OpenAI Responses API (gpt-5.4-mini), streaming via SSE
+- **Deployment:** Docker (multi-stage: Node 22 Alpine + Python 3.12 slim), Gunicorn + Uvicorn workers
 - **Package Manager:** `uv` (backend), `npm` (frontend)
 
 ## Project Structure
@@ -45,7 +46,7 @@ surveyagent/
 │   │   ├── schemas.py         # Pydantic models (Interview, Message, Respondent, request models)
 │   │   ├── db.py              # Interview session CRUD utilities
 │   │   ├── engine.py          # LLM streaming engine + coverage tag parsing
-│   │   ├── utils.py           # build_welcome(), calc_remaining_minutes(), process_stream_result()
+│   │   ├── utils.py           # build_welcome(), calc_remaining_minutes(), process_stream_result(), fire_completion_emails()
 │   │   └── routes.py          # Interview API: start, message, test
 │   ├── ai/
 │   │   ├── __init__.py        # Package marker
@@ -61,8 +62,8 @@ surveyagent/
 │   │   └── utils.py           # verify_survey_access()
 │   ├── email/                 # Email service (Resend)
 │   │   ├── __init__.py        # Package marker
-│   │   ├── service.py         # send_otp_email(), send_invite_email() via Resend API
-│   │   └── templates.py       # Branded HTML email templates (OTP, invite)
+│   │   ├── service.py         # send_otp_email(), send_invite_email(), send_completion_email(), send_creator_notification() via Resend API
+│   │   └── templates.py       # Branded HTML email templates (OTP, invite, completion, creator notification)
 │   ├── orgs/                  # Organization management
 │   │   ├── __init__.py        # Package marker
 │   │   ├── routes.py          # Org CRUD, member management, role changes, ownership transfer
@@ -78,6 +79,7 @@ surveyagent/
 │   ├── index.html             # Entry HTML with Google Fonts
 │   ├── tailwind.config.js     # Design system (colors, fonts, animations)
 │   ├── vite.config.js         # Vite config, port 5174
+│   ├── .env.production        # Production env (VITE_API_URL)
 │   ├── src/
 │   │   ├── main.jsx           # BrowserRouter > AuthProvider > App
 │   │   ├── App.jsx            # Routes: /, /login, /register, /verify-email, /invite/:token, /dashboard, /settings, /settings/org, /settings/teams, /surveys/*, /interview/*
@@ -177,6 +179,9 @@ surveyagent/
 ├── evals/                     # Evaluation suite
 │   ├── cases.py               # Test cases
 │   └── run_evals.py           # Eval runner
+├── Dockerfile                 # Multi-stage build (Node 22 Alpine + Python 3.12 slim)
+├── .dockerignore              # Docker build exclusions
+├── deployment-guide.md        # Azure Web Apps deployment guide
 ├── .env                       # Secrets (gitignored)
 ├── .env.example               # Template for .env
 ├── pyproject.toml             # Python deps (uv)
@@ -212,9 +217,10 @@ Requires a `.env` file at the project root (copy `.env.example`).
 
 ### Survey Management (complete)
 - Full CRUD: create, list, view, edit, delete surveys
-- Survey fields: title, description, goal, context, questions (array of QuestionItem: {text, ai_instructions}), estimated_duration (int, minutes, default 5), welcome_message (optional string), personality_tone (professional/friendly/casual/fun, default "friendly"), webhook_url (optional string, max 2000 chars)
+- Survey fields: title, description, goal, context, questions (array of QuestionItem: {text, ai_instructions}), estimated_duration (int, minutes, default 5), welcome_message (optional string), personality_tone (professional/friendly/casual/fun, default "friendly"), webhook_url (optional string, max 2000 chars), notify_on_completion (bool, default false), analytics_instructions (optional string, max 2000 chars)
 - Draft → Published workflow with uuid4 token generation
-- Ownership isolation: admins only see their own surveys
+- Visibility-based access: admins see their own surveys + org/team-shared surveys
+- Owner/Admin can update and publish any survey in their org (not just their own)
 - Dashboard with survey cards (status badge, dates, share link, actions)
 - Delete confirmation dialog
 - Published survey share link with copy-to-clipboard
@@ -307,6 +313,29 @@ Requires a `.env` file at the project root (copy `.env.example`).
 - Uses `httpx.AsyncClient` with 10s timeout; failures logged but never break interview flow
 - Frontend: URL input field in survey form between Welcome Message and Questions
 
+### Email Notifications (complete)
+- Respondent thank-you email sent after interview completion via `send_completion_email()`
+- Creator notification email sent when an interview completes via `send_creator_notification()`
+- Controlled by `notify_on_completion` boolean on the survey document
+- Fire-and-forget via `fire_completion_emails()` in `server/interviewer/utils.py` using `asyncio.create_task()`
+- Branded HTML templates in `server/email/templates.py`: `completion_email_html()` and `creator_notification_email_html()`
+- Skips test runs — only real respondent interviews trigger emails
+- Frontend: toggle checkbox in survey form, only visible to survey creator
+
+### Custom Analytics Instructions (complete)
+- Optional `analytics_instructions` field on surveys (max 2000 chars)
+- Allows survey creators to guide AI analysis (e.g., "focus on pricing feedback", "ignore off-topic responses")
+- Injected into both interview-level and survey-level LLM analysis prompts
+- Frontend: "How should we evaluate responses?" textarea in survey form
+
+### Docker & Deployment (complete)
+- Multi-stage `Dockerfile`: Node 22 Alpine builds React frontend, Python 3.12 slim runs FastAPI with Gunicorn + Uvicorn workers
+- Single container serves both backend API and built frontend SPA on port 8000
+- `.dockerignore` excludes node_modules, __pycache__, .env, .git, evals
+- `deployment-guide.md` provides Azure Web App for Containers deployment steps
+- Production SPA serving: root route serves `index.html`, custom 404 handler returns JSON for API routes and `index.html` for SPA client-side routes
+- `client/.env.production` with `VITE_API_URL=` (empty for same-origin deployment)
+
 ### Frontend Infrastructure (complete)
 - API layer: Axios client, endpoint constants, form helpers, interceptors, barrel exports
 - AI streaming via native `fetch()` (Axios doesn't support ReadableStream)
@@ -340,7 +369,9 @@ Requires a `.env` file at the project root (copy `.env.example`).
 - Survey endpoints accept **JSON** bodies (not form data like auth).
 - All survey routes require Bearer auth via `Depends(get_current_user)`.
 - Visibility-based access: `build_visibility_query()` builds a `$or` query combining created_by, org+org visibility, and org+team+team_ids visibility. Users see surveys they created, surveys shared with their org, or surveys shared with their teams.
+- Owner/Admin role escalation: Owner/Admin can update and publish any survey in their org, not just surveys they created.
 - Publish generates a `uuid4` token stored in the survey document.
+- Route paths use empty string (`""`) instead of `"/"` to avoid double-slash issues with `redirect_slashes=False`.
 
 ### AI Question Generation
 - Uses OpenAI **Responses API** with `stream=True` (not Chat Completions).
@@ -386,11 +417,29 @@ Requires a `.env` file at the project root (copy `.env.example`).
 - Errors are caught and logged (`logger.warning`) but never propagate — webhook failures must not break the interview flow.
 - No retry logic in v1. Payload is metadata-only (no transcript).
 
+### Email Notifications
+- On interview completion, `fire_completion_emails()` in `server/interviewer/utils.py` is called via `asyncio.create_task()`.
+- Sends two emails: respondent thank-you (`send_completion_email`) and creator notification (`send_creator_notification`).
+- Only fires if `notify_on_completion` is true on the survey and respondent provided an email.
+- Test runs (`is_test_run=True`) are skipped.
+- Errors are caught and logged — email failures never break the interview flow.
+
+### Custom Analytics Instructions
+- `analytics_instructions` is stored on the survey document.
+- Both `build_interview_analysis_prompt()` and `build_survey_analysis_prompt()` in `server/analytics/prompts.py` append these instructions.
+- Instructions are prefixed with a note that they must still follow the JSON output format.
+
+### Production SPA Serving
+- `server/main.py` uses `redirect_slashes=False` on FastAPI initialization.
+- Root route (`GET /`) explicitly serves `index.html` from the built frontend.
+- Custom 404 exception handler: returns JSON `{"detail": "Not found"}` for API routes (`/api/*`, `/docs`, `/redoc`, `/openapi.json`, `/health`), returns `index.html` for all other routes (SPA client-side routing).
+- Static assets mounted at `/assets`.
+
 ### MongoDB
 - Database name: `surveyagent` (configurable via `MONGO_DB_NAME`)
 - Collections: `admins` (user accounts), `surveys` (survey definitions), `interviews` (chat sessions), `error_logs` (error tracking), `orgs` (organizations), `teams` (teams/sub-teams), `invites` (pending invitations, TTL-indexed), `otp_codes` (email verification codes, TTL-indexed)
 - Admin document fields: `name`, `email`, `password`, `org_name`, `org_id`, `role` (owner/admin/member), `email_verified`, `token_version`, `is_active`, `created_at`, `updated_at`, `last_login`
-- Survey document fields: `title`, `description`, `goal`, `context`, `questions` (array of {text, ai_instructions}), `estimated_duration`, `welcome_message`, `personality_tone`, `webhook_url` (optional), `status`, `token`, `created_by`, `org_id`, `visibility` (private/team/org), `team_ids` (array of team ObjectIds), `created_at`, `updated_at`, `analysis` (cached aggregate AI analysis, optional)
+- Survey document fields: `title`, `description`, `goal`, `context`, `questions` (array of {text, ai_instructions}), `estimated_duration`, `welcome_message`, `personality_tone`, `webhook_url` (optional), `notify_on_completion` (bool), `analytics_instructions` (optional), `status`, `token`, `created_by`, `org_id`, `visibility` (private/team/org), `team_ids` (array of team ObjectIds), `created_at`, `updated_at`, `analysis` (cached aggregate AI analysis, optional)
 - Interview document fields: `survey_id`, `respondent` (embedded: name, age, gender, occupation, phone_number, email — all optional), `conversation` (list of {role, content, timestamp}), `status` (in_progress/completed/abandoned), `is_test_run`, `questions_covered` (list of ints), `started_at`, `completed_at`, `analysis` (cached AI analysis, optional)
 - Org document fields: `name`, `slug`, `owner_id`, `created_at`, `updated_at`
 - Team document fields: `name`, `org_id`, `parent_id` (null for top-level), `members` (array of {user_id, name, email}), `created_at`, `updated_at`

@@ -27,7 +27,7 @@ logger = get_logger(__name__)
 router = APIRouter()
 
 
-@router.get("/", response_model=OrgSingleResponse)
+@router.get("", response_model=OrgSingleResponse)
 async def get_org(current_user: dict = Depends(get_current_user)) -> OrgSingleResponse:
     """Get the current user's organization."""
     try:
@@ -51,7 +51,7 @@ async def get_org(current_user: dict = Depends(get_current_user)) -> OrgSingleRe
         raise HTTPException(status_code=500, detail="Failed to retrieve organization")
 
 
-@router.put("/", response_model=OrgSingleResponse)
+@router.put("", response_model=OrgSingleResponse)
 async def update_org(
     data: OrgUpdateRequest,
     current_user: dict = Depends(get_current_user),

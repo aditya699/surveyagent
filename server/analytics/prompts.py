@@ -45,6 +45,7 @@ def build_analysis_prompt(
     conversation: list[dict],
     respondent: dict | None = None,
     questions_covered: list[int] | None = None,
+    analytics_instructions: str | None = None,
 ) -> str:
     """Build the user prompt for interview analysis."""
     parts = ["Analyze the following interview transcript.\n"]
@@ -84,6 +85,12 @@ def build_analysis_prompt(
     for msg in conversation:
         role = "INTERVIEWER" if msg.get("role") == "assistant" else "RESPONDENT"
         parts.append(f"  [{role}]: {msg.get('content', '')}")
+
+    # Custom analytics instructions from the survey creator
+    if analytics_instructions:
+        parts.append("\nCUSTOM ANALYSIS INSTRUCTIONS (from the survey creator):")
+        parts.append(analytics_instructions)
+        parts.append("\nImportant: Follow these custom instructions when analyzing, but you MUST still output valid JSON matching the exact format specified in the system prompt.")
 
     return "\n".join(parts)
 
@@ -142,6 +149,7 @@ def build_survey_analysis_prompt(
     survey: dict,
     analyzed_interviews: list[dict],
     raw_interviews: list[dict],
+    analytics_instructions: str | None = None,
 ) -> str:
     """
     Build the user prompt for aggregate survey analysis.
@@ -203,5 +211,11 @@ def build_survey_analysis_prompt(
             for msg in iv.get("conversation", []):
                 role = "INTERVIEWER" if msg.get("role") == "assistant" else "RESPONDENT"
                 parts.append(f"    [{role}]: {msg.get('content', '')}")
+
+    # Custom analytics instructions from the survey creator
+    if analytics_instructions:
+        parts.append("\nCUSTOM ANALYSIS INSTRUCTIONS (from the survey creator):")
+        parts.append(analytics_instructions)
+        parts.append("\nImportant: Follow these custom instructions when analyzing, but you MUST still output valid JSON matching the exact format specified in the system prompt.")
 
     return "\n".join(parts)

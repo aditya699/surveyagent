@@ -4,7 +4,6 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 from server.core.logging_config import get_logger, setup_logging
 from server.core.config import settings
 
@@ -51,6 +50,7 @@ app = FastAPI(
     docs_url="/docs" if settings.ENABLE_DOCS else None,
     redoc_url="/redoc" if settings.ENABLE_DOCS else None,
     lifespan=lifespan,
+    redirect_slashes=False,
 )
 
 # CORS middleware
@@ -91,15 +91,31 @@ async def health():
     return {"status": "healthy"}
 
 
-# Serve React SPA from client/dist when built (production single-app mode)
+# Serve React SPA from client/dist when built (production single-app mode).
 if SPA_DIR.exists():
+    from fastapi.responses import FileResponse, Response
+
+    # Serve static assets (JS, CSS, images) at /assets
     app.mount("/assets", StaticFiles(directory=SPA_DIR / "assets"), name="static-assets")
 
-    @app.get("/{path:path}")
-    async def serve_spa(path: str):
-        """Catch-all: serve static files or fall back to index.html for SPA routing."""
-        file = SPA_DIR / path
-        if path and file.exists() and file.is_file():
+    # Root route serves index.html
+    @app.get("/")
+    async def serve_spa_root():
+        return FileResponse(SPA_DIR / "index.html")
+
+    # Custom 404 handler: for non-API paths, serve index.html (SPA client-side routing)
+    @app.exception_handler(404)
+    async def spa_fallback(request, exc):
+        path = request.url.path
+        if path.startswith(("/api/", "/docs", "/redoc", "/openapi.json", "/health")):
+            return Response(
+                content='{"detail":"Not Found"}',
+                status_code=404,
+                media_type="application/json",
+            )
+        # Check for real static file first
+        file = SPA_DIR / path.lstrip("/")
+        if file.exists() and file.is_file():
             return FileResponse(file)
         return FileResponse(SPA_DIR / "index.html")
 else:

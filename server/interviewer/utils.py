@@ -14,6 +14,7 @@ from bson import ObjectId
 
 from server.core.logging_config import get_logger
 from server.db.mongo import get_db
+from server.email.service import send_completion_email, send_creator_notification
 from server.interviewer.db import add_message, update_questions_covered, update_status
 
 logger = get_logger(__name__)
@@ -77,6 +78,7 @@ async def process_stream_result(
     if should_complete:
         await update_status(session_id, "completed")
         asyncio.create_task(fire_webhook(session_id))
+        asyncio.create_task(fire_completion_emails(session_id))
         return 'data: {"type": "complete"}\n\n'
 
     return None
@@ -130,3 +132,55 @@ async def fire_webhook(session_id: str) -> None:
 
     except Exception as e:
         logger.warning(f"Webhook failed - session: {session_id}, error: {e}")
+
+
+async def fire_completion_emails(session_id: str) -> None:
+    """Fire-and-forget emails on interview completion."""
+    try:
+        db = await get_db()
+        interview = await db["interviews"].find_one({"_id": ObjectId(session_id)})
+        if not interview:
+            return
+
+        if interview.get("is_test_run"):
+            return
+
+        survey = await db["surveys"].find_one({"_id": interview["survey_id"]})
+        if not survey:
+            return
+
+        respondent = interview.get("respondent") or {}
+        respondent_email = respondent.get("email")
+        respondent_name = respondent.get("name", "")
+        survey_title = survey.get("title", "Survey")
+
+        # 1. Send respondent thank-you email
+        if respondent_email:
+            try:
+                await send_completion_email(respondent_email, respondent_name, survey_title)
+                logger.info(f"Completion email sent - session: {session_id}, to: {respondent_email}")
+            except Exception as e:
+                logger.warning(f"Respondent email failed - session: {session_id}, error: {e}")
+
+        # 2. Send creator notification email
+        if survey.get("notify_on_completion"):
+            try:
+                creator = await db["admins"].find_one(
+                    {"_id": survey["created_by"]}, {"email": 1, "name": 1}
+                )
+                if creator and creator.get("email"):
+                    await send_creator_notification(
+                        to_email=creator["email"],
+                        creator_name=creator.get("name", ""),
+                        survey_title=survey_title,
+                        respondent_name=respondent_name or None,
+                        respondent_email=respondent_email,
+                        questions_covered=len(interview.get("questions_covered", [])),
+                        total_questions=len(survey.get("questions", [])),
+                    )
+                    logger.info(f"Creator notification sent - session: {session_id}, to: {creator['email']}")
+            except Exception as e:
+                logger.warning(f"Creator notification failed - session: {session_id}, error: {e}")
+
+    except Exception as e:
+        logger.warning(f"Completion emails failed - session: {session_id}, error: {e}")

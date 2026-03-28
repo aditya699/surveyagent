@@ -190,6 +190,7 @@ async def analyze_interview(interview_id: str, current_user: dict = Depends(get_
             conversation=interview["conversation"],
             respondent=interview.get("respondent"),
             questions_covered=interview.get("questions_covered"),
+            analytics_instructions=survey.get("analytics_instructions"),
         )
 
         provider_name = survey.get("llm_provider") or "openai"
@@ -271,6 +272,7 @@ async def analyze_survey(survey_id: str, current_user: dict = Depends(get_curren
             survey=survey,
             analyzed_interviews=analyzed,
             raw_interviews=raw,
+            analytics_instructions=survey.get("analytics_instructions"),
         )
 
         provider_name = survey.get("llm_provider") or "openai"

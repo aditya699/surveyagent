@@ -2,7 +2,12 @@
 import httpx
 from server.core.config import settings
 from server.core.logging_config import get_logger
-from server.email.templates import otp_email_html, invite_email_html
+from server.email.templates import (
+    otp_email_html,
+    invite_email_html,
+    completion_email_html,
+    creator_notification_email_html,
+)
 
 logger = get_logger(__name__)
 
@@ -40,6 +45,29 @@ async def send_otp_email(to_email: str, otp_code: str, user_name: str) -> dict:
     """Send OTP verification email."""
     html = otp_email_html(user_name, otp_code)
     return await _send_email(to_email, "Your SurveyAgent verification code", html)
+
+
+async def send_completion_email(to_email: str, respondent_name: str, survey_title: str) -> dict:
+    """Send thank-you email to respondent after interview completion."""
+    html = completion_email_html(respondent_name, survey_title)
+    return await _send_email(to_email, f"Thanks for completing: {survey_title}", html)
+
+
+async def send_creator_notification(
+    to_email: str,
+    creator_name: str,
+    survey_title: str,
+    respondent_name: str | None,
+    respondent_email: str | None,
+    questions_covered: int,
+    total_questions: int,
+) -> dict:
+    """Send notification email to survey creator when an interview is completed."""
+    html = creator_notification_email_html(
+        creator_name, survey_title, respondent_name, respondent_email,
+        questions_covered, total_questions,
+    )
+    return await _send_email(to_email, f"New response: {survey_title}", html)
 
 
 async def send_invite_email(to_email: str, invite_token: str, org_name: str, inviter_name: str) -> dict:

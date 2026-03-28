@@ -35,7 +35,7 @@ export default function Dashboard() {
     const fetchSurveys = async () => {
       try {
         const res = await getSurveys();
-        setSurveys(res.data.surveys);
+        setSurveys(res.data?.surveys || []);
       } catch (err) {
         setError(err.response?.data?.detail || 'Failed to load surveys');
       } finally {

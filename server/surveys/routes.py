@@ -25,7 +25,7 @@ logger = get_logger(__name__)
 router = APIRouter()
 
 
-@router.post("/", response_model=SurveySingleResponse)
+@router.post("", response_model=SurveySingleResponse)
 async def create_survey(
     survey_data: SurveyCreate,
     current_user: dict = Depends(get_current_user),
@@ -74,8 +74,10 @@ async def create_survey(
             "welcome_message": survey_data.welcome_message,
             "personality_tone": survey_data.personality_tone,
             "webhook_url": survey_data.webhook_url,
+            "notify_on_completion": survey_data.notify_on_completion,
             "llm_provider": survey_data.llm_provider,
             "llm_model": survey_data.llm_model,
+            "analytics_instructions": survey_data.analytics_instructions,
             "visibility": survey_data.visibility,
             "team_ids": team_oids,
             "org_id": ObjectId(org_id) if org_id else None,
@@ -104,7 +106,7 @@ async def create_survey(
         raise HTTPException(status_code=500, detail="Failed to create survey")
 
 
-@router.get("/", response_model=SurveyListResponse)
+@router.get("", response_model=SurveyListResponse)
 async def get_surveys(
     current_user: dict = Depends(get_current_user),
 ) -> SurveyListResponse:
@@ -203,9 +205,11 @@ async def update_survey(
     survey_data: SurveyUpdate,
     current_user: dict = Depends(get_current_user),
 ) -> SurveySingleResponse:
-    """Update a survey. Only the creator can update."""
+    """Update a survey. Creator or Owner/Admin can update."""
     try:
         user_id = current_user["user_id"]
+        role = current_user.get("role", "member")
+        org_id = current_user.get("org_id")
         logger.info(f"Updating survey {survey_id} for user_id: {user_id}")
 
         try:
@@ -227,9 +231,19 @@ async def update_survey(
 
         update_data["updated_at"] = datetime.utcnow()
 
+        # Creator can always update; Owner/Admin can update any org survey
+        query = {"_id": survey_oid}
+        if role in ("owner", "admin") and org_id:
+            query["$or"] = [
+                {"created_by": ObjectId(user_id)},
+                {"org_id": ObjectId(org_id)},
+            ]
+        else:
+            query["created_by"] = ObjectId(user_id)
+
         db = await get_db()
         result = await db["surveys"].update_one(
-            {"_id": survey_oid, "created_by": ObjectId(user_id)},
+            query,
             {"$set": update_data},
         )
 
@@ -302,19 +316,29 @@ async def publish_survey(
     survey_id: str,
     current_user: dict = Depends(get_current_user),
 ) -> SurveySingleResponse:
-    """Publish a survey. Only the creator can publish."""
+    """Publish a survey. Creator or Owner/Admin can publish."""
     try:
         user_id = current_user["user_id"]
+        role = current_user.get("role", "member")
+        org_id = current_user.get("org_id")
 
         try:
             survey_oid = ObjectId(survey_id)
         except Exception:
             raise HTTPException(status_code=400, detail="Invalid survey ID format")
 
+        # Creator can always publish; Owner/Admin can publish any org survey
+        query = {"_id": survey_oid}
+        if role in ("owner", "admin") and org_id:
+            query["$or"] = [
+                {"created_by": ObjectId(user_id)},
+                {"org_id": ObjectId(org_id)},
+            ]
+        else:
+            query["created_by"] = ObjectId(user_id)
+
         db = await get_db()
-        doc = await db["surveys"].find_one(
-            {"_id": survey_oid, "created_by": ObjectId(user_id)}
-        )
+        doc = await db["surveys"].find_one(query)
 
         if not doc:
             raise HTTPException(status_code=404, detail="Survey not found")

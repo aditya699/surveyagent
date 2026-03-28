@@ -41,6 +41,7 @@ Traditional survey tools give you structured data but miss the story behind the 
 ### Analytics & AI Analysis
 - **Per-interview analysis:** AI scores interview quality, detects sentiment, identifies themes, strengths, concerns, and areas for improvement — all per question
 - **Survey-level analysis:** Synthesizes insights across ALL completed interviews into a single report with consensus points, divergence, respondent patterns, and per-question aggregate findings
+- **Custom analytics instructions:** Guide AI analysis with survey-specific focus areas (e.g., "focus on pricing feedback", "ignore off-topic responses")
 - Executive summaries with text-to-speech playback
 - Question coverage tracking shows which questions were addressed
 - Session stats: duration, completion rates, respondent counts
@@ -68,6 +69,12 @@ Traditional survey tools give you structured data but miss the story behind the 
 - Branded PDF reports with score badges, section layouts, and autoTable formatting
 - Export available on Interview Detail, Survey Analytics, Survey Detail, and Analytics Overview pages
 
+### Email Notifications
+- Respondent thank-you email sent after interview completion
+- Creator notification email when a new interview completes
+- Controlled per-survey via a toggle — only fires when enabled
+- Skips test runs
+
 ### Webhooks
 - Optional webhook URL per survey
 - POSTs interview results (respondent, coverage, timestamps) to external services on completion
@@ -76,6 +83,7 @@ Traditional survey tools give you structured data but miss the story behind the 
 
 ### Admin Dashboard
 - Create, edit, duplicate, and delete surveys
+- Owner/Admin can edit and publish any survey in their org
 - Draft and published workflow — test before you go live
 - Test mode lets you preview the full interview experience before publishing
 - Publish and share via a simple link — no login required for respondents
@@ -86,6 +94,12 @@ Traditional survey tools give you structured data but miss the story behind the 
 - Clean, focused chat interface — no distractions
 - Optional details form (name, email, age, etc.) — all fields optional
 - Works on any device with a browser
+
+### Docker Deployment
+- Multi-stage Dockerfile: Node 22 Alpine builds the frontend, Python 3.12 slim runs the backend
+- Single container serves both API and frontend SPA on port 8000
+- Gunicorn + Uvicorn workers for production performance
+- Azure Web App deployment guide included
 
 ---
 

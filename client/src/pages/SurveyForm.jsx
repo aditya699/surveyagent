@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, LogOut, Plus, X, Sparkles, Loader2, MessageSquare, ChevronDown, ChevronRight, BotMessageSquare, Cpu, Lock, Users, Building2 } from 'lucide-react';
+import { ArrowLeft, LogOut, Plus, X, Sparkles, Loader2, MessageSquare, ChevronDown, ChevronRight, BotMessageSquare, Cpu, Lock, Users, Building2, BarChart3 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useSurveyForm } from '../hooks/useSurveyForm';
 import { useQuestionManager } from '../hooks/useQuestionManager';
@@ -11,7 +11,7 @@ import { getTeams } from '../api';
 
 export default function SurveyForm() {
   const { id } = useParams();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
 
   const { questions, setQuestions, addQuestion, updateQuestion, updateAiInstructions, removeQuestion } =
     useQuestionManager();
@@ -27,11 +27,13 @@ export default function SurveyForm() {
     personalityTone, setPersonalityTone,
     welcomeMessage, setWelcomeMessage,
     webhookUrl, setWebhookUrl,
+    notifyOnCompletion, setNotifyOnCompletion,
     llmProvider, setLlmProvider,
     llmModel, setLlmModel,
+    analyticsInstructions, setAnalyticsInstructions,
     visibility, setVisibility,
     teamIds, setTeamIds,
-    existingStatus,
+    existingStatus, createdBy,
     saving, publishing, testing, error,
     loadingExisting,
     handleSave, handlePublish, handleTestChatbot,
@@ -388,6 +390,22 @@ export default function SurveyForm() {
               </p>
             </div>
 
+            {/* Email notification toggle — only shown to creator */}
+            {(!isEdit || createdBy === user?.user_id) && (
+              <div className="flex items-center gap-3">
+                <input
+                  id="notifyOnCompletion"
+                  type="checkbox"
+                  checked={notifyOnCompletion}
+                  onChange={(e) => setNotifyOnCompletion(e.target.checked)}
+                  className="w-4 h-4 rounded border-card-border text-accent focus:ring-accent/30"
+                />
+                <label htmlFor="notifyOnCompletion" className="text-sm font-sans text-text-muted">
+                  Email me when someone completes this survey
+                </label>
+              </div>
+            )}
+
             {/* LLM Configuration */}
             <div className="border border-card-border rounded-lg p-4 space-y-4 bg-white/50">
               <div className="flex items-center gap-2 mb-1">
@@ -434,6 +452,27 @@ export default function SurveyForm() {
                   </p>
                 </div>
               </div>
+            </div>
+
+            {/* How to Evaluate Responses */}
+            <div className="border border-card-border rounded-lg p-4 space-y-3 bg-white/50">
+              <div className="flex items-center gap-2 mb-1">
+                <BarChart3 className="w-4 h-4 text-accent" />
+                <span className="text-sm font-sans font-medium text-text-primary">How should we evaluate responses?</span>
+                <span className="text-xs text-text-muted/50 font-sans">(optional)</span>
+              </div>
+              <p className="text-xs text-text-muted/70 font-sans">
+                Tell the AI what matters most when reviewing your interview results. This shapes how scores, themes, and insights are generated.
+              </p>
+              <textarea
+                id="analyticsInstructions"
+                value={analyticsInstructions}
+                onChange={(e) => setAnalyticsInstructions(e.target.value)}
+                rows={4}
+                maxLength={2000}
+                className="w-full bg-white border border-card-border rounded-lg px-4 py-3 text-sm font-sans text-text-primary placeholder:text-text-muted/40 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-all resize-none"
+                placeholder={"Examples:\n• Score higher when respondents give specific examples\n• Pay close attention to any safety concerns mentioned\n• Focus on customer satisfaction, not technical details"}
+              />
             </div>
 
             {/* Questions */}

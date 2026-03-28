@@ -11,8 +11,11 @@ Open-source AI survey platform that replaces static forms with dynamic conversat
 - **Multi-Tenant Organizations** — orgs auto-created on signup, role-based access (Owner/Admin/Member), team and sub-team management, survey visibility controls (private/team/org)
 - **Email Verification** — 6-digit OTP via Resend after signup, required before accessing protected routes
 - **Invite System** — Owner/Admin invite members via email, invitees register with assigned role, 7-day expiry
+- **Email Notifications** — respondent thank-you and creator notification emails on interview completion via Resend
+- **Custom Analytics Instructions** — guide AI analysis with survey-specific focus areas
 - **Webhooks** — optional webhook URL per survey; POSTs interview results (respondent, coverage, timestamps) to external services (e.g., Slack) on completion
 - **Text-to-Speech** — listen to executive summaries via OpenAI TTS API (gpt-4o-mini-tts)
+- **Docker Deployment** — single-container deployment with multi-stage Dockerfile (Node 22 Alpine + Python 3.12 slim), Gunicorn + Uvicorn workers
 - **Landing Page** — 13-section marketing page with scroll animations, responsive navbar, and dark/light section alternation
 - **Auth System** — JWT with token versioning for server-side revocation, auto-refresh with queue pattern, admin registration/login/profile
 
@@ -24,7 +27,8 @@ Open-source AI survey platform that replaces static forms with dynamic conversat
 | **Frontend** | React 19, Vite, Tailwind CSS v3, Framer Motion, Lucide React, React Router v7, Axios, assistant-ui, jsPDF + jspdf-autotable |
 | **Database** | MongoDB (Atlas or self-hosted) |
 | **AI** | OpenAI Responses API (streaming via SSE) |
-| **Email** | Resend (OTP verification, invite emails) |
+| **Email** | Resend (OTP verification, invites, completion notifications) |
+| **Deployment** | Docker (Gunicorn + Uvicorn), Azure Web Apps |
 | **Package Managers** | uv (backend), npm (frontend) |
 
 ## Getting Started
@@ -64,6 +68,15 @@ npm install
 npm run dev    # http://localhost:5174
 ```
 
+### Docker
+
+```bash
+docker build -t surveyagent .
+docker run -p 8000:8000 --env-file .env surveyagent
+```
+
+Single container serves both API and frontend on port 8000. See [deployment-guide.md](deployment-guide.md) for Azure Web App deployment instructions.
+
 ## Project Structure
 
 ```
@@ -77,7 +90,7 @@ surveyagent/
 │   ├── interviewer/            # AI interviewer engine, prompts, session management
 │   ├── ai/                     # Question generation, field enhancement, TTS
 │   ├── analytics/              # Stats, AI analysis (interview + survey), export
-│   ├── email/                  # Resend email service (OTP, invites)
+│   ├── email/                  # Resend email service (OTP, invites, notifications)
 │   ├── orgs/                   # Organization management (members, roles, ownership)
 │   └── teams/                  # Team/sub-team management
 ├── client/                     # React frontend
@@ -90,6 +103,8 @@ surveyagent/
 │       └── pages/              # Page components
 ├── scripts/                    # Migration scripts
 ├── evals/                      # Evaluation suite
+├── Dockerfile                  # Multi-stage build (Node 22 Alpine + Python 3.12 slim)
+├── deployment-guide.md         # Azure Web Apps deployment guide
 ├── .env.example                # Environment variable template
 ├── pyproject.toml              # Python dependencies
 └── uv.lock                     # Lockfile
