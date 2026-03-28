@@ -1,25 +1,20 @@
 import { motion } from 'framer-motion';
-import { Cpu } from 'lucide-react';
+import { Cpu, ArrowRight } from 'lucide-react';
 
-const providers = [
-  'OpenAI',
-  'Anthropic',
-  'Google',
-  'Ollama',
-  'Azure',
-  'Mistral',
-  'Groq',
-  'Any OpenAI-compatible endpoint',
+const steps = [
+  { letter: 'A', label: 'Add your API key' },
+  { letter: 'B', label: 'Pick your model' },
+  { letter: 'C', label: 'Start interviewing' },
 ];
 
 const containerVariants = {
   hidden: {},
-  visible: { transition: { staggerChildren: 0.05 } },
+  visible: { transition: { staggerChildren: 0.15 } },
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, scale: 0.9 },
-  visible: { opacity: 1, scale: 1, transition: { duration: 0.3 } },
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
 };
 
 export default function BringYourLLM() {
@@ -37,7 +32,7 @@ export default function BringYourLLM() {
             Your AI. <span className="italic">Your choice.</span>
           </h2>
           <p className="text-text-muted font-sans text-lg max-w-2xl mx-auto">
-            Plug in any provider. Switch anytime.
+            Bring any LLM provider. Follow three simple steps and you're live.
           </p>
         </motion.div>
 
@@ -46,22 +41,35 @@ export default function BringYourLLM() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
-          className="flex flex-wrap items-center justify-center gap-3"
+          className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6"
         >
-          {providers.map((provider) => (
-            <motion.span
-              key={provider}
-              variants={itemVariants}
-              whileHover={{ scale: 1.05 }}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full border border-card-border
-                         bg-white font-sans text-sm text-text-primary hover:border-accent/40
-                         hover:shadow-sm transition-all duration-200 cursor-default"
-            >
-              <Cpu className="w-4 h-4 text-accent" />
-              {provider}
-            </motion.span>
+          {steps.map((step, i) => (
+            <motion.div key={step.letter} variants={itemVariants} className="flex items-center gap-4 sm:gap-6">
+              <div className="flex items-center gap-3 px-6 py-4 rounded-2xl border border-card-border
+                              bg-white font-sans text-text-primary hover:border-accent/40
+                              hover:shadow-sm transition-all duration-200">
+                <span className="flex items-center justify-center w-9 h-9 rounded-full bg-accent/10
+                                 text-accent font-semibold text-lg">
+                  {step.letter}
+                </span>
+                <span className="text-sm font-medium">{step.label}</span>
+              </div>
+              {i < steps.length - 1 && (
+                <ArrowRight className="w-5 h-5 text-text-muted hidden sm:block" />
+              )}
+            </motion.div>
           ))}
         </motion.div>
+
+        <motion.p
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.5 }}
+          className="text-center text-text-muted/70 font-sans text-sm mt-8"
+        >
+          Works with any OpenAI-compatible endpoint. Switch providers anytime — zero lock-in.
+        </motion.p>
       </div>
     </section>
   );
