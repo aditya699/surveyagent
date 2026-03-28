@@ -15,7 +15,7 @@ const features = [
   {
     icon: KeyRound,
     title: 'Enterprise Auth',
-    description: 'JWT with token versioning and automatic rotation.',
+    description: 'Role-based access control with org-level isolation and team permissions.',
   },
   {
     icon: Wifi,

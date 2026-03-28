@@ -25,7 +25,7 @@ export default function Hero() {
             transition={{ delay: 0.1, duration: 0.6 }}
             className="text-5xl sm:text-6xl lg:text-7xl font-serif text-text-primary leading-[1.1] mb-6"
           >
-            The survey is dead.
+            The survey is <span className="text-red-500 line-through decoration-red-500/70">dead</span>.
             <br />
             <span className="italic">Long live the interview.</span>
           </motion.h1>
