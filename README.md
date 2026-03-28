@@ -8,6 +8,9 @@ Open-source AI survey platform that replaces static forms with dynamic conversat
 - **Survey Builder** — full CRUD with AI-powered question generation and field enhancement (title, description, goal, context, welcome message)
 - **Analytics Dashboard** — per-interview and aggregate survey-level AI analysis with scores, sentiment detection, theme identification, and per-question evaluation
 - **Data Export** — CSV exports (transcripts, bulk responses, summaries) and branded PDF reports (analysis, survey definitions) with one-click download
+- **Multi-Tenant Organizations** — orgs auto-created on signup, role-based access (Owner/Admin/Member), team and sub-team management, survey visibility controls (private/team/org)
+- **Email Verification** — 6-digit OTP via Resend after signup, required before accessing protected routes
+- **Invite System** — Owner/Admin invite members via email, invitees register with assigned role, 7-day expiry
 - **Webhooks** — optional webhook URL per survey; POSTs interview results (respondent, coverage, timestamps) to external services (e.g., Slack) on completion
 - **Text-to-Speech** — listen to executive summaries via OpenAI TTS API (gpt-4o-mini-tts)
 - **Landing Page** — 13-section marketing page with scroll animations, responsive navbar, and dark/light section alternation
@@ -21,6 +24,7 @@ Open-source AI survey platform that replaces static forms with dynamic conversat
 | **Frontend** | React 19, Vite, Tailwind CSS v3, Framer Motion, Lucide React, React Router v7, Axios, assistant-ui, jsPDF + jspdf-autotable |
 | **Database** | MongoDB (Atlas or self-hosted) |
 | **AI** | OpenAI Responses API (streaming via SSE) |
+| **Email** | Resend (OTP verification, invite emails) |
 | **Package Managers** | uv (backend), npm (frontend) |
 
 ## Getting Started
@@ -32,6 +36,7 @@ Open-source AI survey platform that replaces static forms with dynamic conversat
 - MongoDB (Atlas or local)
 - [uv](https://docs.astral.sh/uv/) (recommended) or pip
 - OpenAI API key
+- Resend API key (for email verification and invites)
 
 ### Setup
 
@@ -65,13 +70,16 @@ npm run dev    # http://localhost:5174
 surveyagent/
 ├── server/                     # FastAPI backend
 │   ├── main.py                 # App factory, CORS, lifespan, router mount
-│   ├── core/                   # Config, logging, LLM client
+│   ├── core/                   # Config, logging, LLM client, multi-LLM providers
 │   ├── db/                     # MongoDB connection + error logging
-│   ├── auth/                   # JWT auth (register, login, refresh, profile)
-│   ├── surveys/                # Survey CRUD + publish
+│   ├── auth/                   # JWT auth (register, login, refresh, profile, OTP, invites)
+│   ├── surveys/                # Survey CRUD + publish + visibility queries
 │   ├── interviewer/            # AI interviewer engine, prompts, session management
 │   ├── ai/                     # Question generation, field enhancement, TTS
-│   └── analytics/              # Stats, AI analysis (interview + survey), export
+│   ├── analytics/              # Stats, AI analysis (interview + survey), export
+│   ├── email/                  # Resend email service (OTP, invites)
+│   ├── orgs/                   # Organization management (members, roles, ownership)
+│   └── teams/                  # Team/sub-team management
 ├── client/                     # React frontend
 │   └── src/
 │       ├── api/                # Axios client, endpoint constants, API functions
@@ -80,6 +88,8 @@ surveyagent/
 │       ├── utils/              # Formatters, CSV export, PDF export
 │       ├── context/            # Auth context
 │       └── pages/              # Page components
+├── scripts/                    # Migration scripts
+├── evals/                      # Evaluation suite
 ├── .env.example                # Environment variable template
 ├── pyproject.toml              # Python dependencies
 └── uv.lock                     # Lockfile
@@ -96,13 +106,18 @@ surveyagent/
 | POST | /refresh | None | Rotate JWT tokens |
 | GET | /me | Bearer | Get current admin profile |
 | PUT | /update-profile | Bearer | Update name / org_name |
+| POST | /verify-otp | None | Verify 6-digit email OTP |
+| POST | /resend-otp | None | Resend OTP email |
+| POST | /invite | Bearer (Owner/Admin) | Send invite email |
+| GET | /invite/{token} | None | Get invite info |
+| POST | /register-invite | None | Register via invite link |
 
 ### Surveys — `/api/v1/surveys`
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | POST | / | Bearer | Create survey (draft) |
-| GET | / | Bearer | List all surveys |
+| GET | / | Bearer | List surveys (visibility-filtered) |
 | GET | /{id} | Bearer | Get single survey |
 | PUT | /{id} | Bearer | Update survey |
 | DELETE | /{id} | Bearer | Delete survey |
@@ -137,12 +152,33 @@ surveyagent/
 | GET | /interviews/{id} | Bearer | Full interview detail |
 | POST | /interviews/{id}/analyze | Bearer | Stream AI analysis via SSE |
 
+### Organization — `/api/v1/org`
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | / | Bearer | Get current org |
+| PUT | / | Bearer (Owner) | Update org name |
+| GET | /members | Bearer | List org members |
+| PUT | /members/{user_id}/role | Bearer (Owner) | Change member role |
+| DELETE | /members/{user_id} | Bearer (Owner/Admin) | Remove member |
+| POST | /transfer-ownership | Bearer (Owner) | Transfer ownership |
+
+### Teams — `/api/v1/teams`
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | / | Bearer (Owner/Admin) | Create team |
+| GET | / | Bearer | List teams (nested with sub-teams) |
+| GET | /{team_id} | Bearer | Get team detail |
+| PUT | /{team_id} | Bearer (Owner/Admin) | Update team |
+| DELETE | /{team_id} | Bearer (Owner/Admin) | Delete team + sub-teams |
+| POST | /{team_id}/members | Bearer (Owner/Admin) | Add member to team |
+| DELETE | /{team_id}/members/{user_id} | Bearer (Owner/Admin) | Remove member from team |
+
 ## What's Not Built Yet
 
 - Voice interview mode
 - Video avatar interview mode
-- Email verification
-- Multi-tenant access control
 
 ## License
 

@@ -23,17 +23,22 @@ surveyagent/
 │   ├── core/
 │   │   ├── config.py          # Pydantic Settings (reads .env)
 │   │   ├── logging_config.py  # setup_logging() + get_logger()
-│   │   └── llm.py             # Singleton AsyncOpenAI client
+│   │   ├── llm.py             # Singleton AsyncOpenAI client
+│   │   └── providers/         # Multi-LLM provider support
+│   │       ├── __init__.py    # Provider registry
+│   │       ├── openai.py      # OpenAI provider
+│   │       ├── anthropic.py   # Anthropic provider
+│   │       └── gemini.py      # Google Gemini provider
 │   ├── db/
 │   │   └── mongo.py           # get_db() singleton + log_error() helper
 │   ├── auth/
-│   │   ├── routes.py          # register, login, refresh, /me, update-profile
-│   │   ├── schemas.py         # Pydantic models (AdminInDB, TokenResponse, etc.)
+│   │   ├── routes.py          # register, login, refresh, /me, update-profile, OTP, invites
+│   │   ├── schemas.py         # Pydantic models (AdminInDB, TokenResponse, OTP, Invite, etc.)
 │   │   └── utils.py           # JWT create/verify, bcrypt hash/verify, get_current_user
 │   ├── surveys/
 │   │   ├── routes.py          # CRUD + publish (all Bearer-auth protected)
 │   │   ├── schemas.py         # Pydantic models (SurveyCreate, SurveyResponse, etc.)
-│   │   └── utils.py           # generate_survey_token(), survey_doc_to_response()
+│   │   └── utils.py           # generate_survey_token(), survey_doc_to_response(), build_visibility_query()
 │   ├── interviewer/
 │   │   ├── __init__.py        # Package marker
 │   │   ├── prompts.py         # Interviewer system prompt + build_interviewer_prompt()
@@ -47,38 +52,55 @@ surveyagent/
 │   │   ├── prompts.py         # Question generation + field enhancement prompts & builders
 │   │   ├── schemas.py         # GenerateQuestionsRequest, EnhanceFieldRequest
 │   │   └── routes.py          # SSE streaming: question generation + field enhancement
-│   └── analytics/
+│   ├── analytics/
+│   │   ├── __init__.py        # Package marker
+│   │   ├── routes.py          # Overview, survey detail, interview list/detail, analysis SSE, export
+│   │   ├── schemas.py         # Analytics response models (incl. export models)
+│   │   ├── db.py              # Aggregation queries + bulk export query
+│   │   ├── prompts.py         # Interview + survey analysis LLM prompts
+│   │   └── utils.py           # verify_survey_access()
+│   ├── email/                 # Email service (Resend)
+│   │   ├── __init__.py        # Package marker
+│   │   ├── service.py         # send_otp_email(), send_invite_email() via Resend API
+│   │   └── templates.py       # Branded HTML email templates (OTP, invite)
+│   ├── orgs/                  # Organization management
+│   │   ├── __init__.py        # Package marker
+│   │   ├── routes.py          # Org CRUD, member management, role changes, ownership transfer
+│   │   ├── schemas.py         # Org request/response models
+│   │   ├── db.py              # Org + member DB operations
+│   │   └── utils.py           # Org helper functions
+│   └── teams/                 # Team management
 │       ├── __init__.py        # Package marker
-│       ├── routes.py          # Overview, survey detail, interview list/detail, analysis SSE, export
-│       ├── schemas.py         # Analytics response models (incl. export models)
-│       ├── db.py              # Aggregation queries + bulk export query
-│       ├── prompts.py         # Interview + survey analysis LLM prompts
-│       └── utils.py           # verify_survey_ownership()
+│       ├── routes.py          # Team CRUD, member add/remove
+│       ├── schemas.py         # Team request/response models
+│       └── db.py              # Team DB operations, get_user_team_ids()
 ├── client/                    # React frontend
 │   ├── index.html             # Entry HTML with Google Fonts
 │   ├── tailwind.config.js     # Design system (colors, fonts, animations)
 │   ├── vite.config.js         # Vite config, port 5174
 │   ├── src/
 │   │   ├── main.jsx           # BrowserRouter > AuthProvider > App
-│   │   ├── App.jsx            # Routes: /, /login, /register, /dashboard, /settings, /surveys/*, /interview/*
+│   │   ├── App.jsx            # Routes: /, /login, /register, /verify-email, /invite/:token, /dashboard, /settings, /settings/org, /settings/teams, /surveys/*, /interview/*
 │   │   ├── index.css          # Tailwind directives + custom component classes
 │   │   ├── api/
 │   │   │   ├── index.js       # Barrel export for entire API layer
 │   │   │   ├── client.js      # Axios instance (baseURL from env)
-│   │   │   ├── constants.js   # ENDPOINTS map (AUTH, SURVEYS, AI, INTERVIEW)
+│   │   │   ├── constants.js   # ENDPOINTS map (AUTH, SURVEYS, AI, INTERVIEW, ORG, TEAMS)
 │   │   │   ├── helpers.js     # toFormParams, sendFormData, sendFormPut
 │   │   │   ├── interceptors.js # Bearer token + 401 refresh queue pattern
 │   │   │   ├── surveys.js     # Survey CRUD + publish API functions
 │   │   │   ├── ai.js          # streamGenerateQuestions() via fetch SSE
 │   │   │   ├── analytics.js   # Analytics + export API functions
-│   │   │   └── interview.js   # Interview API: info, start, test, streamMessage
+│   │   │   ├── interview.js   # Interview API: info, start, test, streamMessage
+│   │   │   ├── org.js         # Org management API (members, roles, invites)
+│   │   │   └── teams.js       # Team management API (CRUD, members)
 │   │   ├── utils/
 │   │   │   ├── index.js       # Barrel export
 │   │   │   ├── formatters.js  # formatDate, formatDuration, formatTimer, etc.
 │   │   │   ├── export.js      # CSV export utilities (transcript, responses, summary)
 │   │   │   └── pdf.js         # Branded PDF export (jsPDF + autoTable) for analysis & survey reports
 │   │   ├── context/
-│   │   │   └── AuthContext.jsx # Auth state, login/register/updateProfile/logout
+│   │   │   └── AuthContext.jsx # Auth state, login/register/updateProfile/logout, email verification
 │   │   ├── hooks/
 │   │   │   ├── index.js       # Barrel export
 │   │   │   ├── useAuth.js     # useContext(AuthContext) wrapper
@@ -95,9 +117,11 @@ surveyagent/
 │   │   │   │   ├── index.js           # Barrel export
 │   │   │   │   ├── StatusBadge.jsx    # Survey draft/published badge
 │   │   │   │   ├── InterviewStatusBadge.jsx # Interview status badge
-│   │   │   │   └── ExportButton.jsx  # Reusable export dropdown (CSV/PDF)
+│   │   │   │   ├── ExportButton.jsx   # Reusable export dropdown (CSV/PDF)
+│   │   │   │   ├── RoleBadge.jsx      # User role badge (owner/admin/member)
+│   │   │   │   └── VisibilityBadge.jsx # Survey visibility badge (private/team/org)
 │   │   │   ├── auth/
-│   │   │   │   └── ProtectedRoute.jsx  # Auth guard with Outlet
+│   │   │   │   └── ProtectedRoute.jsx  # Auth guard with Outlet + email verification check
 │   │   │   ├── analytics/
 │   │   │   │   ├── index.js             # Barrel export
 │   │   │   │   ├── helpers.js           # scoreColor, scoreBg, sentimentBadge, questionStatusBadge
@@ -136,14 +160,23 @@ surveyagent/
 │   │       ├── Landing.jsx          # Composes all 13 landing sections
 │   │       ├── Login.jsx            # Glassmorphism login form
 │   │       ├── Register.jsx         # Glassmorphism register form
+│   │       ├── VerifyEmail.jsx      # OTP email verification page
+│   │       ├── InviteAccept.jsx     # Invite acceptance + registration page
 │   │       ├── Dashboard.jsx        # Survey list grid with CRUD actions
-│   │       ├── Settings.jsx         # Profile edit (name, org_name)
+│   │       ├── Settings.jsx         # Profile edit (name, org_name) + links to org/team settings
+│   │       ├── OrgSettings.jsx      # Organization management (members, roles, invites)
+│   │       ├── TeamManagement.jsx   # Team/sub-team management (CRUD, members)
 │   │       ├── SurveyForm.jsx       # Create/Edit survey (uses useSurveyForm + useQuestionManager + useAiGeneration + useFieldEnhance hooks)
 │   │       ├── SurveyDetail.jsx     # Read-only survey view with share link + test button
 │   │       ├── InterviewPage.jsx    # Interview orchestrator (respondent + test modes)
 │   │       ├── AnalyticsOverview.jsx # Global analytics dashboard
 │   │       ├── SurveyAnalytics.jsx  # Per-survey analytics + interview sessions table
 │   │       └── InterviewDetail.jsx  # Tabbed interview dashboard (orchestrator for analytics/ components)
+├── scripts/
+│   └── migrate_multi_tenant.py # Migration script: creates orgs, sets visibility, creates indexes
+├── evals/                     # Evaluation suite
+│   ├── cases.py               # Test cases
+│   └── run_evals.py           # Eval runner
 ├── .env                       # Secrets (gitignored)
 ├── .env.example               # Template for .env
 ├── pyproject.toml             # Python deps (uv)
@@ -306,7 +339,7 @@ Requires a `.env` file at the project root (copy `.env.example`).
 ### Surveys
 - Survey endpoints accept **JSON** bodies (not form data like auth).
 - All survey routes require Bearer auth via `Depends(get_current_user)`.
-- Ownership isolation: every query filters by `created_by` so admins only see their own surveys.
+- Visibility-based access: `build_visibility_query()` builds a `$or` query combining created_by, org+org visibility, and org+team+team_ids visibility. Users see surveys they created, surveys shared with their org, or surveys shared with their teams.
 - Publish generates a `uuid4` token stored in the survey document.
 
 ### AI Question Generation
@@ -355,10 +388,13 @@ Requires a `.env` file at the project root (copy `.env.example`).
 
 ### MongoDB
 - Database name: `surveyagent` (configurable via `MONGO_DB_NAME`)
-- Collections: `admins` (user accounts), `surveys` (survey definitions), `interviews` (chat sessions), `error_logs` (error tracking)
-- Admin document fields: `name`, `email`, `password`, `org_name`, `token_version`, `is_active`, `created_at`, `updated_at`, `last_login`
-- Survey document fields: `title`, `description`, `goal`, `context`, `questions` (array of {text, ai_instructions}), `estimated_duration`, `welcome_message`, `personality_tone`, `webhook_url` (optional), `status`, `token`, `created_by`, `created_at`, `updated_at`, `analysis` (cached aggregate AI analysis, optional)
+- Collections: `admins` (user accounts), `surveys` (survey definitions), `interviews` (chat sessions), `error_logs` (error tracking), `orgs` (organizations), `teams` (teams/sub-teams), `invites` (pending invitations, TTL-indexed), `otp_codes` (email verification codes, TTL-indexed)
+- Admin document fields: `name`, `email`, `password`, `org_name`, `org_id`, `role` (owner/admin/member), `email_verified`, `token_version`, `is_active`, `created_at`, `updated_at`, `last_login`
+- Survey document fields: `title`, `description`, `goal`, `context`, `questions` (array of {text, ai_instructions}), `estimated_duration`, `welcome_message`, `personality_tone`, `webhook_url` (optional), `status`, `token`, `created_by`, `org_id`, `visibility` (private/team/org), `team_ids` (array of team ObjectIds), `created_at`, `updated_at`, `analysis` (cached aggregate AI analysis, optional)
 - Interview document fields: `survey_id`, `respondent` (embedded: name, age, gender, occupation, phone_number, email — all optional), `conversation` (list of {role, content, timestamp}), `status` (in_progress/completed/abandoned), `is_test_run`, `questions_covered` (list of ints), `started_at`, `completed_at`, `analysis` (cached AI analysis, optional)
+- Org document fields: `name`, `slug`, `owner_id`, `created_at`, `updated_at`
+- Team document fields: `name`, `org_id`, `parent_id` (null for top-level), `members` (array of {user_id, name, email}), `created_at`, `updated_at`
+- Invite document fields: `email`, `org_id`, `role`, `token`, `invited_by`, `expires_at`, `used`, `created_at`
 
 ## API Endpoints
 

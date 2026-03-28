@@ -45,11 +45,42 @@ Traditional survey tools give you structured data but miss the story behind the 
 - Question coverage tracking shows which questions were addressed
 - Session stats: duration, completion rates, respondent counts
 
+### Multi-Tenant Organizations
+- Organizations are auto-created on signup — the first user becomes Owner
+- **Role-based access:** Owner (full control), Admin (invite + team management), Member (create surveys)
+- **Invite system:** Owner/Admin invite members via email — invitees register with a link and land in the org with their assigned role
+- **Email verification:** 6-digit OTP sent via Resend after signup, required before accessing the platform
+
+### Teams & Sub-Teams
+- Create teams within your organization to group members
+- Sub-teams nest one level deep under parent teams
+- Members can belong to multiple teams
+- Only Owner and Admin roles can manage teams
+
+### Survey Visibility
+- **Private** — only the creator can see the survey
+- **Team** — visible to members of selected teams and their sub-teams
+- **Org** — visible to everyone in the organization
+- Choose visibility when creating or editing a survey
+
+### Data Export
+- CSV exports for interview transcripts, bulk responses, and analytics summaries
+- Branded PDF reports with score badges, section layouts, and autoTable formatting
+- Export available on Interview Detail, Survey Analytics, Survey Detail, and Analytics Overview pages
+
+### Webhooks
+- Optional webhook URL per survey
+- POSTs interview results (respondent, coverage, timestamps) to external services on completion
+- Fire-and-forget — never blocks the interview flow
+- Test runs are skipped
+
 ### Admin Dashboard
 - Create, edit, duplicate, and delete surveys
 - Draft and published workflow — test before you go live
 - Test mode lets you preview the full interview experience before publishing
 - Publish and share via a simple link — no login required for respondents
+- Organization settings: manage members, change roles, transfer ownership
+- Team management: create teams/sub-teams, add/remove members
 
 ### Respondent Experience
 - Clean, focused chat interface — no distractions
@@ -62,7 +93,6 @@ Traditional survey tools give you structured data but miss the story behind the 
 
 - **Voice interviews** — respondents speak instead of type
 - **Video avatar** — a visual AI interviewer on screen
-- **LLM flexibility** — bring your own model (OpenAI, Anthropic, local models)
 
 ---
 
