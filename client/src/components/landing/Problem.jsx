@@ -5,22 +5,22 @@ const problems = [
   {
     icon: DollarSign,
     title: '$2,000+/month',
-    description: 'Enterprise survey platforms charge thousands per seat. Small teams are priced out entirely.',
+    description: 'AI research tools price out anyone who isn\'t enterprise.',
   },
   {
     icon: Cloud,
     title: 'Your data, their cloud',
-    description: 'Sensitive survey data lives on vendor servers. You can\'t control where it goes or who accesses it.',
+    description: 'Sensitive responses live on servers you don\'t control.',
   },
   {
     icon: Lock,
-    title: 'Locked into one LLM',
-    description: 'Stuck with whatever AI model the vendor chose. No switching, no fine-tuning, no local models.',
+    title: 'One LLM, forever',
+    description: 'Locked into whatever model the vendor chose. No switching.',
   },
   {
     icon: Server,
     title: 'SaaS or nothing',
-    description: 'No self-hosting option. No air-gapped deployments. No compliance flexibility.',
+    description: 'No self-hosting. No air-gap. No compliance flexibility.',
   },
 ];
 
@@ -46,9 +46,7 @@ export default function Problem() {
           className="text-center mb-16"
         >
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif text-text-primary">
-            Survey platforms got expensive.
-            <br />
-            <span className="italic text-text-muted">And closed.</span>
+            Why surveys <span className="italic">fail you</span>
           </h2>
         </motion.div>
 

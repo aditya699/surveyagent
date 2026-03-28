@@ -14,7 +14,6 @@ const columns = [
       { label: 'GitHub', href: '#' },
       { label: 'Discord', href: '#' },
       { label: 'Contributing', href: '#' },
-      { label: 'Discussions', href: '#' },
     ],
   },
   {
@@ -22,8 +21,6 @@ const columns = [
     links: [
       { label: 'About', href: '#' },
       { label: 'Blog', href: '#' },
-      { label: 'Careers', href: '#' },
-      { label: 'Contact', href: '#' },
     ],
   },
   {
@@ -32,7 +29,6 @@ const columns = [
       { label: 'Privacy', href: '#' },
       { label: 'Terms', href: '#' },
       { label: 'License', href: '#' },
-      { label: 'Security', href: '#' },
     ],
   },
 ];

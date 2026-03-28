@@ -5,32 +5,32 @@ const features = [
   {
     icon: Shield,
     title: 'Data Sovereignty',
-    description: 'Your data stays on your servers. No third-party processing, no shared infrastructure.',
+    description: 'Stays on your servers. Period.',
   },
   {
     icon: Database,
     title: 'Your Database',
-    description: 'Connect your own MongoDB instance. Full control over storage, backups, and retention.',
+    description: 'Connect your own MongoDB. You control backups and retention.',
   },
   {
     icon: KeyRound,
     title: 'Enterprise Auth',
-    description: 'JWT-based authentication with token versioning and automatic rotation built in.',
+    description: 'JWT with token versioning and automatic rotation.',
   },
   {
     icon: Wifi,
     title: 'Air-Gap Ready',
-    description: 'Deploy fully offline behind your firewall. No external calls required to operate.',
+    description: 'Deploy fully offline. No external calls required.',
   },
   {
     icon: ClipboardCheck,
     title: 'Compliance Supportable',
-    description: 'Self-host to meet GDPR, HIPAA, SOC 2, or any regulatory framework your org requires.',
+    description: 'GDPR, HIPAA, SOC 2 — self-host to meet any framework.',
   },
   {
     icon: FileSearch,
     title: 'Fully Auditable',
-    description: 'Open-source codebase means full transparency. Audit every line that touches your data.',
+    description: 'Open source. Read every line that touches your data.',
   },
 ];
 

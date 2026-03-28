@@ -6,25 +6,25 @@ const steps = [
     number: '01',
     icon: PenLine,
     title: 'Create your survey',
-    description: 'Define your survey goals and questions. The AI structures the conversation flow automatically.',
+    description: 'Write your goals and questions. AI helps you sharpen them.',
   },
   {
     number: '02',
     icon: Share2,
-    title: 'Share the link',
-    description: 'Send respondents a single link. They choose text, voice, or video — no app download needed.',
+    title: 'Share one link',
+    description: 'Respondents open it. No app, no login, no friction.',
   },
   {
     number: '03',
     icon: BotMessageSquare,
-    title: 'AI conducts interviews',
-    description: 'The AI adapts in real-time, asks follow-ups, and probes deeper based on responses.',
+    title: 'AI conducts the interview',
+    description: 'It adapts, probes, and wraps up on time.',
   },
   {
     number: '04',
     icon: BarChart3,
-    title: 'Analyze insights',
-    description: 'Get AI-generated summaries, themes, and sentiment analysis across all responses.',
+    title: 'Read your insights',
+    description: 'AI summaries, sentiment, themes, and per-question analysis.',
   },
 ];
 
@@ -50,9 +50,7 @@ export default function HowItWorks() {
           className="text-center mb-16"
         >
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif text-text-primary">
-            Survey to insights.
-            <br />
-            <span className="italic">Minutes, not months.</span>
+            From question to insight <span className="italic">in four steps</span>
           </h2>
         </motion.div>
 

@@ -3,13 +3,11 @@ import { Check, X, Minus } from 'lucide-react';
 
 const rows = [
   { feature: 'AI-driven interviews', us: true, closedAI: true, traditional: false, basic: false },
-  { feature: 'Text, voice & video', us: true, closedAI: 'partial', traditional: false, basic: false },
   { feature: 'Self-hostable', us: true, closedAI: false, traditional: false, basic: false },
-  { feature: 'Open-source', us: true, closedAI: false, traditional: false, basic: 'partial' },
+  { feature: 'Open source', us: true, closedAI: false, traditional: false, basic: false },
   { feature: 'Bring your own LLM', us: true, closedAI: false, traditional: false, basic: false },
-  { feature: 'Real-time follow-ups', us: true, closedAI: true, traditional: false, basic: false },
+  { feature: 'Free tier', us: true, closedAI: 'partial', traditional: true, basic: true },
   { feature: 'No vendor lock-in', us: true, closedAI: false, traditional: 'partial', basic: true },
-  { feature: 'Free tier', us: true, closedAI: 'partial', traditional: false, basic: true },
 ];
 
 function Cell({ value, highlight }) {
@@ -31,7 +29,7 @@ export default function Comparison() {
           className="text-center mb-12"
         >
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif text-text-primary">
-            How we <span className="italic">compare.</span>
+            How we compare
           </h2>
         </motion.div>
 
@@ -49,9 +47,9 @@ export default function Comparison() {
                 <th className="py-3 px-4 text-center">
                   <span className="text-accent font-semibold">SurveyAgent</span>
                 </th>
-                <th className="py-3 px-4 text-center text-text-muted font-medium">Closed AI</th>
-                <th className="py-3 px-4 text-center text-text-muted font-medium">Traditional</th>
-                <th className="py-3 px-4 text-center text-text-muted font-medium">Basic Forms</th>
+                <th className="py-3 px-4 text-center text-text-muted font-medium">Closed AI tools</th>
+                <th className="py-3 px-4 text-center text-text-muted font-medium">Traditional surveys</th>
+                <th className="py-3 px-4 text-center text-text-muted font-medium">Basic forms</th>
               </tr>
             </thead>
             <tbody>

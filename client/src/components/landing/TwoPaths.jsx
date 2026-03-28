@@ -33,13 +33,12 @@ export default function TwoPaths() {
             </div>
             <h3 className="font-serif text-2xl text-text-primary mb-3">Cloud</h3>
             <p className="text-text-muted font-sans text-sm leading-relaxed mb-6">
-              Start instantly with our hosted platform. No setup, no infrastructure.
-              We handle scaling, updates, and uptime so you can focus on your surveys.
+              Start in seconds. We handle the infrastructure.
             </p>
             <ul className="space-y-2 text-sm text-text-muted font-sans mb-6">
               <li className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-                Zero setup time
+                Zero setup
               </li>
               <li className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-accent" />
@@ -47,7 +46,7 @@ export default function TwoPaths() {
               </li>
               <li className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-                Managed infrastructure
+                Managed scaling
               </li>
             </ul>
             <Link to="/register" className="btn-primary inline-flex items-center gap-2 text-sm">
@@ -70,8 +69,7 @@ export default function TwoPaths() {
             </div>
             <h3 className="font-serif text-2xl text-text-primary mb-3">Self-Host</h3>
             <p className="text-text-muted font-sans text-sm leading-relaxed mb-6">
-              Full control over your data, infrastructure, and deployment. Run on
-              your servers, behind your firewall, with your compliance requirements.
+              Full control. Your servers, your rules.
             </p>
             <ul className="space-y-2 text-sm text-text-muted font-sans mb-6">
               <li className="flex items-center gap-2">

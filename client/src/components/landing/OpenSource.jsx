@@ -2,9 +2,9 @@ import { motion } from 'framer-motion';
 import { Scale, Users, EyeOff, Github, BookOpen, MessageCircle } from 'lucide-react';
 
 const badges = [
-  { icon: Scale, label: 'MIT Licensed', description: 'Use it anywhere — commercial or personal. No strings attached.' },
-  { icon: Users, label: 'Community Driven', description: 'Built in the open. Contributions, issues, and ideas welcome.' },
-  { icon: EyeOff, label: 'No Telemetry', description: 'Zero tracking, zero analytics, zero phone-home. Your data is yours.' },
+  { icon: Scale, label: 'MIT Licensed', description: 'Use anywhere, commercial or personal. No strings.' },
+  { icon: EyeOff, label: 'No Telemetry', description: 'Zero tracking. Zero phone-home. Your data is yours.' },
+  { icon: Users, label: 'Community Driven', description: 'Built in the open. PRs and ideas welcome.' },
 ];
 
 const links = [
@@ -38,7 +38,7 @@ export default function OpenSource() {
             Open source. <span className="italic">Open book.</span>
           </h2>
           <p className="text-text-muted font-sans text-lg max-w-2xl mx-auto">
-            We believe survey tools should be transparent, auditable, and community-owned.
+            We believe research tools should be transparent, auditable, and community-owned.
           </p>
         </motion.div>
 

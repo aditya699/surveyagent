@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, Github, BookOpen } from 'lucide-react';
+import { ArrowRight, Github } from 'lucide-react';
 
 export default function FinalCTA() {
   return (
@@ -20,7 +20,7 @@ export default function FinalCTA() {
             <span className="italic">Your rules.</span>
           </h2>
           <p className="text-white/60 font-sans text-lg mb-10 max-w-xl mx-auto">
-            Start for free on our cloud, or self-host on your own servers. Either way, you're in control.
+            Start free on our cloud, or self-host on your own servers.
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-4">
@@ -37,13 +37,6 @@ export default function FinalCTA() {
             >
               <Github className="w-4 h-4" />
               View on GitHub
-            </a>
-            <a
-              href="#"
-              className="btn-outline-light inline-flex items-center gap-2"
-            >
-              <BookOpen className="w-4 h-4" />
-              Documentation
             </a>
           </div>
         </motion.div>

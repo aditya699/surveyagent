@@ -37,7 +37,7 @@ export default function BringYourLLM() {
             Your AI. <span className="italic">Your choice.</span>
           </h2>
           <p className="text-text-muted font-sans text-lg max-w-2xl mx-auto">
-            Plug in any LLM provider. Switch anytime. No vendor lock-in.
+            Plug in any provider. Switch anytime.
           </p>
         </motion.div>
 

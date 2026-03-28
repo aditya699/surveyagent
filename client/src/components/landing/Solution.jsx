@@ -12,16 +12,14 @@ export default function Solution() {
           className="text-center"
         >
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif text-text-primary mb-6">
-            Surveys that talk.
-            <br />
-            <span className="italic">Infrastructure you own.</span>
+            Surveys that actually <span className="italic">listen</span>
           </h2>
           <p className="text-lg text-text-muted font-sans leading-relaxed max-w-3xl mx-auto">
-            SurveyAgent is an open-source AI survey platform that replaces static
-            forms with dynamic conversations. Your AI interviewer adapts in real-time,
-            asks follow-up questions, and extracts deeper insights — through text chat,
-            real-time voice, or a video avatar. Deploy it on your servers, connect your
-            preferred LLM, and keep full control of your survey data.
+            SurveyAgent replaces the form with a conversation. An AI interviewer
+            follows your questions but adapts in real time — probing deeper when
+            something interesting comes up, moving on when it's time, and wrapping
+            up gracefully. Every respondent gets a one-on-one. You get structured
+            insights across all of them.
           </p>
         </motion.div>
       </div>

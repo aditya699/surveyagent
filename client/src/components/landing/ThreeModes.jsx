@@ -5,17 +5,20 @@ const modes = [
   {
     icon: MessageSquare,
     title: 'Text Chat',
-    description: 'Natural conversational interviews through an AI chatbot. Respondents type at their own pace while the AI adapts questions in real-time.',
+    description: 'Respondents type at their own pace. The AI adapts in real time.',
+    comingSoon: false,
   },
   {
     icon: Mic,
     title: 'Voice',
-    description: 'Real-time voice conversations with AI. Speak naturally and let the AI interviewer listen, understand, and respond with follow-up questions.',
+    description: 'Speak naturally. The AI listens and responds.',
+    comingSoon: true,
   },
   {
     icon: Video,
     title: 'Video Avatar',
-    description: 'Face-to-face interviews with an AI video avatar. The most human-like experience for sensitive or in-depth qualitative surveys.',
+    description: 'The most human-like experience for sensitive research.',
+    comingSoon: true,
   },
 ];
 
@@ -64,7 +67,14 @@ export default function ThreeModes() {
               <div className="w-14 h-14 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-5">
                 <mode.icon className="w-7 h-7 text-accent" />
               </div>
-              <h3 className="font-serif text-xl text-text-primary mb-3">{mode.title}</h3>
+              <h3 className="font-serif text-xl text-text-primary mb-3">
+                {mode.title}
+                {mode.comingSoon && (
+                  <span className="ml-2 text-xs font-sans font-medium text-accent bg-accent/10 rounded-full px-2 py-0.5 align-middle">
+                    Coming Soon
+                  </span>
+                )}
+              </h3>
               <p className="text-sm text-text-muted font-sans leading-relaxed">{mode.description}</p>
             </motion.div>
           ))}
