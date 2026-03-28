@@ -1,9 +1,14 @@
 # main.py
 from contextlib import asynccontextmanager
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from server.core.logging_config import get_logger, setup_logging
 from server.core.config import settings
+
+SPA_DIR = Path(__file__).resolve().parent.parent / "client" / "dist"
 
 # Initialize logging before anything else
 setup_logging()
@@ -80,13 +85,26 @@ from server.teams.routes import router as teams_router
 app.include_router(teams_router, prefix="/api/v1/teams", tags=["Teams"])
 
 
-@app.get("/")
-async def root():
-    """Root endpoint - API health check."""
-    return {"message": "SurveyAgent API is running."}
-
-
 @app.get("/health")
 async def health():
     """Health check endpoint."""
     return {"status": "healthy"}
+
+
+# Serve React SPA from client/dist when built (production single-app mode)
+if SPA_DIR.exists():
+    app.mount("/assets", StaticFiles(directory=SPA_DIR / "assets"), name="static-assets")
+
+    @app.get("/{path:path}")
+    async def serve_spa(path: str):
+        """Catch-all: serve static files or fall back to index.html for SPA routing."""
+        file = SPA_DIR / path
+        if path and file.exists() and file.is_file():
+            return FileResponse(file)
+        return FileResponse(SPA_DIR / "index.html")
+else:
+
+    @app.get("/")
+    async def root():
+        """Root endpoint - API info (dev mode, no SPA build)."""
+        return {"message": "SurveyAgent API is running."}
