@@ -22,6 +22,8 @@ export function useSurveyForm({ id, setQuestions }) {
   const [teamIds, setTeamIds] = useState([]);
   const [existingStatus, setExistingStatus] = useState(null);
   const [createdBy, setCreatedBy] = useState(null);
+  const [createdByName, setCreatedByName] = useState(null);
+  const [createdByEmail, setCreatedByEmail] = useState(null);
 
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -59,6 +61,8 @@ export function useSurveyForm({ id, setQuestions }) {
         setTeamIds(s.team_ids ?? []);
         setExistingStatus(s.status);
         setCreatedBy(s.created_by);
+        setCreatedByName(s.created_by_name ?? null);
+        setCreatedByEmail(s.created_by_email ?? null);
       } catch (err) {
         if (!cancelled) setError(err.response?.data?.detail || 'Failed to load survey');
       } finally {
@@ -176,7 +180,7 @@ export function useSurveyForm({ id, setQuestions }) {
     analyticsInstructions, setAnalyticsInstructions,
     visibility, setVisibility,
     teamIds, setTeamIds,
-    existingStatus, createdBy,
+    existingStatus, createdBy, createdByName, createdByEmail,
     saving, publishing, testing, error,
     loadingExisting,
     handleSave, handlePublish, handleTestChatbot,

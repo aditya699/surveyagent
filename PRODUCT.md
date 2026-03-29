@@ -59,7 +59,7 @@ Traditional survey tools give you structured data but miss the story behind the 
 - Only Owner and Admin roles can manage teams
 
 ### Survey Visibility
-- **Private** — only the creator can see the survey
+- **Private** — only the creator and org Owner/Admins can see the survey
 - **Team** — visible to members of selected teams and their sub-teams
 - **Org** — visible to everyone in the organization
 - Choose visibility when creating or editing a survey
@@ -92,6 +92,7 @@ Traditional survey tools give you structured data but miss the story behind the 
 
 ### Respondent Experience
 - Clean, focused chat interface — no distractions
+- **Speech-to-text dictation** — click the mic button to dictate replies instead of typing (uses the browser's native Web Speech API, no backend needed)
 - Optional details form (name, email, age, etc.) — all fields optional
 - Works on any device with a browser
 

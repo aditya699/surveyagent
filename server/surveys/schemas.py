@@ -113,6 +113,7 @@ class SurveyResponse(BaseModel):
     token: Optional[str] = Field(None, description="Unique public token")
     created_by: str = Field(..., description="Admin ID who created the survey")
     created_by_name: Optional[str] = Field(None, description="Creator's name (for shared surveys)")
+    created_by_email: Optional[str] = Field(None, description="Creator's email (for shared surveys)")
     org_id: Optional[str] = Field(None, description="Organization ID")
     visibility: str = Field("private", description="Survey visibility: private, team, or org")
     team_ids: List[str] = Field(default_factory=list, description="Team IDs for team visibility")

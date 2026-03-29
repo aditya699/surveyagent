@@ -4,7 +4,7 @@ Open-source AI survey platform that replaces static forms with dynamic conversat
 
 ## Features
 
-- **AI Interviewer** — conversational interviews via text chat with configurable personality tone, per-question AI instructions, time-aware pacing, and automatic question coverage tracking
+- **AI Interviewer** — conversational interviews via text chat with configurable personality tone, per-question AI instructions, time-aware pacing, automatic question coverage tracking, and speech-to-text dictation (browser-native Web Speech API)
 - **Survey Builder** — full CRUD with AI-powered question generation and field enhancement (title, description, goal, context, welcome message)
 - **Analytics Dashboard** — per-interview and aggregate survey-level AI analysis with scores, sentiment detection, theme identification, and per-question evaluation
 - **Data Export** — CSV exports (transcripts, bulk responses, summaries) and branded PDF reports (analysis, survey definitions) with one-click download
@@ -97,7 +97,7 @@ surveyagent/
 │   └── src/
 │       ├── api/                # Axios client, endpoint constants, API functions
 │       ├── components/         # Shared, analytics, interview, landing components
-│       ├── hooks/              # Custom hooks (auth, forms, AI streaming, analysis)
+│       ├── hooks/              # Custom hooks (auth, forms, AI streaming, analysis, speech-to-text)
 │       ├── utils/              # Formatters, CSV export, PDF export
 │       ├── context/            # Auth context
 │       └── pages/              # Page components

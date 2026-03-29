@@ -1,11 +1,14 @@
+import { useCallback } from 'react';
 import {
   ThreadPrimitive,
   ComposerPrimitive,
   MessagePrimitive,
   useMessagePartText,
+  useComposerRuntime,
 } from '@assistant-ui/react';
 import { motion } from 'framer-motion';
-import { SendHorizontal, Bot, ArrowDown } from 'lucide-react';
+import { SendHorizontal, Bot, ArrowDown, Mic } from 'lucide-react';
+import { useSpeechToText } from '../../hooks';
 
 const messageVariants = {
   hidden: { opacity: 0, y: 8 },
@@ -67,6 +70,37 @@ function AssistantMessage() {
   );
 }
 
+function DictateButton() {
+  const composerRuntime = useComposerRuntime();
+
+  const onTranscript = useCallback(
+    (text) => {
+      const prev = composerRuntime.getState().text;
+      composerRuntime.setText(prev ? prev + ' ' + text : text);
+    },
+    [composerRuntime],
+  );
+
+  const { isListening, isSupported, toggleListening } = useSpeechToText({ onTranscript });
+
+  if (!isSupported) return null;
+
+  return (
+    <button
+      type="button"
+      onClick={toggleListening}
+      className={`shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 active:scale-95 ${
+        isListening
+          ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse'
+          : 'bg-transparent hover:bg-accent/10 text-text-muted hover:text-accent'
+      }`}
+      title={isListening ? 'Stop dictating' : 'Dictate your reply'}
+    >
+      <Mic className="w-4 h-4" />
+    </button>
+  );
+}
+
 export default function ChatThread() {
   return (
     <ThreadPrimitive.Root className="flex flex-col h-full relative">
@@ -95,6 +129,7 @@ export default function ChatThread() {
               className="flex-1 resize-none bg-transparent px-2 py-2 text-sm font-sans text-text-primary placeholder:text-text-muted/50 focus:outline-none"
               autoFocus
             />
+            <DictateButton />
             <ComposerPrimitive.Send className="shrink-0 w-9 h-9 rounded-xl bg-accent hover:bg-accent-hover text-white flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed hover:shadow-md active:scale-95">
               <SendHorizontal className="w-4 h-4" />
             </ComposerPrimitive.Send>

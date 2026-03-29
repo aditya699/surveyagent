@@ -7,3 +7,4 @@ export { useFieldEnhance } from './useFieldEnhance';
 export { useInterviewAnalysis } from './useInterviewAnalysis';
 export { useSurveyAnalysis } from './useSurveyAnalysis';
 export { useTts } from './useTts';
+export { default as useSpeechToText } from './useSpeechToText';

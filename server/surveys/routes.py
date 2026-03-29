@@ -132,13 +132,15 @@ async def get_surveys(
         creator_map = {}
         if creator_ids:
             creators = await db["admins"].find(
-                {"_id": {"$in": list(creator_ids)}}, {"name": 1}
+                {"_id": {"$in": list(creator_ids)}}, {"name": 1, "email": 1}
             ).to_list(None)
             creator_map = {c["_id"]: c["name"] for c in creators}
+            creator_email_map = {c["_id"]: c["email"] for c in creators}
 
         surveys = []
         for doc in docs:
             doc["created_by_name"] = creator_map.get(doc["created_by"])
+            doc["created_by_email"] = creator_email_map.get(doc["created_by"])
             surveys.append(survey_doc_to_response(doc))
 
         logger.info(f"Returned {len(surveys)} surveys for user_id: {user_id}")
@@ -182,9 +184,10 @@ async def get_survey(
         if not has_access:
             raise HTTPException(status_code=404, detail="Survey not found")
 
-        # Add creator name
-        creator = await db["admins"].find_one({"_id": doc["created_by"]}, {"name": 1})
+        # Add creator name and email
+        creator = await db["admins"].find_one({"_id": doc["created_by"]}, {"name": 1, "email": 1})
         doc["created_by_name"] = creator["name"] if creator else None
+        doc["created_by_email"] = creator["email"] if creator else None
 
         return SurveySingleResponse(
             message="Survey retrieved successfully",

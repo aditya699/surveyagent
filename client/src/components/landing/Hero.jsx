@@ -65,7 +65,7 @@ export default function Hero() {
             transition={{ delay: 0.6 }}
             className="text-sm text-text-muted/60 font-sans mt-6"
           >
-            MIT licensed · No credit card · No vendor lock-in
+            MIT licensed · No vendor lock-in
           </motion.p>
         </motion.div>
       </div>

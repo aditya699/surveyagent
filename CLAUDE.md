@@ -4,7 +4,7 @@
 
 SurveyAgent is an open-source AI survey platform that replaces static forms with dynamic conversations. It conducts interviews via text chat, voice, or video avatar. It's self-hostable, LLM-agnostic, and keeps survey data under the user's control.
 
-**Status:** Early development. Auth system, landing page, survey CRUD, AI question generation, AI field enhancement, interviewer foundation, interviewer engine + routes, interview chat UI (text), analytics, data export, webhooks, multi-tenant org support (orgs, roles, teams, email OTP verification, invite system, survey visibility), email notifications on interview completion, custom analytics instructions, and Docker containerization are built. Voice and video are not yet implemented.
+**Status:** Early development. Auth system, landing page, survey CRUD, AI question generation, AI field enhancement, interviewer foundation, interviewer engine + routes, interview chat UI (text + speech-to-text dictation), analytics, data export, webhooks, multi-tenant org support (orgs, roles, teams, email OTP verification, invite system, survey visibility), email notifications on interview completion, custom analytics instructions, and Docker containerization are built. Voice and video are not yet implemented.
 
 ## Tech Stack
 
@@ -113,7 +113,8 @@ surveyagent/
 │   │   │   ├── useFieldEnhance.js # AI field enhancement streaming state
 │   │   │   ├── useInterviewAnalysis.js # Interview analysis streaming state
 │   │   │   ├── useSurveyAnalysis.js   # Survey aggregate analysis streaming state
-│   │   │   └── useTts.js         # Text-to-speech playback via OpenAI TTS API
+│   │   │   ├── useTts.js         # Text-to-speech playback via OpenAI TTS API
+│   │   │   └── useSpeechToText.js # Browser Speech Recognition API wrapper for dictation
 │   │   ├── components/
 │   │   │   ├── shared/
 │   │   │   │   ├── index.js           # Barrel export
@@ -217,7 +218,7 @@ Requires a `.env` file at the project root (copy `.env.example`).
 
 ### Survey Management (complete)
 - Full CRUD: create, list, view, edit, delete surveys
-- Survey fields: title, description, goal, context, questions (array of QuestionItem: {text, ai_instructions}), estimated_duration (int, minutes, default 5), welcome_message (optional string), personality_tone (professional/friendly/casual/fun, default "friendly"), webhook_url (optional string, max 2000 chars), notify_on_completion (bool, default false), analytics_instructions (optional string, max 2000 chars)
+- Survey fields: title, description, goal, context, questions (array of QuestionItem: {text, ai_instructions}), estimated_duration (int, minutes, default 5), welcome_message (optional string), personality_tone (professional/friendly/casual/fun, default "friendly"), webhook_url (optional string, max 2000 chars), notify_on_completion (bool, default false), analytics_instructions (optional string, max 2000 chars). Response includes `created_by_name` and `created_by_email` for shared survey context.
 - Draft → Published workflow with uuid4 token generation
 - Visibility-based access: admins see their own surveys + org/team-shared surveys
 - Owner/Admin can update and publish any survey in their org (not just their own)
@@ -279,6 +280,7 @@ Requires a `.env` file at the project root (copy `.env.example`).
 - "Test Survey" button on both SurveyForm (create/edit) and SurveyDetail pages opens test mode in new tab
 - SurveyForm "Test Survey" saves the survey first (creates if new, updates if existing), then opens `/interview/test/{surveyId}` in a new tab
 - Shareable survey link format: `/interview/{token}` (used in both Dashboard and SurveyDetail)
+- **Speech-to-text dictation:** Microphone button in the composer lets respondents dictate replies using the browser's native Web Speech API (`SpeechRecognition`). No backend needed — runs entirely client-side. `useSpeechToText` hook wraps the API with auto-restart on silence, error handling, and cleanup. `DictateButton` component uses `useComposerRuntime().setText()` to inject transcribed text into the assistant-ui composer. Visual states: muted mic (idle), red pulsing mic (listening). Hides on unsupported browsers.
 
 ### Analytics (complete)
 - Analytics overview page showing all surveys with aggregate stats (total interviews, completion rate, avg duration)
@@ -368,7 +370,7 @@ Requires a `.env` file at the project root (copy `.env.example`).
 ### Surveys
 - Survey endpoints accept **JSON** bodies (not form data like auth).
 - All survey routes require Bearer auth via `Depends(get_current_user)`.
-- Visibility-based access: `build_visibility_query()` builds a `$or` query combining created_by, org+org visibility, and org+team+team_ids visibility. Users see surveys they created, surveys shared with their org, or surveys shared with their teams.
+- Visibility-based access: `build_visibility_query()` builds a `$or` query combining created_by, org+org visibility, and org+team+team_ids visibility. Owner/Admin roles bypass visibility filters and see all surveys in their org. Members see surveys they created, surveys shared with their org, or surveys shared with their teams.
 - Owner/Admin role escalation: Owner/Admin can update and publish any survey in their org, not just surveys they created.
 - Publish generates a `uuid4` token stored in the survey document.
 - Route paths use empty string (`""`) instead of `"/"` to avoid double-slash issues with `redirect_slashes=False`.
@@ -409,6 +411,7 @@ Requires a `.env` file at the project root (copy `.env.example`).
 - Completion flow: backend auto-completes session → next message POST returns 400 → adapter calls `onComplete()` callback → page transitions to completed phase.
 - Two routes resolve to one component: `/interview/:token` (respondent) and `/interview/test/:surveyId` (admin). Component uses `useParams()` to detect which route matched.
 - Test route listed before token route in App.jsx so `/interview/test/xxx` matches the static `test` segment first.
+- **Speech-to-text dictation:** `DictateButton` component inside the composer uses `useSpeechToText` hook + `useComposerRuntime()` from assistant-ui. The hook wraps `window.SpeechRecognition` (or `webkitSpeechRecognition`) with `continuous=true`, `interimResults=true`. On each final transcript result, `composerRuntime.setText()` appends text to the composer. Auto-restarts recognition on silence (browser stops after ~5s silence). Button hidden via `isSupported` check on browsers without Web Speech API. No backend involved.
 
 ### Webhooks
 - `webhook_url` is stored on the survey document. When an interview completes, `fire_webhook()` in `server/interviewer/utils.py` is called via `asyncio.create_task()`.
@@ -562,7 +565,7 @@ client/src/
 - **Email Verification (OTP)**: 6-digit OTP sent via Resend after signup. Must verify before accessing protected routes. 10-min expiry, rate-limited resend (3 per 10 min).
 - **Invite System**: Owner/Admin can invite via email (Resend). Invitee gets link → registers with name+password → lands in org as assigned role. 7-day invite expiry.
 - **Teams & Sub-Teams**: Teams inside orgs, sub-teams one level deep. Members can belong to multiple teams. Only Owner/Admin can manage.
-- **Survey Visibility**: Private (creator only), Team (team + sub-teams), Org (everyone in org). Chosen at survey creation.
+- **Survey Visibility**: Private (creator only, plus Owner/Admin), Team (team + sub-teams), Org (everyone in org). Owner/Admin can see all surveys in their org regardless of visibility. Chosen at survey creation.
 - **Access Control**: Org isolation — users never see another org's data. Visibility query uses `$or` with created_by, org+visibility, and team membership.
 - **Migration Script**: `scripts/migrate_multi_tenant.py` — creates orgs for existing admins, sets visibility=private on existing surveys, creates all indexes.
 
@@ -572,7 +575,7 @@ client/src/
 - **Survey doc extended**: `org_id`, `visibility`, `team_ids` fields added
 - **Email via Resend**: `server/email/service.py` uses httpx to POST to Resend API. Branded HTML templates in `templates.py`. From: `noreply@getsurveyagent.com`
 - **`get_current_user` enforces email verification**: Returns 403 `email_not_verified` for unverified users on all protected routes
-- **Survey visibility query**: `build_visibility_query()` in `server/surveys/utils.py` builds `$or` query combining created_by, org+org visibility, and org+team+team_ids visibility
+- **Survey visibility query**: `build_visibility_query()` in `server/surveys/utils.py` builds `$or` query. Owner/Admin get a simplified query (created_by + org_id) since they can see all org surveys. Members get the full visibility filter (created_by + org+org visibility + org+team+team_ids)
 - **Team inheritance**: `get_user_team_ids()` returns user's direct teams PLUS parent teams of any sub-teams they belong to
 - **Analytics updated**: `verify_survey_ownership` → `verify_survey_access`, `get_overview_stats` accepts full `current_user` dict
 - **Frontend pages**: VerifyEmail, InviteAccept, OrgSettings, TeamManagement. Settings page links to org/team management.

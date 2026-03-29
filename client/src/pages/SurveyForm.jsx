@@ -33,7 +33,7 @@ export default function SurveyForm() {
     analyticsInstructions, setAnalyticsInstructions,
     visibility, setVisibility,
     teamIds, setTeamIds,
-    existingStatus, createdBy,
+    existingStatus, createdBy, createdByName, createdByEmail,
     saving, publishing, testing, error,
     loadingExisting,
     handleSave, handlePublish, handleTestChatbot,
@@ -313,8 +313,15 @@ export default function SurveyForm() {
                   </button>
                 ))}
               </div>
-              <p className="mt-1 text-xs text-text-muted/60 font-sans">
-                {visibility === 'private' && 'Only you can see this survey.'}
+              <p
+                className="mt-1 text-xs text-text-muted/60 font-sans"
+                title={visibility === 'private' && isEdit && createdBy !== user?.user_id && createdByEmail
+                  ? `Creator: ${createdByName} (${createdByEmail})`
+                  : undefined}
+              >
+                {visibility === 'private' && (isEdit && createdBy !== user?.user_id
+                  ? `Only ${createdByName || 'the creator'} and org admins can see this survey.`
+                  : 'Only you and org admins can see this survey.')}
                 {visibility === 'team' && 'Everyone in the selected teams can see this survey.'}
                 {visibility === 'org' && 'Everyone in your organization can see this survey.'}
               </p>
@@ -390,21 +397,27 @@ export default function SurveyForm() {
               </p>
             </div>
 
-            {/* Email notification toggle — only shown to creator */}
-            {(!isEdit || createdBy === user?.user_id) && (
-              <div className="flex items-center gap-3">
-                <input
-                  id="notifyOnCompletion"
-                  type="checkbox"
-                  checked={notifyOnCompletion}
-                  onChange={(e) => setNotifyOnCompletion(e.target.checked)}
-                  className="w-4 h-4 rounded border-card-border text-accent focus:ring-accent/30"
-                />
-                <label htmlFor="notifyOnCompletion" className="text-sm font-sans text-text-muted">
-                  Email me when someone completes this survey
-                </label>
-              </div>
-            )}
+            {/* Email notification toggle */}
+            <div className="flex items-center gap-3">
+              <input
+                id="notifyOnCompletion"
+                type="checkbox"
+                checked={notifyOnCompletion}
+                onChange={(e) => setNotifyOnCompletion(e.target.checked)}
+                className="w-4 h-4 rounded border-card-border text-accent focus:ring-accent/30"
+              />
+              <label
+                htmlFor="notifyOnCompletion"
+                className="text-sm font-sans text-text-muted"
+                title={isEdit && createdBy !== user?.user_id && createdByEmail
+                  ? `Notification will be sent to ${createdByName} (${createdByEmail})`
+                  : 'Notification will be sent to your email on completion'}
+              >
+                {isEdit && createdBy !== user?.user_id && createdByName
+                  ? `Email ${createdByName} when someone completes this survey`
+                  : 'Email me when someone completes this survey'}
+              </label>
+            </div>
 
             {/* LLM Configuration */}
             <div className="border border-card-border rounded-lg p-4 space-y-4 bg-white/50">
