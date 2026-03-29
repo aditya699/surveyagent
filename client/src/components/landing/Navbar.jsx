@@ -7,6 +7,7 @@ const navLinks = [
   { label: 'Features', href: '#features' },
   { label: 'How It Works', href: '#how-it-works' },
   { label: 'Self-Host', href: '#self-host' },
+  { label: 'Feedback', href: '/feedback', isRoute: true },
 ];
 
 export default function Navbar() {
@@ -27,15 +28,25 @@ export default function Navbar() {
 
         {/* Desktop nav — centered */}
         <div className="hidden md:flex items-center gap-6 flex-1">
-          {navLinks.map((link) => (
-            <a
-              key={link.label}
-              href={link.href}
-              className="text-sm font-sans text-text-muted hover:text-text-primary transition-colors"
-            >
-              {link.label}
-            </a>
-          ))}
+          {navLinks.map((link) =>
+            link.isRoute ? (
+              <Link
+                key={link.label}
+                to={link.href}
+                className="text-sm font-sans text-text-muted hover:text-text-primary transition-colors"
+              >
+                {link.label}
+              </Link>
+            ) : (
+              <a
+                key={link.label}
+                href={link.href}
+                className="text-sm font-sans text-text-muted hover:text-text-primary transition-colors"
+              >
+                {link.label}
+              </a>
+            )
+          )}
           <a
             href="https://github.com/aditya699/surveyagent"
             target="_blank"
@@ -72,16 +83,27 @@ export default function Navbar() {
           animate={{ opacity: 1, y: 0 }}
           className="md:hidden mt-2 bg-white/95 backdrop-blur-lg border border-card-border rounded-2xl p-4 space-y-3"
         >
-          {navLinks.map((link) => (
-            <a
-              key={link.label}
-              href={link.href}
-              onClick={() => setMobileOpen(false)}
-              className="block text-sm font-sans text-text-muted hover:text-text-primary"
-            >
-              {link.label}
-            </a>
-          ))}
+          {navLinks.map((link) =>
+            link.isRoute ? (
+              <Link
+                key={link.label}
+                to={link.href}
+                onClick={() => setMobileOpen(false)}
+                className="block text-sm font-sans text-text-muted hover:text-text-primary"
+              >
+                {link.label}
+              </Link>
+            ) : (
+              <a
+                key={link.label}
+                href={link.href}
+                onClick={() => setMobileOpen(false)}
+                className="block text-sm font-sans text-text-muted hover:text-text-primary"
+              >
+                {link.label}
+              </a>
+            )
+          )}
           <hr className="border-card-border" />
           <Link to="/login" onClick={() => setMobileOpen(false)} className="block text-sm font-sans text-text-muted">
             Log in

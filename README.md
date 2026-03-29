@@ -16,6 +16,7 @@ Open-source AI survey platform that replaces static forms with dynamic conversat
 - **Webhooks** — optional webhook URL per survey; POSTs interview results (respondent, coverage, timestamps) to external services (e.g., Slack) on completion
 - **Text-to-Speech** — listen to executive summaries via OpenAI TTS API (gpt-4o-mini-tts)
 - **Docker Deployment** — single-container deployment with multi-stage Dockerfile (Node 22 Alpine + Python 3.12 slim), Gunicorn + Uvicorn workers
+- **Public Feedback** — standalone feedback page (`/feedback`) with optional name, email, star rating, and speech-to-text dictation, stored in a separate `feedback` collection
 - **Landing Page** — 13-section marketing page with scroll animations, responsive navbar, and dark/light section alternation
 - **Auth System** — JWT with token versioning for server-side revocation, auto-refresh with queue pattern, admin registration/login/profile
 
@@ -91,6 +92,7 @@ surveyagent/
 │   ├── ai/                     # Question generation, field enhancement, TTS
 │   ├── analytics/              # Stats, AI analysis (interview + survey), export
 │   ├── email/                  # Resend email service (OTP, invites, notifications)
+│   ├── feedback/               # Public feedback collection (separate collection)
 │   ├── orgs/                   # Organization management (members, roles, ownership)
 │   └── teams/                  # Team/sub-team management
 ├── client/                     # React frontend
@@ -189,6 +191,12 @@ surveyagent/
 | DELETE | /{team_id} | Bearer (Owner/Admin) | Delete team + sub-teams |
 | POST | /{team_id}/members | Bearer (Owner/Admin) | Add member to team |
 | DELETE | /{team_id}/members/{user_id} | Bearer (Owner/Admin) | Remove member from team |
+
+### Feedback — `/api/v1/feedback`
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | / | None | Submit public feedback |
 
 ## What's Not Built Yet
 

@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 const columns = [
   {
     title: 'Product',
@@ -5,6 +7,7 @@ const columns = [
       { label: 'Features', href: '#' },
       { label: 'Self-Host', href: '#self-host' },
       { label: 'GitHub', href: '#' },
+      { label: 'Feedback', href: '/feedback' },
     ],
   },
   {
@@ -36,13 +39,30 @@ export default function Footer() {
               <ul className="space-y-2.5">
                 {col.links.map((link) => (
                   <li key={link.label}>
-                    <a
-                      href={link.href}
-                      {...(link.href.startsWith('http') ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-                      className="text-sm text-white/40 hover:text-white/70 transition-colors font-sans"
-                    >
-                      {link.label}
-                    </a>
+                    {link.href.startsWith('http') ? (
+                      <a
+                        href={link.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-white/40 hover:text-white/70 transition-colors font-sans"
+                      >
+                        {link.label}
+                      </a>
+                    ) : link.href.startsWith('/') ? (
+                      <Link
+                        to={link.href}
+                        className="text-sm text-white/40 hover:text-white/70 transition-colors font-sans"
+                      >
+                        {link.label}
+                      </Link>
+                    ) : (
+                      <a
+                        href={link.href}
+                        className="text-sm text-white/40 hover:text-white/70 transition-colors font-sans"
+                      >
+                        {link.label}
+                      </a>
+                    )}
                   </li>
                 ))}
               </ul>

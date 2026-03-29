@@ -67,6 +67,10 @@ export const ENDPOINTS = {
     TRANSFER:       `${PREFIX}/org/transfer-ownership`,
   },
 
+  FEEDBACK: {
+    SUBMIT: `${PREFIX}/feedback`,
+  },
+
   TEAMS: {
     LIST:           `${PREFIX}/teams`,
     CREATE:         `${PREFIX}/teams`,

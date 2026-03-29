@@ -14,6 +14,7 @@ import InterviewPage from './pages/InterviewPage';
 import AnalyticsOverview from './pages/AnalyticsOverview';
 import SurveyAnalytics from './pages/SurveyAnalytics';
 import InterviewDetail from './pages/InterviewDetail';
+import Feedback from './pages/Feedback';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
 export default function App() {
@@ -24,6 +25,7 @@ export default function App() {
       <Route path="/register" element={<Register />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/invite/:token" element={<InviteAccept />} />
+      <Route path="/feedback" element={<Feedback />} />
       <Route path="/interview/test/:surveyId" element={<InterviewPage />} />
       <Route path="/interview/:token" element={<InterviewPage />} />
       <Route element={<ProtectedRoute />}>

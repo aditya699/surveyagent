@@ -4,7 +4,7 @@
 
 SurveyAgent is an open-source AI survey platform that replaces static forms with dynamic conversations. It conducts interviews via text chat, voice, or video avatar. It's self-hostable, LLM-agnostic, and keeps survey data under the user's control.
 
-**Status:** Early development. Auth system, landing page, survey CRUD, AI question generation, AI field enhancement, interviewer foundation, interviewer engine + routes, interview chat UI (text + speech-to-text dictation), analytics, data export, webhooks, multi-tenant org support (orgs, roles, teams, email OTP verification, invite system, survey visibility), email notifications on interview completion, custom analytics instructions, and Docker containerization are built. Voice and video are not yet implemented.
+**Status:** Early development. Auth system, landing page, survey CRUD, AI question generation, AI field enhancement, interviewer foundation, interviewer engine + routes, interview chat UI (text + speech-to-text dictation), analytics, data export, webhooks, multi-tenant org support (orgs, roles, teams, email OTP verification, invite system, survey visibility), email notifications on interview completion, custom analytics instructions, public feedback collection (with speech-to-text dictation), and Docker containerization are built. Voice and video are not yet implemented.
 
 ## Tech Stack
 
@@ -70,6 +70,10 @@ surveyagent/
 │   │   ├── schemas.py         # Org request/response models
 │   │   ├── db.py              # Org + member DB operations
 │   │   └── utils.py           # Org helper functions
+│   ├── feedback/              # Public feedback collection
+│   │   ├── __init__.py        # Package marker
+│   │   ├── schemas.py         # FeedbackCreate, FeedbackResponse models
+│   │   └── routes.py          # POST feedback (public, no auth)
 │   └── teams/                 # Team management
 │       ├── __init__.py        # Package marker
 │       ├── routes.py          # Team CRUD, member add/remove
@@ -82,12 +86,12 @@ surveyagent/
 │   ├── .env.production        # Production env (VITE_API_URL)
 │   ├── src/
 │   │   ├── main.jsx           # BrowserRouter > AuthProvider > App
-│   │   ├── App.jsx            # Routes: /, /login, /register, /verify-email, /invite/:token, /dashboard, /settings, /settings/org, /settings/teams, /surveys/*, /interview/*
+│   │   ├── App.jsx            # Routes: /, /login, /register, /verify-email, /invite/:token, /feedback, /dashboard, /settings, /settings/org, /settings/teams, /surveys/*, /interview/*
 │   │   ├── index.css          # Tailwind directives + custom component classes
 │   │   ├── api/
 │   │   │   ├── index.js       # Barrel export for entire API layer
 │   │   │   ├── client.js      # Axios instance (baseURL from env)
-│   │   │   ├── constants.js   # ENDPOINTS map (AUTH, SURVEYS, AI, INTERVIEW, ORG, TEAMS)
+│   │   │   ├── constants.js   # ENDPOINTS map (AUTH, SURVEYS, AI, INTERVIEW, ORG, TEAMS, FEEDBACK)
 │   │   │   ├── helpers.js     # toFormParams, sendFormData, sendFormPut
 │   │   │   ├── interceptors.js # Bearer token + 401 refresh queue pattern
 │   │   │   ├── surveys.js     # Survey CRUD + publish API functions
@@ -95,6 +99,7 @@ surveyagent/
 │   │   │   ├── analytics.js   # Analytics + export API functions
 │   │   │   ├── interview.js   # Interview API: info, start, test, streamMessage
 │   │   │   ├── org.js         # Org management API (members, roles, invites)
+│   │   │   ├── feedback.js    # submitFeedback() API function
 │   │   │   └── teams.js       # Team management API (CRUD, members)
 │   │   ├── utils/
 │   │   │   ├── index.js       # Barrel export
@@ -174,7 +179,8 @@ surveyagent/
 │   │       ├── InterviewPage.jsx    # Interview orchestrator (respondent + test modes)
 │   │       ├── AnalyticsOverview.jsx # Global analytics dashboard
 │   │       ├── SurveyAnalytics.jsx  # Per-survey analytics + interview sessions table
-│   │       └── InterviewDetail.jsx  # Tabbed interview dashboard (orchestrator for analytics/ components)
+│   │       ├── InterviewDetail.jsx  # Tabbed interview dashboard (orchestrator for analytics/ components)
+│   │       └── Feedback.jsx         # Public feedback form with star rating + speech-to-text dictation
 ├── scripts/
 │   └── migrate_multi_tenant.py # Migration script: creates orgs, sets visibility, creates indexes
 ├── evals/                     # Evaluation suite
@@ -330,6 +336,15 @@ Requires a `.env` file at the project root (copy `.env.example`).
 - Injected into both interview-level and survey-level LLM analysis prompts
 - Frontend: "How should we evaluate responses?" textarea in survey form
 
+### Public Feedback (complete)
+- Public feedback page at `/feedback` — no auth required, anyone can submit
+- Form fields: name (optional), email (optional), rating (optional, 1-5 stars), message (required, max 5000 chars)
+- Speech-to-text dictation on the message textarea — reuses existing `useSpeechToText` hook
+- Stored in a separate `feedback` MongoDB collection — completely independent of app logic
+- Backend: single `POST /api/v1/feedback` endpoint, no auth
+- Frontend: glassmorphism card matching auth pages design, star rating component, success state with thank-you screen
+- Links in landing page navbar and footer
+
 ### Docker & Deployment (complete)
 - Multi-stage `Dockerfile`: Node 22 Alpine builds React frontend, Python 3.12 slim runs FastAPI with Gunicorn + Uvicorn workers
 - Single container serves both backend API and built frontend SPA on port 8000
@@ -440,13 +455,14 @@ Requires a `.env` file at the project root (copy `.env.example`).
 
 ### MongoDB
 - Database name: `surveyagent` (configurable via `MONGO_DB_NAME`)
-- Collections: `admins` (user accounts), `surveys` (survey definitions), `interviews` (chat sessions), `error_logs` (error tracking), `orgs` (organizations), `teams` (teams/sub-teams), `invites` (pending invitations, TTL-indexed), `otp_codes` (email verification codes, TTL-indexed)
+- Collections: `admins` (user accounts), `surveys` (survey definitions), `interviews` (chat sessions), `error_logs` (error tracking), `orgs` (organizations), `teams` (teams/sub-teams), `invites` (pending invitations, TTL-indexed), `otp_codes` (email verification codes, TTL-indexed), `feedback` (public feedback submissions, independent of app logic)
 - Admin document fields: `name`, `email`, `password`, `org_name`, `org_id`, `role` (owner/admin/member), `email_verified`, `token_version`, `is_active`, `created_at`, `updated_at`, `last_login`
 - Survey document fields: `title`, `description`, `goal`, `context`, `questions` (array of {text, ai_instructions}), `estimated_duration`, `welcome_message`, `personality_tone`, `webhook_url` (optional), `notify_on_completion` (bool), `analytics_instructions` (optional), `status`, `token`, `created_by`, `org_id`, `visibility` (private/team/org), `team_ids` (array of team ObjectIds), `created_at`, `updated_at`, `analysis` (cached aggregate AI analysis, optional)
 - Interview document fields: `survey_id`, `respondent` (embedded: name, age, gender, occupation, phone_number, email — all optional), `conversation` (list of {role, content, timestamp}), `status` (in_progress/completed/abandoned), `is_test_run`, `questions_covered` (list of ints), `started_at`, `completed_at`, `analysis` (cached AI analysis, optional)
 - Org document fields: `name`, `slug`, `owner_id`, `created_at`, `updated_at`
 - Team document fields: `name`, `org_id`, `parent_id` (null for top-level), `members` (array of {user_id, name, email}), `created_at`, `updated_at`
 - Invite document fields: `email`, `org_id`, `role`, `token`, `invited_by`, `expires_at`, `used`, `created_at`
+- Feedback document fields: `name` (optional), `email` (optional), `message`, `rating` (optional, 1-5), `created_at`
 
 ## API Endpoints
 
@@ -499,6 +515,12 @@ Requires a `.env` file at the project root (copy `.env.example`).
 | POST   | /surveys/{id}/analyze             | Bearer   | Stream aggregate AI analysis of all interviews via SSE |
 | GET    | /interviews/{id}                  | Bearer   | Full interview detail with conversation                |
 | POST   | /interviews/{id}/analyze          | Bearer   | Stream AI analysis of single interview via SSE         |
+
+### Feedback — `/api/v1/feedback`
+
+| Method | Path | Auth     | Description                    |
+|--------|------|----------|--------------------------------|
+| POST   |      | None     | Submit public feedback         |
 
 ## Conventions
 
@@ -612,6 +634,11 @@ client/src/
 | POST | /auth/register-invite | None | Register via invite |
 | POST | /auth/invite | Bearer (Owner/Admin) | Send invite email |
 | GET | /auth/invite/{token} | None | Get invite info |
+
+#### Feedback — `/api/v1/feedback`
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | / | None | Submit public feedback |
 
 ## What's NOT Built Yet
 

@@ -96,6 +96,13 @@ Traditional survey tools give you structured data but miss the story behind the 
 - Optional details form (name, email, age, etc.) — all fields optional
 - Works on any device with a browser
 
+### Public Feedback
+- Anyone can submit feedback at `/feedback` — no account needed
+- Optional name, email, and star rating (1-5)
+- Speech-to-text dictation on the message field — speak your feedback instead of typing
+- Feedback stored in a dedicated collection, separate from core app data
+- Accessible from the landing page navbar and footer
+
 ### Docker Deployment
 - Multi-stage Dockerfile: Node 22 Alpine builds the frontend, Python 3.12 slim runs the backend
 - Single container serves both API and frontend SPA on port 8000

@@ -56,3 +56,4 @@ export {
   addTeamMember,
   removeTeamMember,
 } from './teams';
+export { submitFeedback } from './feedback';
