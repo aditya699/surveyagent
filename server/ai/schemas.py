@@ -26,6 +26,7 @@ class EnhanceFieldRequest(BaseModel):
     description: str = ""
     goal: str = ""
     context: str = ""
+    additional_context: str = ""
     llm_provider: Optional[str] = Field(None, description="LLM provider: openai, anthropic, or gemini")
     llm_model: Optional[str] = Field(None, description="Model name override")
 

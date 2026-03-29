@@ -83,6 +83,7 @@ def build_enhance_prompt(
     description: str = "",
     goal: str = "",
     context: str = "",
+    additional_context: str = "",
 ) -> str:
     """Build the user prompt for field enhancement."""
     fields_map = {"title": title, "description": description, "goal": goal, "context": context}
@@ -99,5 +100,8 @@ def build_enhance_prompt(
         parts.append(f"Current value to improve: {current_value.strip()}")
     else:
         parts.append("No current value provided. Generate fresh content.")
+
+    if additional_context.strip():
+        parts.append(f"Additional instructions: {additional_context.strip()}")
 
     return "\n".join(parts)

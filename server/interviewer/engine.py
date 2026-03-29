@@ -8,7 +8,7 @@ from typing import AsyncGenerator
 
 from server.core.llm import get_provider
 from server.core.logging_config import get_logger
-from server.interviewer.prompts import build_interviewer_prompt
+from server.interviewer.prompts import build_interviewer_prompt, build_question_test_prompt
 
 logger = get_logger(__name__)
 
@@ -50,6 +50,57 @@ def parse_abuse_tag(text: str) -> tuple[str, bool]:
         return text, False
     clean = text[:match.start()] + text[match.end():]
     return clean.strip(), True
+
+
+async def run_question_test_turn(
+    question_text: str,
+    conversation: list[dict],
+    ai_instructions: str | None = None,
+    personality_tone: str = "friendly",
+    survey_title: str | None = None,
+    survey_goal: str | None = None,
+    survey_context: str | None = None,
+    llm_provider: str | None = None,
+    llm_model: str | None = None,
+) -> AsyncGenerator[str, None]:
+    """
+    Stream one question-test turn via SSE. Stateless — no DB reads/writes.
+
+    Yields SSE-formatted strings: data: {"token": "..."}\n\n
+    Final event: data: {"done": true, "clean_text": "..."}\n\n
+    """
+    system_prompt = build_question_test_prompt(
+        question_text=question_text,
+        ai_instructions=ai_instructions,
+        personality_tone=personality_tone,
+        survey_title=survey_title,
+        survey_goal=survey_goal,
+        survey_context=survey_context,
+    )
+
+    messages = [{"role": msg["role"], "content": msg["content"]} for msg in conversation]
+
+    provider_name = llm_provider or "openai"
+    provider = await get_provider(provider_name)
+    model = llm_model or provider.default_model
+
+    try:
+        full_response = ""
+
+        async for delta in provider.stream_text(
+            model=model,
+            system_prompt=system_prompt,
+            messages=messages,
+        ):
+            full_response += delta
+            yield f"data: {json.dumps({'token': delta})}\n\n"
+
+        yield f"data: {json.dumps({'done': True, 'clean_text': full_response.strip()})}\n\n"
+
+    except Exception as e:
+        logger.error(f"Question test engine error: {e}", exc_info=True)
+        yield f"data: {json.dumps({'error': str(e)})}\n\n"
+        yield f"data: {json.dumps({'done': True, 'clean_text': ''})}\n\n"
 
 
 async def run_interview_turn(

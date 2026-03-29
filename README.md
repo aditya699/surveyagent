@@ -1,208 +1,144 @@
+<div align="center">
+
 # SurveyAgent
 
-Open-source AI survey platform that replaces static forms with dynamic conversations. An AI interviewer conducts interviews with respondents via text chat, adapting follow-up questions in real time. Self-hostable, LLM-agnostic, and keeps all survey data under your control.
+**Open-source AI survey platform that replaces static forms with dynamic conversations.**
+
+Every respondent gets a one-on-one interview with an AI that listens, adapts, and digs deeper — just like a real human researcher. You get rich, actionable insights at scale.
+
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-3776AB?logo=python&logoColor=white)](https://python.org)
+[![React 19](https://img.shields.io/badge/react-19-61DAFB?logo=react&logoColor=white)](https://react.dev)
+[![MongoDB](https://img.shields.io/badge/mongodb-47A248?logo=mongodb&logoColor=white)](https://mongodb.com)
+[![Docker Ready](https://img.shields.io/badge/docker-ready-2496ED?logo=docker&logoColor=white)](Dockerfile)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/aditya699/surveyagent/pulls)
+
+[Features](#features) · [Quick Start](#quick-start) · [Documentation](#documentation) · [Contributing](#contributing)
+
+</div>
+
+---
+
+## The Problem
+
+Traditional survey tools give you structured data but miss the story behind the answers. Interviews capture rich insights but don't scale. You're stuck choosing between depth and reach.
+
+## The Solution
+
+SurveyAgent bridges that gap. An AI interviewer conducts natural conversations with every respondent — following your questions, probing deeper when it matters, and wrapping up gracefully when time runs out. Then AI-powered analytics synthesizes insights across all interviews into actionable reports.
+
+Self-hostable. Open-source. Your data stays with you.
+
+---
 
 ## Features
 
-- **AI Interviewer** — conversational interviews via text chat with configurable personality tone, per-question AI instructions, time-aware pacing, automatic question coverage tracking, and speech-to-text dictation (browser-native Web Speech API)
-- **Survey Builder** — full CRUD with AI-powered question generation and field enhancement (title, description, goal, context, welcome message)
-- **Analytics Dashboard** — per-interview and aggregate survey-level AI analysis with scores, sentiment detection, theme identification, and per-question evaluation
-- **Data Export** — CSV exports (transcripts, bulk responses, summaries) and branded PDF reports (analysis, survey definitions) with one-click download
-- **Multi-Tenant Organizations** — orgs auto-created on signup, role-based access (Owner/Admin/Member), team and sub-team management, survey visibility controls (private/team/org)
-- **Email Verification** — 6-digit OTP via Resend after signup, required before accessing protected routes
-- **Invite System** — Owner/Admin invite members via email, invitees register with assigned role, 7-day expiry
-- **Email Notifications** — respondent thank-you and creator notification emails on interview completion via Resend
-- **Custom Analytics Instructions** — guide AI analysis with survey-specific focus areas
-- **Webhooks** — optional webhook URL per survey; POSTs interview results (respondent, coverage, timestamps) to external services (e.g., Slack) on completion
-- **Text-to-Speech** — listen to executive summaries via OpenAI TTS API (gpt-4o-mini-tts)
-- **Docker Deployment** — single-container deployment with multi-stage Dockerfile (Node 22 Alpine + Python 3.12 slim), Gunicorn + Uvicorn workers
-- **Public Feedback** — standalone feedback page (`/feedback`) with optional name, email, star rating, and speech-to-text dictation, stored in a separate `feedback` collection
-- **Landing Page** — 13-section marketing page with scroll animations, responsive navbar, and dark/light section alternation
-- **Auth System** — JWT with token versioning for server-side revocation, auto-refresh with queue pattern, admin registration/login/profile
+**Conversational AI Interviews** — Respondents chat naturally with an AI interviewer that adapts in real time. It knows when to probe deeper, when to move on, and when to wrap up. Configurable personality tone: professional, friendly, casual, or fun.
 
-## Tech Stack
+**Smart Survey Builder** — Define your survey with a title, description, goal, and context. Add questions manually or let AI generate them. Every question supports optional AI instructions to guide the interviewer's behavior.
 
-| Layer | Technologies |
-|-------|-------------|
-| **Backend** | Python 3.12+, FastAPI, Motor (async MongoDB), python-jose (JWT), bcrypt, OpenAI SDK, httpx |
-| **Frontend** | React 19, Vite, Tailwind CSS v3, Framer Motion, Lucide React, React Router v7, Axios, assistant-ui, jsPDF + jspdf-autotable |
+**Question Test Panel** — Test individual questions with the AI before publishing. A slide-over panel lets you have a real conversation to see exactly how the interviewer handles each question.
+
+**AI Field Enhancement** — Hit "Enhance" on any text field and the AI improves it (or generates fresh content if empty). Add custom instructions like "Make it crisp" or "Keep it formal" to steer the output.
+
+**Multi-LLM Support** — Choose between OpenAI, Anthropic (Claude), and Google Gemini. Pluggable provider architecture — each survey or request can use a different model.
+
+**Analytics & AI Analysis** — Per-interview scoring, sentiment detection, and theme identification. Aggregate survey-level analysis synthesizes ALL interviews into a single report with consensus points, divergence, and respondent patterns. Custom analytics instructions let you focus the AI on what matters.
+
+**Data Export** — CSV exports for transcripts, bulk responses, and summaries. Branded PDF reports with score badges, section layouts, and professional formatting.
+
+**Multi-Tenant Organizations** — Orgs auto-created on signup. Role-based access (Owner / Admin / Member). Teams and sub-teams with survey visibility controls (private / team / org).
+
+**Email & Webhooks** — Respondent thank-you emails and creator notifications on completion. Optional webhook URL per survey to POST results to external services like Slack.
+
+**Speech-to-Text Dictation** — Respondents can dictate replies using the browser's native Web Speech API. No backend needed — runs entirely client-side.
+
+**Docker Deployment** — Single container serves both API and frontend. Multi-stage Dockerfile with Gunicorn + Uvicorn workers. Production-ready.
+
+---
+
+## Built With
+
+| Layer | Stack |
+|-------|-------|
+| **Backend** | Python 3.12+, FastAPI, Motor (async MongoDB), JWT auth |
+| **Frontend** | React 19, Vite, Tailwind CSS, Framer Motion, assistant-ui |
+| **AI** | OpenAI, Anthropic, Gemini (pluggable providers), streaming SSE |
 | **Database** | MongoDB (Atlas or self-hosted) |
-| **AI** | OpenAI Responses API (streaming via SSE) |
-| **Email** | Resend (OTP verification, invites, completion notifications) |
-| **Deployment** | Docker (Gunicorn + Uvicorn), Azure Web Apps |
-| **Package Managers** | uv (backend), npm (frontend) |
+| **Email** | Resend (OTP, invites, notifications) |
+| **Deployment** | Docker, Gunicorn + Uvicorn, Azure Web Apps |
 
-## Getting Started
+---
 
-### Prerequisites
+## Quick Start
 
-- Python 3.12+
-- Node.js 18+
-- MongoDB (Atlas or local)
-- [uv](https://docs.astral.sh/uv/) (recommended) or pip
-- OpenAI API key
-- Resend API key (for email verification and invites)
-
-### Setup
+**Prerequisites:** Python 3.12+, Node.js 18+, MongoDB, [uv](https://docs.astral.sh/uv/), OpenAI API key
 
 ```bash
-# Clone the repo
 git clone https://github.com/aditya699/surveyagent.git
 cd surveyagent
-
-# Copy .env.example and fill in your values
-cp .env.example .env
+cp .env.example .env   # Fill in your values
 ```
 
-### Run Backend
-
+**Backend:**
 ```bash
 uv sync
 uv run uvicorn server.main:app --reload --port 8001
 ```
 
-### Run Frontend
-
+**Frontend:**
 ```bash
-cd client
-npm install
-npm run dev    # http://localhost:5174
+cd client && npm install && npm run dev   # http://localhost:5174
 ```
 
-### Docker
-
+**Docker:**
 ```bash
 docker build -t surveyagent .
 docker run -p 8000:8000 --env-file .env surveyagent
 ```
 
-Single container serves both API and frontend on port 8000. See [deployment-guide.md](deployment-guide.md) for Azure Web App deployment instructions.
+---
 
-## Project Structure
+## Documentation
 
+| Doc | What's Inside |
+|-----|---------------|
+| **[PRODUCT.md](PRODUCT.md)** | Detailed feature descriptions, product philosophy, and roadmap |
+| **[CLAUDE.md](CLAUDE.md)** | Technical reference — architecture, API endpoints, coding conventions |
+| **[deployment-guide.md](deployment-guide.md)** | Step-by-step Azure Web App deployment |
+
+---
+
+## Philosophy
+
+- **Open source** — MIT licensed, no telemetry, no vendor lock-in
+- **Self-hostable** — run it on your own infrastructure
+- **Data ownership** — your survey data never leaves your control
+- **LLM-agnostic** — pluggable providers for OpenAI, Anthropic, Gemini, and more
+
+---
+
+## What's Next
+
+- **Voice interviews** — respondents speak instead of type
+- **Video avatar** — a visual AI interviewer on screen
+
+---
+
+## Contributing
+
+Contributions are welcome! Open an issue to discuss what you'd like to change, or submit a pull request directly.
+
+```bash
+# Fork the repo, create a branch, make your changes, then:
+git push origin your-branch
+# Open a PR on GitHub
 ```
-surveyagent/
-├── server/                     # FastAPI backend
-│   ├── main.py                 # App factory, CORS, lifespan, router mount
-│   ├── core/                   # Config, logging, LLM client, multi-LLM providers
-│   ├── db/                     # MongoDB connection + error logging
-│   ├── auth/                   # JWT auth (register, login, refresh, profile, OTP, invites)
-│   ├── surveys/                # Survey CRUD + publish + visibility queries
-│   ├── interviewer/            # AI interviewer engine, prompts, session management
-│   ├── ai/                     # Question generation, field enhancement, TTS
-│   ├── analytics/              # Stats, AI analysis (interview + survey), export
-│   ├── email/                  # Resend email service (OTP, invites, notifications)
-│   ├── feedback/               # Public feedback collection (separate collection)
-│   ├── orgs/                   # Organization management (members, roles, ownership)
-│   └── teams/                  # Team/sub-team management
-├── client/                     # React frontend
-│   └── src/
-│       ├── api/                # Axios client, endpoint constants, API functions
-│       ├── components/         # Shared, analytics, interview, landing components
-│       ├── hooks/              # Custom hooks (auth, forms, AI streaming, analysis, speech-to-text)
-│       ├── utils/              # Formatters, CSV export, PDF export
-│       ├── context/            # Auth context
-│       └── pages/              # Page components
-├── scripts/                    # Migration scripts
-├── evals/                      # Evaluation suite
-├── Dockerfile                  # Multi-stage build (Node 22 Alpine + Python 3.12 slim)
-├── deployment-guide.md         # Azure Web Apps deployment guide
-├── .env.example                # Environment variable template
-├── pyproject.toml              # Python dependencies
-└── uv.lock                     # Lockfile
-```
 
-## API Endpoints
+---
 
-### Auth — `/api/v1/auth`
+<div align="center">
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | /register | None | Create admin account |
-| POST | /login | None | Authenticate, return tokens |
-| POST | /refresh | None | Rotate JWT tokens |
-| GET | /me | Bearer | Get current admin profile |
-| PUT | /update-profile | Bearer | Update name / org_name |
-| POST | /verify-otp | None | Verify 6-digit email OTP |
-| POST | /resend-otp | None | Resend OTP email |
-| POST | /invite | Bearer (Owner/Admin) | Send invite email |
-| GET | /invite/{token} | None | Get invite info |
-| POST | /register-invite | None | Register via invite link |
+**MIT License** · Built with care by [Aditya](https://github.com/aditya699)
 
-### Surveys — `/api/v1/surveys`
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | / | Bearer | Create survey (draft) |
-| GET | / | Bearer | List surveys (visibility-filtered) |
-| GET | /{id} | Bearer | Get single survey |
-| PUT | /{id} | Bearer | Update survey |
-| DELETE | /{id} | Bearer | Delete survey |
-| POST | /{id}/publish | Bearer | Publish + generate share token |
-
-### AI — `/api/v1/ai`
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | /generate-questions | Bearer | Stream AI-generated questions via SSE |
-| POST | /enhance-field | Bearer | Stream AI-enhanced field content via SSE |
-| POST | /synthesize-speech | Bearer | Generate TTS audio |
-
-### Interview — `/api/v1/interview`
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | /{token}/info | None | Survey info for landing page |
-| POST | /start/{token} | None | Start interview session |
-| POST | /{session_id}/message | None | Send message, stream AI response via SSE |
-| POST | /test/{survey_id} | Bearer | Start admin test session |
-
-### Analytics — `/api/v1/analytics`
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | /surveys | Bearer | Overview stats across all surveys |
-| GET | /surveys/{id} | Bearer | Detailed stats for a survey |
-| GET | /surveys/{id}/interviews | Bearer | Paginated interview list |
-| GET | /surveys/{id}/interviews/export | Bearer | Bulk interview export (no pagination) |
-| POST | /surveys/{id}/analyze | Bearer | Stream aggregate AI analysis via SSE |
-| GET | /interviews/{id} | Bearer | Full interview detail |
-| POST | /interviews/{id}/analyze | Bearer | Stream AI analysis via SSE |
-
-### Organization — `/api/v1/org`
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | / | Bearer | Get current org |
-| PUT | / | Bearer (Owner) | Update org name |
-| GET | /members | Bearer | List org members |
-| PUT | /members/{user_id}/role | Bearer (Owner) | Change member role |
-| DELETE | /members/{user_id} | Bearer (Owner/Admin) | Remove member |
-| POST | /transfer-ownership | Bearer (Owner) | Transfer ownership |
-
-### Teams — `/api/v1/teams`
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | / | Bearer (Owner/Admin) | Create team |
-| GET | / | Bearer | List teams (nested with sub-teams) |
-| GET | /{team_id} | Bearer | Get team detail |
-| PUT | /{team_id} | Bearer (Owner/Admin) | Update team |
-| DELETE | /{team_id} | Bearer (Owner/Admin) | Delete team + sub-teams |
-| POST | /{team_id}/members | Bearer (Owner/Admin) | Add member to team |
-| DELETE | /{team_id}/members/{user_id} | Bearer (Owner/Admin) | Remove member from team |
-
-### Feedback — `/api/v1/feedback`
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | / | None | Submit public feedback |
-
-## What's Not Built Yet
-
-- Voice interview mode
-- Video avatar interview mode
-
-## License
-
-MIT
+</div>

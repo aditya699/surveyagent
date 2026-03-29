@@ -42,6 +42,19 @@ class SendMessageRequest(BaseModel):
     message: str = Field(..., description="Respondent's message", min_length=1, max_length=5000)
 
 
+class TestQuestionRequest(BaseModel):
+    """Request body for testing a single question via lightweight chatbot."""
+    question_text: str = Field(..., description="The question text to test", min_length=1, max_length=5000)
+    ai_instructions: Optional[str] = Field(None, description="AI instructions for this question", max_length=2000)
+    personality_tone: str = Field("friendly", description="Interviewer personality tone")
+    survey_title: Optional[str] = Field(None, max_length=500)
+    survey_goal: Optional[str] = Field(None, max_length=2000)
+    survey_context: Optional[str] = Field(None, max_length=5000)
+    conversation: List[dict] = Field(default_factory=list, description="Chat history [{role, content}]")
+    llm_provider: Optional[str] = None
+    llm_model: Optional[str] = None
+
+
 class InterviewCreate(BaseModel):
     """
     Deep Technical Context:

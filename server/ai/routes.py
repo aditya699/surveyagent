@@ -103,6 +103,7 @@ async def enhance_field(
         description=request.description,
         goal=request.goal,
         context=request.context,
+        additional_context=request.additional_context,
     )
 
     provider = await get_provider(request.llm_provider or "openai")

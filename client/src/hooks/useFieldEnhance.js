@@ -28,7 +28,7 @@ export function useFieldEnhance({
 
   const valueMap = { title, description, goal, context, welcome_message: welcomeMessage };
 
-  const enhanceField = useCallback(async (fieldName) => {
+  const enhanceField = useCallback(async (fieldName, additionalContext = '') => {
     setEnhanceError('');
     setEnhancingField(fieldName);
 
@@ -52,6 +52,7 @@ export function useFieldEnhance({
         field_name: fieldName,
         current_value: currentValue.trim(),
         ...contextData,
+        additional_context: additionalContext.trim(),
         llm_provider: llmProvider || null,
         llm_model: llmModel?.trim() || null,
       },

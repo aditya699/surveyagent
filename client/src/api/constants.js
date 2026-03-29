@@ -26,6 +26,7 @@ export const ENDPOINTS = {
     START:   (token) => `${PREFIX}/interview/start/${token}`,
     MESSAGE: (sessionId) => `${PREFIX}/interview/${sessionId}/message`,
     TEST:    (surveyId) => `${PREFIX}/interview/test/${surveyId}`,
+    TEST_QUESTION: `${PREFIX}/interview/test-question`,
   },
 
   SURVEYS: {

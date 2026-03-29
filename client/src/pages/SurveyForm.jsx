@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, LogOut, Plus, X, Sparkles, Loader2, MessageSquare, ChevronDown, ChevronRight, BotMessageSquare, Cpu, Lock, Users, Building2, BarChart3 } from 'lucide-react';
+import { ArrowLeft, LogOut, Plus, X, Play, Sparkles, Loader2, MessageSquare, ChevronDown, ChevronRight, BotMessageSquare, Cpu, Lock, Users, Building2, BarChart3 } from 'lucide-react';
+import QuestionTestPanel from '../components/interview/QuestionTestPanel';
+import { EnhanceButton } from '../components/shared';
 import { useAuth } from '../hooks/useAuth';
 import { useSurveyForm } from '../hooks/useSurveyForm';
 import { useQuestionManager } from '../hooks/useQuestionManager';
@@ -16,6 +18,8 @@ export default function SurveyForm() {
   const { questions, setQuestions, addQuestion, updateQuestion, updateAiInstructions, removeQuestion } =
     useQuestionManager();
   const [expandedInstructions, setExpandedInstructions] = useState(new Set());
+  const [instructionsSeeded, setInstructionsSeeded] = useState(false);
+  const [testingQuestion, setTestingQuestion] = useState(null);
 
   const {
     isEdit,
@@ -60,6 +64,16 @@ export default function SurveyForm() {
     setTitle, setDescription, setGoal, setContext, setWelcomeMessage,
     llmProvider, llmModel,
   });
+
+  // Auto-expand AI Instructions for questions that already have content (on initial load)
+  useEffect(() => {
+    if (!instructionsSeeded && questions.some((q) => q.aiInstructions)) {
+      const indices = new Set();
+      questions.forEach((q, i) => { if (q.aiInstructions) indices.add(i); });
+      setExpandedInstructions(indices);
+      setInstructionsSeeded(true);
+    }
+  }, [questions, instructionsSeeded]);
 
   if (loadingExisting) {
     return (
@@ -116,18 +130,7 @@ export default function SurveyForm() {
                 <label htmlFor="title" className="text-sm font-sans text-text-muted">
                   Title <span className="text-error">*</span>
                 </label>
-                <button
-                  type="button"
-                  onClick={() => enhancingField === 'title' ? cancelEnhance() : enhanceField('title')}
-                  disabled={enhanceBusy && enhancingField !== 'title'}
-                  className="flex items-center gap-1 text-xs text-accent hover:text-accent-hover transition-colors font-sans disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {enhancingField === 'title' ? (
-                    <><Loader2 className="w-3 h-3 animate-spin" /> Cancel</>
-                  ) : (
-                    <><Sparkles className="w-3 h-3" /> Enhance with AI</>
-                  )}
-                </button>
+                <EnhanceButton fieldName="title" enhancingField={enhancingField} enhanceBusy={enhanceBusy} onEnhance={enhanceField} onCancel={cancelEnhance} />
               </div>
               <input
                 id="title"
@@ -145,18 +148,7 @@ export default function SurveyForm() {
                 <label htmlFor="description" className="text-sm font-sans text-text-muted">
                   Description
                 </label>
-                <button
-                  type="button"
-                  onClick={() => enhancingField === 'description' ? cancelEnhance() : enhanceField('description')}
-                  disabled={enhanceBusy && enhancingField !== 'description'}
-                  className="flex items-center gap-1 text-xs text-accent hover:text-accent-hover transition-colors font-sans disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {enhancingField === 'description' ? (
-                    <><Loader2 className="w-3 h-3 animate-spin" /> Cancel</>
-                  ) : (
-                    <><Sparkles className="w-3 h-3" /> Enhance with AI</>
-                  )}
-                </button>
+                <EnhanceButton fieldName="description" enhancingField={enhancingField} enhanceBusy={enhanceBusy} onEnhance={enhanceField} onCancel={cancelEnhance} />
               </div>
               <textarea
                 id="description"
@@ -174,18 +166,7 @@ export default function SurveyForm() {
                 <label htmlFor="goal" className="text-sm font-sans text-text-muted">
                   Goal
                 </label>
-                <button
-                  type="button"
-                  onClick={() => enhancingField === 'goal' ? cancelEnhance() : enhanceField('goal')}
-                  disabled={enhanceBusy && enhancingField !== 'goal'}
-                  className="flex items-center gap-1 text-xs text-accent hover:text-accent-hover transition-colors font-sans disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {enhancingField === 'goal' ? (
-                    <><Loader2 className="w-3 h-3 animate-spin" /> Cancel</>
-                  ) : (
-                    <><Sparkles className="w-3 h-3" /> Enhance with AI</>
-                  )}
-                </button>
+                <EnhanceButton fieldName="goal" enhancingField={enhancingField} enhanceBusy={enhanceBusy} onEnhance={enhanceField} onCancel={cancelEnhance} />
               </div>
               <textarea
                 id="goal"
@@ -203,18 +184,7 @@ export default function SurveyForm() {
                 <label htmlFor="context" className="text-sm font-sans text-text-muted">
                   Context
                 </label>
-                <button
-                  type="button"
-                  onClick={() => enhancingField === 'context' ? cancelEnhance() : enhanceField('context')}
-                  disabled={enhanceBusy && enhancingField !== 'context'}
-                  className="flex items-center gap-1 text-xs text-accent hover:text-accent-hover transition-colors font-sans disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {enhancingField === 'context' ? (
-                    <><Loader2 className="w-3 h-3 animate-spin" /> Cancel</>
-                  ) : (
-                    <><Sparkles className="w-3 h-3" /> Enhance with AI</>
-                  )}
-                </button>
+                <EnhanceButton fieldName="context" enhancingField={enhancingField} enhanceBusy={enhanceBusy} onEnhance={enhanceField} onCancel={cancelEnhance} />
               </div>
               <textarea
                 id="context"
@@ -266,18 +236,7 @@ export default function SurveyForm() {
                 <label htmlFor="welcomeMessage" className="text-sm font-sans text-text-muted">
                   Welcome Message
                 </label>
-                <button
-                  type="button"
-                  onClick={() => enhancingField === 'welcome_message' ? cancelEnhance() : enhanceField('welcome_message')}
-                  disabled={enhanceBusy && enhancingField !== 'welcome_message'}
-                  className="flex items-center gap-1 text-xs text-accent hover:text-accent-hover transition-colors font-sans disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {enhancingField === 'welcome_message' ? (
-                    <><Loader2 className="w-3 h-3 animate-spin" /> Cancel</>
-                  ) : (
-                    <><Sparkles className="w-3 h-3" /> Enhance with AI</>
-                  )}
-                </button>
+                <EnhanceButton fieldName="welcome_message" enhancingField={enhancingField} enhanceBusy={enhanceBusy} onEnhance={enhanceField} onCancel={cancelEnhance} />
               </div>
               <textarea
                 id="welcomeMessage"
@@ -493,7 +452,7 @@ export default function SurveyForm() {
               <label className="block text-sm font-sans text-text-muted mb-3">Questions</label>
               <div className="space-y-3">
                 {questions.map((q, i) => {
-                  const isExpanded = expandedInstructions.has(i) || !!q.aiInstructions;
+                  const isExpanded = expandedInstructions.has(i);
                   return (
                     <div key={i} className="flex items-start gap-2">
                       <span className="text-sm text-text-muted font-sans mt-3 w-6 text-right shrink-0">
@@ -535,6 +494,15 @@ export default function SurveyForm() {
                           )}
                         </div>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => setTestingQuestion(i)}
+                        disabled={!q.text.trim()}
+                        className="mt-2 p-1.5 text-text-muted/40 hover:text-accent transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Test this question"
+                      >
+                        <Play className="w-4 h-4" />
+                      </button>
                       <button
                         type="button"
                         onClick={() => removeQuestion(i)}
@@ -680,6 +648,24 @@ export default function SurveyForm() {
           </form>
         </motion.div>
       </main>
+
+      {/* Question Test Panel */}
+      <AnimatePresence>
+        {testingQuestion !== null && questions[testingQuestion] && (
+          <QuestionTestPanel
+            key={testingQuestion}
+            question={questions[testingQuestion]}
+            questionIndex={testingQuestion}
+            surveyTitle={title}
+            surveyGoal={goal}
+            surveyContext={context}
+            personalityTone={personalityTone}
+            llmProvider={llmProvider}
+            llmModel={llmModel}
+            onClose={() => setTestingQuestion(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

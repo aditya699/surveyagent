@@ -4,14 +4,14 @@
 
 SurveyAgent is an open-source AI survey platform that replaces static forms with dynamic conversations. It conducts interviews via text chat, voice, or video avatar. It's self-hostable, LLM-agnostic, and keeps survey data under the user's control.
 
-**Status:** Early development. Auth system, landing page, survey CRUD, AI question generation, AI field enhancement, interviewer foundation, interviewer engine + routes, interview chat UI (text + speech-to-text dictation), analytics, data export, webhooks, multi-tenant org support (orgs, roles, teams, email OTP verification, invite system, survey visibility), email notifications on interview completion, custom analytics instructions, public feedback collection (with speech-to-text dictation), and Docker containerization are built. Voice and video are not yet implemented.
+**Status:** Early development. Auth system, landing page, survey CRUD, AI question generation, AI field enhancement (with custom instructions), question test panel (per-question AI testing), multi-LLM provider support (OpenAI, Anthropic, Gemini), interviewer foundation, interviewer engine + routes, interview chat UI (text + speech-to-text dictation), analytics, data export, webhooks, multi-tenant org support (orgs, roles, teams, email OTP verification, invite system, survey visibility), email notifications on interview completion, custom analytics instructions, public feedback collection (with speech-to-text dictation), and Docker containerization are built. Voice and video are not yet implemented.
 
 ## Tech Stack
 
 - **Backend:** Python 3.12+, FastAPI, Motor (async MongoDB), python-jose (JWT), bcrypt, OpenAI SDK, httpx (webhooks), Resend (email)
 - **Frontend:** React 19, Vite, Tailwind CSS v3, Framer Motion, Lucide React, React Router v7, Axios, assistant-ui (chat primitives), jsPDF + jspdf-autotable (PDF export)
 - **Database:** MongoDB (Atlas or self-hosted)
-- **AI:** OpenAI Responses API (gpt-5.4-mini), streaming via SSE
+- **AI:** Multi-LLM (OpenAI, Anthropic, Gemini) via pluggable provider interface, streaming via SSE
 - **Deployment:** Docker (multi-stage: Node 22 Alpine + Python 3.12 slim), Gunicorn + Uvicorn workers
 - **Package Manager:** `uv` (backend), `npm` (frontend)
 
@@ -47,7 +47,7 @@ surveyagent/
 │   │   ├── db.py              # Interview session CRUD utilities
 │   │   ├── engine.py          # LLM streaming engine + coverage tag parsing
 │   │   ├── utils.py           # build_welcome(), calc_remaining_minutes(), process_stream_result(), fire_completion_emails()
-│   │   └── routes.py          # Interview API: start, message, test
+│   │   └── routes.py          # Interview API: start, message, test, test-question
 │   ├── ai/
 │   │   ├── __init__.py        # Package marker
 │   │   ├── prompts.py         # Question generation + field enhancement prompts & builders
@@ -126,6 +126,7 @@ surveyagent/
 │   │   │   │   ├── StatusBadge.jsx    # Survey draft/published badge
 │   │   │   │   ├── InterviewStatusBadge.jsx # Interview status badge
 │   │   │   │   ├── ExportButton.jsx   # Reusable export dropdown (CSV/PDF)
+│   │   │   │   ├── EnhanceButton.jsx  # AI enhance button with custom instructions popover
 │   │   │   │   ├── RoleBadge.jsx      # User role badge (owner/admin/member)
 │   │   │   │   └── VisibilityBadge.jsx # Survey visibility badge (private/team/org)
 │   │   │   ├── auth/
@@ -147,6 +148,7 @@ surveyagent/
 │   │   │   ├── interview/
 │   │   │   │   ├── ChatThread.jsx      # Chat UI with assistant-ui primitives
 │   │   │   │   ├── InterviewChat.jsx   # Runtime adapter + AssistantRuntimeProvider
+│   │   │   │   ├── QuestionTestPanel.jsx # Slide-over panel for testing individual questions with AI
 │   │   │   │   ├── RespondentForm.jsx  # Optional respondent details form
 │   │   │   │   ├── CompletionScreen.jsx # Thank-you screen after interview
 │   │   │   │   └── TerminationScreen.jsx # Abuse termination screen
@@ -250,6 +252,29 @@ Requires a `.env` file at the project root (copy `.env.example`).
 - Cancel mid-stream support via AbortController
 - `useFieldEnhance` hook manages streaming state, field setters, and abort
 - Mutual exclusion with AI question generation (both disable each other's buttons)
+- **Custom instructions support:** `EnhanceButton` component (`components/shared/EnhanceButton.jsx`) has a popover where users type custom instructions (e.g., "Make it crisp", "Keep it formal") before enhancing
+- `additional_context` parameter flows through: `EnhanceButton` -> `useFieldEnhance` hook -> `EnhanceFieldRequest` schema -> `build_enhance_prompt()` -> appended as "Additional instructions:" in the LLM prompt
+- `EnhanceButton` extracted to `components/shared/EnhanceButton.jsx` from inline JSX in SurveyForm
+
+### Question Test Panel (complete)
+- Slide-over panel in SurveyForm for testing individual questions with the AI interviewer
+- Play button on each question row opens the panel for that question
+- Completely stateless — no interview session created, no DB reads/writes
+- Conversation history sent by client each turn, backend streams response via SSE
+- Uses `@assistant-ui/react` chat UI (same ChatThread component as full interview)
+- `createQuestionTestAdapter` bridges assistant-ui to the `/test-question` SSE endpoint
+- Supports all survey context: personality tone, survey title/goal/context, AI instructions
+- Supports multi-LLM: passes `llm_provider` and `llm_model` to backend
+- Panel animates in from the right with Framer Motion
+- Close button or clicking outside dismisses the panel
+
+### Multi-LLM Provider Support (complete)
+- Abstract `LLMProvider` base class in `server/core/llm.py` with `name`, `default_model`, `initialize()`, `stream_text()` interface
+- Three built-in providers: OpenAI (`server/core/providers/openai.py`), Anthropic (`server/core/providers/anthropic.py`), Gemini (`server/core/providers/gemini.py`)
+- Provider registry in `server/core/providers/__init__.py` — `register_provider()` + `get_provider()` for lazy initialization
+- All AI endpoints accept optional `llm_provider` and `llm_model` parameters to override defaults
+- Default provider: OpenAI. Default model: provider-specific (e.g., gpt-5.4-mini for OpenAI)
+- Each provider implements `stream_text()` as an async generator yielding text chunks
 
 ### Landing Page (complete)
 - 13-section marketing page with scroll animations (Framer Motion)
@@ -428,6 +453,28 @@ Requires a `.env` file at the project root (copy `.env.example`).
 - Test route listed before token route in App.jsx so `/interview/test/xxx` matches the static `test` segment first.
 - **Speech-to-text dictation:** `DictateButton` component inside the composer uses `useSpeechToText` hook + `useComposerRuntime()` from assistant-ui. The hook wraps `window.SpeechRecognition` (or `webkitSpeechRecognition`) with `continuous=true`, `interimResults=true`. On each final transcript result, `composerRuntime.setText()` appends text to the composer. Auto-restarts recognition on silence (browser stops after ~5s silence). Button hidden via `isSupported` check on browsers without Web Speech API. No backend involved.
 
+### Question Test Panel
+- Completely stateless design — no interview session in MongoDB, no DB reads/writes
+- Client sends full conversation history on every turn; backend builds prompt + streams response
+- System prompt (`QUESTION_TEST_PROMPT` in `server/interviewer/prompts.py`) is a focused single-question variant of the full interviewer prompt
+- Uses `build_question_test_prompt()` which accepts question text, AI instructions, personality tone, and optional survey context
+- Frontend `QuestionTestPanel` component in `client/src/components/interview/QuestionTestPanel.jsx` uses `createQuestionTestAdapter` pattern (same as full interview adapter but targets `/test-question` endpoint)
+- Supports multi-LLM via `llm_provider` and `llm_model` pass-through
+
+### Multi-LLM Provider Support
+- `LLMProvider` abstract base class in `server/core/llm.py` defines the interface: `name`, `default_model`, `initialize()`, `stream_text()`
+- Provider registry in `server/core/providers/__init__.py` — `register_provider()` + `get_provider()` with lazy initialization
+- OpenAI provider (`server/core/providers/openai.py`): uses `AsyncOpenAI` with Responses API streaming
+- Anthropic provider (`server/core/providers/anthropic.py`): uses `AsyncAnthropic` with Messages API streaming
+- Gemini provider (`server/core/providers/gemini.py`): uses `google.genai.Client` with async streaming
+- All providers implement `stream_text(system_prompt, messages, model)` as async generators yielding text chunks
+- Route handlers accept optional `llm_provider` and `llm_model` parameters; fall back to OpenAI if not specified
+
+### EnhanceButton Architecture
+- `EnhanceButton` extracted to `components/shared/EnhanceButton.jsx` — popover with text input for custom instructions, click-outside-to-close, auto-focus
+- `additional_context` parameter added to `EnhanceFieldRequest` schema, `build_enhance_prompt()`, and `useFieldEnhance` hook
+- Popover opens on button click, user types instructions, then clicks enhance — instructions flow through the full pipeline to the LLM prompt
+
 ### Webhooks
 - `webhook_url` is stored on the survey document. When an interview completes, `fire_webhook()` in `server/interviewer/utils.py` is called via `asyncio.create_task()`.
 - Webhook fetches the interview + survey docs from MongoDB, builds the payload, and POSTs via `httpx.AsyncClient` with a 10s timeout.
@@ -503,6 +550,7 @@ Requires a `.env` file at the project root (copy `.env.example`).
 | POST   | /start/{survey_token}   | None     | Start interview session for published survey         |
 | POST   | /{session_id}/message   | None     | Send respondent message, stream AI response via SSE  |
 | POST   | /test/{survey_id}       | Bearer   | Start admin test session (works with draft surveys)  |
+| POST   | /test-question          | Bearer   | Stateless per-question test — streams AI response via SSE |
 
 ### Analytics — `/api/v1/analytics`
 

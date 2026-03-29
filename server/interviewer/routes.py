@@ -16,11 +16,12 @@ from server.interviewer.db import (
     create_interview,
     get_interview,
 )
-from server.interviewer.engine import run_interview_turn
+from server.interviewer.engine import run_interview_turn, run_question_test_turn
 from server.interviewer.schemas import (
     RespondentDetails,
     StartInterviewRequest,
     SendMessageRequest,
+    TestQuestionRequest,
 )
 from server.interviewer.utils import build_welcome, calc_remaining_minutes, process_stream_result, sanitize_user_input
 
@@ -297,3 +298,55 @@ async def test_interview(
             additional_info={"survey_id": survey_id, "user_id": current_user.get("user_id")},
         )
         raise HTTPException(status_code=500, detail="Failed to start test interview")
+
+
+# ---------------------------------------------------------------------------
+# POST /test-question — Bearer auth (per-question test, stateless)
+# ---------------------------------------------------------------------------
+
+@router.post("/test-question")
+async def test_question(
+    body: TestQuestionRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Test a single question with a lightweight chatbot. Completely stateless —
+    no interview session created, no DB reads or writes.
+    Conversation history is sent by the client each turn.
+    """
+    try:
+        # Sanitize user messages in the conversation history
+        for msg in body.conversation:
+            if msg.get("role") == "user":
+                msg["content"] = sanitize_user_input(msg.get("content", ""))
+
+        async def event_stream():
+            async for chunk in run_question_test_turn(
+                question_text=body.question_text,
+                conversation=body.conversation,
+                ai_instructions=body.ai_instructions,
+                personality_tone=body.personality_tone,
+                survey_title=body.survey_title,
+                survey_goal=body.survey_goal,
+                survey_context=body.survey_context,
+                llm_provider=body.llm_provider,
+                llm_model=body.llm_model,
+            ):
+                yield chunk
+
+        return StreamingResponse(
+            event_stream(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Test question error: {e}", exc_info=True)
+        await log_error(e, "interviewer/routes.py::test_question")
+        raise HTTPException(status_code=500, detail="Failed to test question")

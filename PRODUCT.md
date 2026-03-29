@@ -27,16 +27,24 @@ Traditional survey tools give you structured data but miss the story behind the 
 - Add questions manually or let AI generate them for you
 - AI question generation streams questions one by one — pick and choose what you keep
 - Every question supports optional AI instructions (e.g., "probe for specifics", "don't push if they're uncomfortable")
+- **Question Test Panel** — test individual questions with the AI interviewer in real time before publishing. A slide-over panel lets you have a conversation to see exactly how the AI handles each question. Completely stateless — no session created, instant feedback.
 
 ### AI Field Enhancement
 - Hit "Enhance with AI" on any text field — title, description, goal, context, welcome message
 - If the field has content, AI improves it; if it's empty, AI generates fresh content
 - Context flows naturally: enhancing a description uses your title as context, enhancing a goal uses both title and description, and so on
+- **Custom instructions** — provide direction when enhancing (e.g., "Make it crisp", "Keep it formal", "More conversational") and the AI follows your guidance alongside its default behavior
 
 ### Interviewer Personality
 - Choose a tone for your interviewer: professional, friendly, casual, or fun
 - The personality shapes how the AI asks questions, responds to answers, and manages the conversation
 - Custom welcome messages let you set the first impression
+
+### Multi-LLM Provider Support
+- Choose between OpenAI, Anthropic (Claude), and Google Gemini as your AI backend
+- Pluggable provider architecture — adding a new LLM provider is a single Python class
+- Each provider streams text via SSE using the same interface
+- Configure provider and model per-request — different surveys can use different models
 
 ### Analytics & AI Analysis
 - **Per-interview analysis:** AI scores interview quality, detects sentiment, identifies themes, strengths, concerns, and areas for improvement — all per question
@@ -123,4 +131,4 @@ Traditional survey tools give you structured data but miss the story behind the 
 - **Open source** — MIT licensed, no telemetry, no vendor lock-in
 - **Self-hostable** — run it on your own infrastructure
 - **Data ownership** — your survey data never leaves your control
-- **LLM-agnostic** — designed to work with any language model provider
+- **LLM-agnostic** — pluggable provider support for OpenAI, Anthropic, and Gemini, with an interface that makes adding new providers straightforward
