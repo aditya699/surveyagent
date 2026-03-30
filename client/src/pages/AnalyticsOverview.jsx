@@ -52,38 +52,38 @@ export default function AnalyticsOverview() {
   return (
     <div className="min-h-screen bg-background">
       {/* Top bar */}
-      <header className="bg-white border-b border-card-border px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <header className="bg-white border-b border-card-border px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
           <Link
             to="/dashboard"
-            className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors font-sans"
+            className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors font-sans shrink-0"
           >
             <ArrowLeft className="w-4 h-4" />
-            Dashboard
+            <span className="hidden sm:inline">Dashboard</span>
           </Link>
-          <span className="text-card-border">|</span>
-          <h1 className="text-xl font-serif text-text-primary">Analytics</h1>
+          <span className="text-card-border hidden sm:inline">|</span>
+          <h1 className="text-lg sm:text-xl font-serif text-text-primary truncate">Analytics</h1>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
           {surveys.length > 0 && (
             <ExportButton
               options={[{ label: 'Export Summary (CSV)', onClick: () => exportSurveySummary(surveys) }]}
             />
           )}
-          <span className="text-sm text-text-muted font-sans">{user?.name}</span>
+          <span className="text-sm text-text-muted font-sans hidden sm:block">{user?.name}</span>
           <Link
             to="/settings"
             className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors font-sans"
           >
             <Settings className="w-4 h-4" />
-            Settings
+            <span className="hidden sm:inline">Settings</span>
           </Link>
           <button
             onClick={logout}
             className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors font-sans"
           >
             <LogOut className="w-4 h-4" />
-            Logout
+            <span className="hidden sm:inline">Logout</span>
           </button>
         </div>
       </header>
@@ -94,7 +94,7 @@ export default function AnalyticsOverview() {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="grid grid-cols-3 gap-6 mb-10"
+            className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-10"
           >
             <div className="card flex items-center gap-4">
               <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">

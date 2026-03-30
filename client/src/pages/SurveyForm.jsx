@@ -90,26 +90,26 @@ export default function SurveyForm() {
   return (
     <div className="min-h-screen bg-background">
       {/* Top bar */}
-      <header className="bg-white border-b border-card-border px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <header className="bg-white border-b border-card-border px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
           <Link
             to="/dashboard"
-            className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors font-sans"
+            className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors font-sans shrink-0"
           >
             <ArrowLeft className="w-4 h-4" />
-            Dashboard
+            <span className="hidden sm:inline">Dashboard</span>
           </Link>
-          <span className="text-card-border">|</span>
-          <h1 className="text-xl font-serif text-text-primary">
+          <span className="text-card-border hidden sm:inline">|</span>
+          <h1 className="text-lg sm:text-xl font-serif text-text-primary truncate">
             {isEdit ? 'Edit Survey' : 'Create Survey'}
           </h1>
         </div>
         <button
           onClick={logout}
-          className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors font-sans"
+          className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors font-sans shrink-0"
         >
           <LogOut className="w-4 h-4" />
-          Logout
+          <span className="hidden sm:inline">Logout</span>
         </button>
       </header>
 
@@ -208,7 +208,7 @@ export default function SurveyForm() {
                 max={60}
                 value={estimatedDuration}
                 onChange={(e) => setEstimatedDuration(Math.max(1, Math.min(60, Number(e.target.value) || 1)))}
-                className="w-32 bg-white border border-card-border rounded-lg px-4 py-3 text-sm font-sans text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-all"
+                className="w-full sm:w-32 bg-white border border-card-border rounded-lg px-4 py-3 text-sm font-sans text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-all"
               />
             </div>
 
@@ -221,7 +221,7 @@ export default function SurveyForm() {
                 id="personalityTone"
                 value={personalityTone}
                 onChange={(e) => setPersonalityTone(e.target.value)}
-                className="w-48 bg-white border border-card-border rounded-lg px-4 py-3 text-sm font-sans text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-all"
+                className="w-full sm:w-48 bg-white border border-card-border rounded-lg px-4 py-3 text-sm font-sans text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-all"
               >
                 <option value="professional">Professional</option>
                 <option value="friendly">Friendly</option>
@@ -384,7 +384,7 @@ export default function SurveyForm() {
                 <Cpu className="w-4 h-4 text-accent" />
                 <span className="text-sm font-sans font-medium text-text-primary">LLM Configuration</span>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="llmProvider" className="block text-sm font-sans text-text-muted mb-1.5">
                     Provider
@@ -617,7 +617,7 @@ export default function SurveyForm() {
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-3 pt-2">
+            <div className="flex flex-wrap items-center gap-3 pt-2">
               <button
                 type="submit"
                 disabled={!canSubmit}

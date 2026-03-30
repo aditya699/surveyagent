@@ -62,7 +62,7 @@ export default function InterviewDetail() {
   if (error || !interview) {
     return (
       <div className="min-h-screen bg-background">
-        <header className="bg-white border-b border-card-border px-6 py-4">
+        <header className="bg-white border-b border-card-border px-4 sm:px-6 py-3 sm:py-4">
           <Link
             to="/analytics"
             className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors font-sans"

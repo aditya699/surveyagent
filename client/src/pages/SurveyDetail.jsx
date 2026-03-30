@@ -56,7 +56,7 @@ export default function SurveyDetail() {
   if (error) {
     return (
       <div className="min-h-screen bg-background">
-        <header className="bg-white border-b border-card-border px-6 py-4">
+        <header className="bg-white border-b border-card-border px-4 sm:px-6 py-3 sm:py-4">
           <Link
             to="/dashboard"
             className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors font-sans"
@@ -77,25 +77,25 @@ export default function SurveyDetail() {
   return (
     <div className="min-h-screen bg-background">
       {/* Top bar */}
-      <header className="bg-white border-b border-card-border px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <header className="bg-white border-b border-card-border px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
           <Link
             to="/dashboard"
-            className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors font-sans"
+            className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors font-sans shrink-0"
           >
             <ArrowLeft className="w-4 h-4" />
-            Dashboard
+            <span className="hidden sm:inline">Dashboard</span>
           </Link>
-          <span className="text-card-border">|</span>
-          <h1 className="text-xl font-serif text-text-primary line-clamp-1">{survey.title}</h1>
+          <span className="text-card-border hidden sm:inline">|</span>
+          <h1 className="text-lg sm:text-xl font-serif text-text-primary truncate">{survey.title}</h1>
           <StatusBadge status={survey.status} />
         </div>
         <button
           onClick={logout}
-          className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors font-sans"
+          className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors font-sans shrink-0"
         >
           <LogOut className="w-4 h-4" />
-          Logout
+          <span className="hidden sm:inline">Logout</span>
         </button>
       </header>
 
@@ -103,7 +103,7 @@ export default function SurveyDetail() {
       <main className="container-max max-w-2xl section-padding">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
           {/* Metadata */}
-          <div className="flex items-center gap-4 text-sm text-text-muted font-sans">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-text-muted font-sans">
             <span className="flex items-center gap-1.5">
               <Calendar className="w-4 h-4" />
               Created {formatDate(survey.created_at)}
@@ -217,7 +217,7 @@ export default function SurveyDetail() {
           )}
 
           {/* Actions */}
-          <div className="flex items-center gap-2 pt-4 border-t border-card-border">
+          <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-card-border">
             <Link
               to={`/surveys/${survey.id}/edit`}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-sans font-medium bg-accent text-white hover:bg-accent-hover transition-colors"

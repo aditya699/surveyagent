@@ -113,7 +113,7 @@ export default function SurveyAnalytics() {
   if (error) {
     return (
       <div className="min-h-screen bg-background">
-        <header className="bg-white border-b border-card-border px-6 py-4">
+        <header className="bg-white border-b border-card-border px-4 sm:px-6 py-3 sm:py-4">
           <Link
             to="/analytics"
             className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors font-sans"
@@ -134,19 +134,19 @@ export default function SurveyAnalytics() {
   return (
     <div className="min-h-screen bg-background">
       {/* Top bar */}
-      <header className="bg-white border-b border-card-border px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <header className="bg-white border-b border-card-border px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
           <Link
             to="/analytics"
-            className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors font-sans"
+            className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors font-sans shrink-0"
           >
             <ArrowLeft className="w-4 h-4" />
-            Analytics
+            <span className="hidden sm:inline">Analytics</span>
           </Link>
-          <span className="text-card-border">|</span>
-          <h1 className="text-xl font-serif text-text-primary line-clamp-1">{title}</h1>
+          <span className="text-card-border hidden sm:inline">|</span>
+          <h1 className="text-lg sm:text-xl font-serif text-text-primary truncate">{title}</h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {/* Export button */}
           {stats && stats.total_interviews > 0 && (
             <ExportButton
@@ -176,19 +176,15 @@ export default function SurveyAnalytics() {
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-sans font-medium bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
               >
                 <X className="w-3.5 h-3.5" />
-                Cancel
+                <span className="hidden sm:inline">Cancel</span>
               </button>
             ) : (
               <button
                 onClick={() => startAnalysis(id)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-sans font-medium bg-accent/10 text-accent hover:bg-accent/20 transition-colors"
               >
-                {analysis ? (
-                  <Sparkles className="w-3.5 h-3.5" />
-                ) : (
-                  <Sparkles className="w-3.5 h-3.5" />
-                )}
-                {analysis ? 'Re-analyze' : 'Analyze All'}
+                <Sparkles className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{analysis ? 'Re-analyze' : 'Analyze All'}</span>
               </button>
             )
           )}
@@ -197,7 +193,7 @@ export default function SurveyAnalytics() {
             className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors font-sans"
           >
             <LogOut className="w-4 h-4" />
-            Logout
+            <span className="hidden sm:inline">Logout</span>
           </button>
         </div>
       </header>
@@ -206,7 +202,7 @@ export default function SurveyAnalytics() {
         {stats && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             {/* Stats row */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
               <div className="card flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
                   <Users className="w-4 h-4 text-accent" />

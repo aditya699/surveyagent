@@ -43,24 +43,24 @@ export default function Settings() {
   return (
     <div className="min-h-screen bg-background">
       {/* Top bar */}
-      <header className="bg-white border-b border-card-border px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <header className="bg-white border-b border-card-border px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+        <div className="flex items-center gap-2 sm:gap-4">
           <Link
             to="/dashboard"
             className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors font-sans"
           >
             <ArrowLeft className="w-4 h-4" />
-            Dashboard
+            <span className="hidden sm:inline">Dashboard</span>
           </Link>
-          <span className="text-card-border">|</span>
-          <h1 className="text-xl font-serif text-text-primary">Settings</h1>
+          <span className="text-card-border hidden sm:inline">|</span>
+          <h1 className="text-lg sm:text-xl font-serif text-text-primary">Settings</h1>
         </div>
         <button
           onClick={logout}
           className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors font-sans"
         >
           <LogOut className="w-4 h-4" />
-          Logout
+          <span className="hidden sm:inline">Logout</span>
         </button>
       </header>
 

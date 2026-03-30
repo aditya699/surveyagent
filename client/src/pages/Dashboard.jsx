@@ -61,30 +61,30 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-background">
       {/* Top bar */}
-      <header className="bg-white border-b border-card-border px-6 py-4 flex items-center justify-between">
+      <header className="bg-white border-b border-card-border px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
         <h1 className="text-xl font-serif text-text-primary">SurveyAgent</h1>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-text-muted font-sans">{user?.name}</span>
+        <div className="flex items-center gap-3 sm:gap-4">
+          <span className="text-sm text-text-muted font-sans hidden sm:block">{user?.name}</span>
           <Link
             to="/analytics"
             className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors font-sans"
           >
             <BarChart3 className="w-4 h-4" />
-            Analytics
+            <span className="hidden sm:inline">Analytics</span>
           </Link>
           <Link
             to="/settings"
             className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors font-sans"
           >
             <Settings className="w-4 h-4" />
-            Settings
+            <span className="hidden sm:inline">Settings</span>
           </Link>
           <button
             onClick={logout}
             className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors font-sans"
           >
             <LogOut className="w-4 h-4" />
-            Logout
+            <span className="hidden sm:inline">Logout</span>
           </button>
         </div>
       </header>
@@ -94,17 +94,17 @@ export default function Dashboard() {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-start justify-between mb-10"
+          className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-10"
         >
           <div>
-            <h2 className="text-3xl lg:text-4xl font-serif text-text-primary">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif text-text-primary">
               Welcome back, {user?.name}
             </h2>
             <p className="text-text-muted font-sans mt-2">{user?.org_name}</p>
           </div>
           <Link
             to="/surveys/create"
-            className="btn-primary text-sm inline-flex items-center gap-2 shrink-0"
+            className="btn-primary text-sm inline-flex items-center gap-2 shrink-0 self-start"
           >
             <PlusCircle className="w-4 h-4" />
             Create Survey

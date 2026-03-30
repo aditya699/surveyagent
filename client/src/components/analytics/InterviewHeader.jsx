@@ -20,7 +20,7 @@ export default function InterviewHeader({
   return (
     <header className="bg-white border-b border-card-border">
       {/* Top row: back link + logout */}
-      <div className="px-6 py-3 flex items-center justify-between border-b border-card-border/50">
+      <div className="px-4 sm:px-6 py-3 flex items-center justify-between border-b border-card-border/50">
         <Link
           to={`/surveys/${interview.survey_id}/analytics`}
           className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors font-sans"
@@ -38,7 +38,7 @@ export default function InterviewHeader({
       </div>
 
       {/* Bottom row: respondent info + stats + action */}
-      <div className="px-6 py-3 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
+      <div className="px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
         {/* Respondent */}
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-9 h-9 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
