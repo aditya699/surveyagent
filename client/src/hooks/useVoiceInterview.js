@@ -12,6 +12,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { transcribeAudio, synthesizeInterviewSpeech } from '../api';
 
 const SENTENCE_RE = /([.!?])(\s+)/;
+const TAG_STRIP_RE = /\[COVERED:[^\]]*\]|\[ABUSE:\s*true\s*\]/gi; // safety-net: strip any leaked tags
 const SILENCE_TIMEOUT_MS = 7000; // 7 seconds of silence before auto-stop
 const MIN_RECORDING_MS = 1000; // minimum 1s recording before silence detection kicks in
 
@@ -169,10 +170,11 @@ export function useVoiceInterview({ sessionId, onSendMessage }) {
   // -----------------------------------------------------------------------
 
   const enqueueSentence = useCallback((text) => {
-    if (!text.trim()) return;
+    const clean = text.replace(TAG_STRIP_RE, '').trim();
+    if (!clean) return;
     const entry = {
-      text,
-      blobPromise: synthesizeInterviewSpeech(sessionId, text)
+      text: clean,
+      blobPromise: synthesizeInterviewSpeech(sessionId, clean)
         .then((res) => res.blob())
         .catch((err) => {
           console.error('TTS fetch failed:', err);
@@ -241,7 +243,7 @@ export function useVoiceInterview({ sessionId, onSendMessage }) {
   }, [enqueueSentence]);
 
   const flushSpeech = useCallback(() => {
-    const remaining = bufferRef.current.trim();
+    const remaining = bufferRef.current.replace(TAG_STRIP_RE, '').trim();
     bufferRef.current = '';
     if (remaining) {
       enqueueSentence(remaining);

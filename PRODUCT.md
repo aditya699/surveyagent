@@ -98,9 +98,18 @@ Traditional survey tools give you structured data but miss the story behind the 
 - Organization settings: manage members, change roles, transfer ownership
 - Team management: create teams/sub-teams, add/remove members
 
+### Voice Interview Mode
+- Full voice loop: speak naturally → AI listens via Whisper transcription → responds with natural-sounding TTS → auto-listens for your next reply
+- **Tap-to-talk model** — tap the mic to start recording, tap again to stop and send. 7-second silence timeout as backup auto-stop
+- **Sentence-level TTS streaming** — AI starts speaking the first sentence while still generating the rest, for a natural conversational pace
+- Switch between Text and Voice modes anytime via a segmented toggle in the chat header
+- Messages appear as normal text bubbles in both modes — full transcript preserved
+- After AI finishes speaking, automatically starts listening again for a seamless conversational loop
+
 ### Respondent Experience
 - Clean, focused chat interface — no distractions
-- **Speech-to-text dictation** — click the mic button to dictate replies instead of typing (uses the browser's native Web Speech API, no backend needed)
+- **Speech-to-text dictation** in text mode — click the mic button to dictate replies instead of typing (uses the browser's native Web Speech API, no backend needed)
+- **Voice mode** — full voice conversation with the AI interviewer (see above)
 - Optional details form (name, email, age, etc.) — all fields optional
 - Works on any device with a browser
 
@@ -121,7 +130,6 @@ Traditional survey tools give you structured data but miss the story behind the 
 
 ## What's Coming Next
 
-- **Voice interviews** — respondents speak instead of type
 - **Video avatar** — a visual AI interviewer on screen
 
 ---

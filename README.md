@@ -51,7 +51,9 @@ Self-hostable. Open-source. Your data stays with you.
 
 **Email & Webhooks** — Respondent thank-you emails and creator notifications on completion. Optional webhook URL per survey to POST results to external services like Slack.
 
-**Speech-to-Text Dictation** — Respondents can dictate replies using the browser's native Web Speech API. No backend needed — runs entirely client-side.
+**Voice Interview Mode** — Full voice conversations with the AI interviewer. Speak naturally — Whisper transcribes your speech, the AI responds with sentence-level TTS streaming (starts speaking the first sentence while still generating the rest), then auto-listens for your next reply. Tap-to-talk with 7-second silence timeout. Switch between Text and Voice modes anytime.
+
+**Speech-to-Text Dictation** — In text mode, respondents can dictate replies using the browser's native Web Speech API. No backend needed — runs entirely client-side.
 
 **Docker Deployment** — Single container serves both API and frontend. Multi-stage Dockerfile with Gunicorn + Uvicorn workers. Production-ready.
 
@@ -120,7 +122,6 @@ docker run -p 8000:8000 --env-file .env surveyagent
 
 ## What's Next
 
-- **Voice interviews** — respondents speak instead of type
 - **Video avatar** — a visual AI interviewer on screen
 
 ---

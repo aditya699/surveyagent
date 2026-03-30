@@ -7,9 +7,10 @@ import ChatThread from './ChatThread';
 import { useVoiceInterview } from '../../hooks';
 import { API_URL, ENDPOINTS } from '../../api/constants';
 
-// Strip partial/complete coverage and abuse tags during streaming so they never flash in the UI
-const COVERAGE_RE = /\[COVERED:[\d,\s]*\]?$/;
-const ABUSE_RE = /\[ABUSE:\s*true\s*\]?$/i;
+// Strip partial/complete coverage and abuse tags during streaming so they never flash in the UI.
+// First alternation: complete or near-complete tag.  Second: partial prefix being built token-by-token.
+const COVERAGE_RE = /\[COVERED[:\d,\s\]]*$|\[C(?:O(?:V(?:E(?:R(?:E(?:D)?)?)?)?)?)?$/i;
+const ABUSE_RE = /\[ABUSE[:\s\w\]]*$|\[A(?:B(?:U(?:S(?:E)?)?)?)?$/i;
 
 /**
  * Creates a ChatModelAdapter that bridges assistant-ui to our SSE backend.
@@ -50,6 +51,7 @@ function createAdapter(sessionId, onComplete, onTerminated, onToken, onStreamDon
       const decoder = new TextDecoder();
       let buffer = '';
       let fullText = '';
+      let prevCleanLen = 0;
       let questionsCovered = [];
 
       while (true) {
@@ -68,9 +70,13 @@ function createAdapter(sessionId, onComplete, onTerminated, onToken, onStreamDon
             const parsed = JSON.parse(payload);
             if (parsed.token) {
               fullText += parsed.token;
-              onToken?.(parsed.token);
+              const cleanText = fullText.replace(COVERAGE_RE, '').replace(ABUSE_RE, '');
+              // Send only the clean increment to voice — when a tag is being stripped, delta is empty
+              const delta = cleanText.slice(prevCleanLen);
+              prevCleanLen = cleanText.length;
+              if (delta) onToken?.(delta);
               yield {
-                content: [{ type: 'text', text: fullText.replace(COVERAGE_RE, '').replace(ABUSE_RE, '') }],
+                content: [{ type: 'text', text: cleanText }],
               };
             }
             if (parsed.done) {
