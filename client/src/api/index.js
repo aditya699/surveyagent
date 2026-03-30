@@ -29,6 +29,8 @@ export {
   startInterview,
   startTestInterview,
   streamInterviewMessage,
+  transcribeAudio,
+  synthesizeInterviewSpeech,
 } from './interview';
 export {
   getAnalyticsOverview,

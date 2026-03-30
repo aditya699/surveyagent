@@ -12,7 +12,7 @@ const modes = [
     icon: Mic,
     title: 'Voice',
     description: 'Speak naturally. The AI listens and responds.',
-    comingSoon: true,
+    comingSoon: false,
   },
   {
     icon: Video,

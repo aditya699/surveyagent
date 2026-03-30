@@ -5,11 +5,12 @@ All interview endpoints are mounted at /api/v1/interview.
 
 import json
 from bson import ObjectId
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
 from fastapi.responses import StreamingResponse
 
 from server.auth.utils import get_current_user
 from server.core.logging_config import get_logger
+from server.core.llm import get_openai_client
 from server.db.mongo import get_db, log_error
 from server.interviewer.db import (
     add_message,
@@ -24,9 +25,27 @@ from server.interviewer.schemas import (
     TestQuestionRequest,
 )
 from server.interviewer.utils import build_welcome, calc_remaining_minutes, process_stream_result, sanitize_user_input
+from server.ai.schemas import SynthesizeSpeechRequest
 
 logger = get_logger(__name__)
 router = APIRouter()
+
+
+async def _get_active_interview(session_id: str):
+    """Validate session_id format, fetch interview, and check it's in_progress."""
+    try:
+        ObjectId(session_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid session ID format")
+
+    interview = await get_interview(session_id)
+    if not interview:
+        raise HTTPException(status_code=404, detail="Interview session not found")
+
+    if interview.status != "in_progress":
+        raise HTTPException(status_code=400, detail="Interview session is no longer active")
+
+    return interview
 
 
 # ---------------------------------------------------------------------------
@@ -132,19 +151,7 @@ async def send_message(
     and updated questions_covered for the client to use.
     """
     try:
-        # Validate session ID format
-        try:
-            ObjectId(session_id)
-        except Exception:
-            raise HTTPException(status_code=400, detail="Invalid session ID format")
-
-        # Get interview session
-        interview = await get_interview(session_id)
-        if not interview:
-            raise HTTPException(status_code=404, detail="Interview session not found")
-
-        if interview.status != "in_progress":
-            raise HTTPException(status_code=400, detail="Interview session is no longer active")
+        interview = await _get_active_interview(session_id)
 
         # Sanitize user input to prevent tag injection
         safe_message = sanitize_user_input(body.message)
@@ -350,3 +357,92 @@ async def test_question(
         logger.error(f"Test question error: {e}", exc_info=True)
         await log_error(e, "interviewer/routes.py::test_question")
         raise HTTPException(status_code=500, detail="Failed to test question")
+
+
+# ---------------------------------------------------------------------------
+# POST /{session_id}/transcribe — Public, session-gated
+# ---------------------------------------------------------------------------
+
+@router.post("/{session_id}/transcribe")
+async def transcribe_audio(
+    session_id: str,
+    audio: UploadFile = File(...),
+):
+    """
+    Transcribe audio using OpenAI Whisper API.
+    Public endpoint, validated by active session_id.
+    """
+    try:
+        await _get_active_interview(session_id)
+
+        client = await get_openai_client()
+        audio_bytes = await audio.read()
+
+        transcript = await client.audio.transcriptions.create(
+            model="whisper-1",
+            file=(audio.filename or "audio.webm", audio_bytes, audio.content_type or "audio/webm"),
+        )
+
+        return {"text": transcript.text}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Transcribe error - session: {session_id}: {e}", exc_info=True)
+        await log_error(
+            e, "interviewer/routes.py::transcribe_audio",
+            additional_info={"session_id": session_id},
+        )
+        raise HTTPException(status_code=500, detail="Failed to transcribe audio")
+
+
+# ---------------------------------------------------------------------------
+# POST /{session_id}/synthesize — Public, session-gated
+# ---------------------------------------------------------------------------
+
+@router.post("/{session_id}/synthesize")
+async def synthesize_interview_speech(
+    session_id: str,
+    request: SynthesizeSpeechRequest,
+):
+    """
+    Convert text to speech for an active interview session.
+    Public endpoint, validated by active session_id.
+    """
+    try:
+        await _get_active_interview(session_id)
+
+        client = await get_openai_client()
+
+        async def audio_stream():
+            try:
+                async with client.audio.speech.with_streaming_response.create(
+                    model="gpt-4o-mini-tts",
+                    voice=request.voice,
+                    input=request.text,
+                    instructions="Speak naturally and conversationally.",
+                ) as response:
+                    async for chunk in response.iter_bytes(1024):
+                        yield chunk
+            except Exception as e:
+                logger.error(f"TTS synthesis failed: {e}", exc_info=True)
+                raise HTTPException(status_code=500, detail="Speech synthesis failed")
+
+        return StreamingResponse(
+            audio_stream(),
+            media_type="audio/mpeg",
+            headers={
+                "Cache-Control": "no-cache",
+                "Content-Type": "audio/mpeg",
+            },
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Synthesize error - session: {session_id}: {e}", exc_info=True)
+        await log_error(
+            e, "interviewer/routes.py::synthesize_interview_speech",
+            additional_info={"session_id": session_id},
+        )
+        raise HTTPException(status_code=500, detail="Failed to synthesize speech")

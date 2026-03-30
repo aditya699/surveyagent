@@ -1,13 +1,14 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ShieldAlert, Pencil, RotateCcw, Home } from 'lucide-react';
+import { PoweredBy } from '../shared';
 
 export default function TerminationScreen({ isTestMode, surveyId, onTestAgain }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex items-center justify-center h-full px-4"
+      className="flex flex-col items-center justify-center h-full px-4"
     >
       <div className="card text-center max-w-md">
         <div className="flex justify-center mb-4">
@@ -51,6 +52,7 @@ export default function TerminationScreen({ isTestMode, surveyId, onTestAgain })
           </div>
         )}
       </div>
+      <PoweredBy className="mt-4" />
     </motion.div>
   );
 }

@@ -4,7 +4,7 @@
 
 SurveyAgent is an open-source AI survey platform that replaces static forms with dynamic conversations. It conducts interviews via text chat, voice, or video avatar. It's self-hostable, LLM-agnostic, and keeps survey data under the user's control.
 
-**Status:** Early development. Auth system, landing page, survey CRUD, AI question generation, AI field enhancement (with custom instructions), question test panel (per-question AI testing), multi-LLM provider support (OpenAI, Anthropic, Gemini), interviewer foundation, interviewer engine + routes, interview chat UI (text + speech-to-text dictation), analytics, data export, webhooks, multi-tenant org support (orgs, roles, teams, email OTP verification, invite system, survey visibility), email notifications on interview completion, custom analytics instructions, public feedback collection (with speech-to-text dictation), and Docker containerization are built. Voice and video are not yet implemented.
+**Status:** Early development. Auth system, landing page, survey CRUD, AI question generation, AI field enhancement (with custom instructions), question test panel (per-question AI testing), multi-LLM provider support (OpenAI, Anthropic, Gemini), interviewer foundation, interviewer engine + routes, interview chat UI (text + speech-to-text dictation), voice interview mode (Whisper transcription + sentence-level TTS), analytics, data export, webhooks, multi-tenant org support (orgs, roles, teams, email OTP verification, invite system, survey visibility), email notifications on interview completion, custom analytics instructions, public feedback collection (with speech-to-text dictation), and Docker containerization are built. Video avatar is not yet implemented.
 
 ## Tech Stack
 
@@ -119,7 +119,8 @@ surveyagent/
 │   │   │   ├── useInterviewAnalysis.js # Interview analysis streaming state
 │   │   │   ├── useSurveyAnalysis.js   # Survey aggregate analysis streaming state
 │   │   │   ├── useTts.js         # Text-to-speech playback via OpenAI TTS API
-│   │   │   └── useSpeechToText.js # Browser Speech Recognition API wrapper for dictation
+│   │   │   ├── useSpeechToText.js # Browser Speech Recognition API wrapper for dictation
+│   │   │   └── useVoiceInterview.js # Voice interview loop state machine (record → transcribe → TTS)
 │   │   ├── components/
 │   │   │   ├── shared/
 │   │   │   │   ├── index.js           # Barrel export
@@ -148,6 +149,7 @@ surveyagent/
 │   │   │   ├── interview/
 │   │   │   │   ├── ChatThread.jsx      # Chat UI with assistant-ui primitives
 │   │   │   │   ├── InterviewChat.jsx   # Runtime adapter + AssistantRuntimeProvider
+│   │   │   │   ├── VoiceChat.jsx       # Voice mode UI (tap-to-talk mic button)
 │   │   │   │   ├── QuestionTestPanel.jsx # Slide-over panel for testing individual questions with AI
 │   │   │   │   ├── RespondentForm.jsx  # Optional respondent details form
 │   │   │   │   ├── CompletionScreen.jsx # Thank-you screen after interview
@@ -313,6 +315,22 @@ Requires a `.env` file at the project root (copy `.env.example`).
 - Shareable survey link format: `/interview/{token}` (used in both Dashboard and SurveyDetail)
 - **Speech-to-text dictation:** Microphone button in the composer lets respondents dictate replies using the browser's native Web Speech API (`SpeechRecognition`). No backend needed — runs entirely client-side. `useSpeechToText` hook wraps the API with auto-restart on silence, error handling, and cleanup. `DictateButton` component uses `useComposerRuntime().setText()` to inject transcribed text into the assistant-ui composer. Visual states: muted mic (idle), red pulsing mic (listening). Hides on unsupported browsers.
 
+### Voice Interview Mode (complete)
+- Voice I/O layer on top of existing interview engine — core engine stays untouched
+- Full voice loop: user speaks → Whisper transcribes → transcript feeds existing message endpoint → LLM streams response → sentence-level TTS speaks back → auto-listens again
+- **Tap-to-talk model:** tap mic to start recording, tap again to stop and send. 7-second silence timeout as backup auto-stop.
+- **Sentence-level TTS streaming:** accumulates SSE tokens, detects sentence boundaries, prefetches TTS audio for next sentence while current plays, sequential playback via `Audio.onended` chaining
+- Two new backend endpoints (public, session-gated — no auth, validated by active session_id):
+  - `POST /api/v1/interview/{session_id}/transcribe` — accepts audio file, transcribes via OpenAI Whisper API
+  - `POST /api/v1/interview/{session_id}/synthesize` — text-to-speech via OpenAI TTS API (`gpt-4o-mini-tts`), returns audio/mpeg stream
+- `useVoiceInterview` hook manages full state machine: idle → listening → transcribing → thinking → speaking → auto-loop
+- `VoiceChat` component replaces text composer in voice mode — large mic button with state-dependent styling (pulse rings when listening, spinner when processing, speaker icon when speaking)
+- Segmented pill toggle in chat header to switch between Text and Voice modes
+- Audio recording via `MediaRecorder` API with silence detection via `AnalyserNode`
+- Messages appear as normal text bubbles in both modes (voice transcripts show as user messages)
+- Auto-listen: after AI finishes speaking all sentences, automatically starts recording again
+- Interrupt: tap during speaking to stop playback and return to idle
+
 ### Analytics (complete)
 - Analytics overview page showing all surveys with aggregate stats (total interviews, completion rate, avg duration)
 - Per-survey analytics page with stat cards, question coverage bars, and paginated interview sessions table
@@ -453,6 +471,22 @@ Requires a `.env` file at the project root (copy `.env.example`).
 - Test route listed before token route in App.jsx so `/interview/test/xxx` matches the static `test` segment first.
 - **Speech-to-text dictation:** `DictateButton` component inside the composer uses `useSpeechToText` hook + `useComposerRuntime()` from assistant-ui. The hook wraps `window.SpeechRecognition` (or `webkitSpeechRecognition`) with `continuous=true`, `interimResults=true`. On each final transcript result, `composerRuntime.setText()` appends text to the composer. Auto-restarts recognition on silence (browser stops after ~5s silence). Button hidden via `isSupported` check on browsers without Web Speech API. No backend involved.
 
+### Voice Interview Mode
+- Voice I/O layer on top of existing interview engine — no changes to engine, prompts, or coverage logic.
+- Two new public endpoints in `server/interviewer/routes.py`, gated by `_get_active_interview(session_id)` validation (same pattern as `send_message`):
+  - `POST /{session_id}/transcribe` — accepts `UploadFile` audio, calls `openai.audio.transcriptions.create(model="whisper-1")`, returns `{"text": "..."}`.
+  - `POST /{session_id}/synthesize` — accepts `SynthesizeSpeechRequest` (reused from `server/ai/schemas.py`), streams `audio/mpeg` via `gpt-4o-mini-tts`. TTS instruction: "Speak naturally and conversationally."
+- `_get_active_interview()` helper extracted to avoid duplicating ObjectId parse + get_interview + status check across `send_message`, `transcribe`, and `synthesize`.
+- `useVoiceInterview` hook (`client/src/hooks/useVoiceInterview.js`) manages the full state machine: `idle` → `listening` → `transcribing` → `thinking` → `speaking` → auto-loop back to `listening`.
+- **Tap-to-talk model:** user taps mic to start recording, taps again to stop. 7-second silence timeout (via `AnalyserNode` RMS monitoring) as backup auto-stop. Minimum 1s recording before silence detection activates.
+- **Sentence-level TTS:** `feedToken(token)` accumulates text, splits on sentence boundaries (`/([.!?])(\s+)/`), immediately starts fetching TTS audio for each sentence. `Audio.onended` chains sequential playback. `flushSpeech()` sends remaining buffer when SSE stream ends.
+- `createAdapter` in `InterviewChat.jsx` accepts optional `onToken` and `onStreamDone` callbacks — forwards SSE tokens to `feedToken/flushSpeech` in voice mode.
+- `VoiceChat` component (`client/src/components/interview/VoiceChat.jsx`) renders state-dependent mic button: idle (muted), listening (red filled + pulse rings, "tap to send"), processing (spinner, disabled), speaking (speaker icon, tap to interrupt).
+- Segmented pill toggle in chat header (`InterviewPage.jsx`): `[Text | Voice]` — clear labels with icons, active segment gets white bg + shadow.
+- `handleVoiceSend` uses `runtime.thread.append()` to programmatically submit user messages from voice transcripts.
+- `stopRecording()` detaches `onstop` handler before stopping to prevent accidental transcription when force-stopping.
+- Audio recording uses `MediaRecorder` API; codec selection: `audio/webm;codecs=opus` > `audio/webm` > `audio/mp4` (Safari fallback).
+
 ### Question Test Panel
 - Completely stateless design — no interview session in MongoDB, no DB reads/writes
 - Client sends full conversation history on every turn; backend builds prompt + streams response
@@ -551,6 +585,8 @@ Requires a `.env` file at the project root (copy `.env.example`).
 | POST   | /{session_id}/message   | None     | Send respondent message, stream AI response via SSE  |
 | POST   | /test/{survey_id}       | Bearer   | Start admin test session (works with draft surveys)  |
 | POST   | /test-question          | Bearer   | Stateless per-question test — streams AI response via SSE |
+| POST   | /{session_id}/transcribe | None    | Transcribe audio via Whisper (session-gated)              |
+| POST   | /{session_id}/synthesize | None    | Text-to-speech via OpenAI TTS (session-gated)             |
 
 ### Analytics — `/api/v1/analytics`
 
@@ -690,5 +726,4 @@ client/src/
 
 ## What's NOT Built Yet
 
-- Voice interview mode
 - Video avatar interview mode

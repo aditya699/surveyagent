@@ -21,6 +21,35 @@ export function startTestInterview(surveyId) {
   return api.post(ENDPOINTS.INTERVIEW.TEST(surveyId), { respondent: null });
 }
 
+/** Transcribe audio via Whisper (public, session-gated). */
+export async function transcribeAudio(sessionId, audioBlob) {
+  const form = new FormData();
+  form.append('audio', audioBlob, 'recording.webm');
+  const res = await fetch(`${API_URL}${ENDPOINTS.INTERVIEW.TRANSCRIBE(sessionId)}`, {
+    method: 'POST',
+    body: form,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Transcription failed' }));
+    throw new Error(err.detail || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+/** Synthesize speech for an active interview session (public, session-gated). */
+export async function synthesizeInterviewSpeech(sessionId, text, voice = 'coral') {
+  const res = await fetch(`${API_URL}${ENDPOINTS.INTERVIEW.SYNTHESIZE(sessionId)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, voice }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Speech synthesis failed' }));
+    throw new Error(err.detail || `HTTP ${res.status}`);
+  }
+  return res;
+}
+
 /**
  * Stream an interview message via Server-Sent Events.
  *

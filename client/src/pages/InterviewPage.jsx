@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useSearchParams, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Clock, MessageSquare, Timer } from 'lucide-react';
+import { Clock, MessageSquare, Timer, Mic, Keyboard } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { getInterviewInfo, startInterview, startTestInterview, publishSurvey } from '../api';
 import InterviewChat from '../components/interview/InterviewChat';
@@ -9,6 +9,7 @@ import RespondentForm from '../components/interview/RespondentForm';
 import CompletionScreen from '../components/interview/CompletionScreen';
 import TerminationScreen from '../components/interview/TerminationScreen';
 import { formatTimer } from '../utils/formatters';
+import { PoweredBy } from '../components/shared';
 
 // Phases: loading | info | details | chatting | completed | terminated | error
 export default function InterviewPage() {
@@ -29,6 +30,9 @@ export default function InterviewPage() {
   const startTimeRef = useRef(null);
   const [elapsed, setElapsed] = useState(0);
   const [duration, setDuration] = useState(null);
+
+  // Voice mode
+  const [voiceMode, setVoiceMode] = useState(false);
 
   const onComplete = useCallback(() => {
     if (startTimeRef.current) {
@@ -200,6 +204,7 @@ export default function InterviewPage() {
           >
             Begin
           </button>
+          <PoweredBy className="mt-4" />
         </motion.div>
       </div>
     );
@@ -215,6 +220,7 @@ export default function InterviewPage() {
           className="max-w-lg w-full"
         >
           <RespondentForm onSubmit={handleStart} loading={starting} />
+          <PoweredBy className="mt-3" />
         </motion.div>
       </div>
     );
@@ -236,6 +242,33 @@ export default function InterviewPage() {
             <Timer className="w-3.5 h-3.5" />
             {formatTimer(elapsed)}
           </span>
+          {/* Voice / Text mode toggle — segmented pill */}
+          <div className="flex items-center bg-background rounded-full p-0.5 border border-card-border/60">
+            <button
+              type="button"
+              onClick={() => setVoiceMode(false)}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-sans font-medium transition-all duration-200 ${
+                !voiceMode
+                  ? 'bg-white text-text-primary shadow-sm'
+                  : 'text-text-muted hover:text-text-primary'
+              }`}
+            >
+              <Keyboard className="w-3 h-3" />
+              Text
+            </button>
+            <button
+              type="button"
+              onClick={() => setVoiceMode(true)}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-sans font-medium transition-all duration-200 ${
+                voiceMode
+                  ? 'bg-white text-text-primary shadow-sm'
+                  : 'text-text-muted hover:text-text-primary'
+              }`}
+            >
+              <Mic className="w-3 h-3" />
+              Voice
+            </button>
+          </div>
           {isTestMode && (
             <span className="text-[10px] font-sans font-medium bg-accent/10 text-accent px-2 py-0.5 rounded-full">
               TEST
@@ -250,6 +283,7 @@ export default function InterviewPage() {
             welcomeMessage={welcomeMessage}
             onComplete={onComplete}
             onTerminated={onTerminated}
+            voiceMode={voiceMode}
           />
         </div>
       </div>

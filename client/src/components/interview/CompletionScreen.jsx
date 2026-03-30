@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { CheckCircle, Clock, Pencil, RotateCcw, Rocket, Link as LinkIcon, Check, Home } from 'lucide-react';
 import { useClipboard } from '../../hooks/useClipboard';
+import { PoweredBy } from '../shared';
 import { formatDurationLong } from '../../utils/formatters';
 
 export default function CompletionScreen({
@@ -41,7 +42,7 @@ export default function CompletionScreen({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex items-center justify-center h-full px-4"
+      className="flex flex-col items-center justify-center h-full px-4"
     >
       <div className="card text-center max-w-md">
         <div className="flex justify-center mb-4">
@@ -125,6 +126,7 @@ export default function CompletionScreen({
           </div>
         )}
       </div>
+      <PoweredBy className="mt-4" />
     </motion.div>
   );
 }

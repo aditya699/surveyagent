@@ -4,3 +4,4 @@ export { default as ExportButton } from './ExportButton';
 export { default as VisibilityBadge } from './VisibilityBadge';
 export { default as RoleBadge } from './RoleBadge';
 export { default as EnhanceButton } from './EnhanceButton';
+export { default as PoweredBy } from './PoweredBy';

@@ -22,11 +22,13 @@ export const ENDPOINTS = {
   },
 
   INTERVIEW: {
-    INFO:    (token) => `${PREFIX}/interview/${token}/info`,
-    START:   (token) => `${PREFIX}/interview/start/${token}`,
-    MESSAGE: (sessionId) => `${PREFIX}/interview/${sessionId}/message`,
-    TEST:    (surveyId) => `${PREFIX}/interview/test/${surveyId}`,
+    INFO:       (token) => `${PREFIX}/interview/${token}/info`,
+    START:      (token) => `${PREFIX}/interview/start/${token}`,
+    MESSAGE:    (sessionId) => `${PREFIX}/interview/${sessionId}/message`,
+    TEST:       (surveyId) => `${PREFIX}/interview/test/${surveyId}`,
     TEST_QUESTION: `${PREFIX}/interview/test-question`,
+    TRANSCRIBE: (sessionId) => `${PREFIX}/interview/${sessionId}/transcribe`,
+    SYNTHESIZE: (sessionId) => `${PREFIX}/interview/${sessionId}/synthesize`,
   },
 
   SURVEYS: {

@@ -1,9 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback, useRef } from 'react';
 import {
   AssistantRuntimeProvider,
   useLocalRuntime,
 } from '@assistant-ui/react';
 import ChatThread from './ChatThread';
+import { useVoiceInterview } from '../../hooks';
 import { API_URL, ENDPOINTS } from '../../api/constants';
 
 // Strip partial/complete coverage and abuse tags during streaming so they never flash in the UI
@@ -12,8 +13,9 @@ const ABUSE_RE = /\[ABUSE:\s*true\s*\]?$/i;
 
 /**
  * Creates a ChatModelAdapter that bridges assistant-ui to our SSE backend.
+ * Accepts optional onToken/onStreamDone callbacks for voice mode TTS.
  */
-function createAdapter(sessionId, onComplete, onTerminated) {
+function createAdapter(sessionId, onComplete, onTerminated, onToken, onStreamDone) {
   return {
     async *run({ messages, abortSignal }) {
       // Extract the latest user message
@@ -66,6 +68,7 @@ function createAdapter(sessionId, onComplete, onTerminated) {
             const parsed = JSON.parse(payload);
             if (parsed.token) {
               fullText += parsed.token;
+              onToken?.(parsed.token);
               yield {
                 content: [{ type: 'text', text: fullText.replace(COVERAGE_RE, '').replace(ABUSE_RE, '') }],
               };
@@ -73,6 +76,7 @@ function createAdapter(sessionId, onComplete, onTerminated) {
             if (parsed.done) {
               fullText = parsed.clean_text || fullText;
               questionsCovered = parsed.questions_covered || [];
+              onStreamDone?.();
               // Yield clean text (tag stripped) as final content
               yield {
                 content: [{ type: 'text', text: fullText }],
@@ -107,10 +111,25 @@ function createAdapter(sessionId, onComplete, onTerminated) {
  * Chat wrapper component — mounts only during CHATTING phase.
  * Calls useLocalRuntime unconditionally (hooks rules).
  */
-export default function InterviewChat({ sessionId, welcomeMessage, onComplete, onTerminated }) {
+export default function InterviewChat({ sessionId, welcomeMessage, onComplete, onTerminated, voiceMode = false }) {
+  // Voice hook refs for token forwarding
+  const voiceRef = useRef(null);
+
+  const onToken = useCallback((token) => {
+    voiceRef.current?.feedToken(token);
+  }, []);
+
+  const onStreamDone = useCallback(() => {
+    voiceRef.current?.flushSpeech();
+  }, []);
+
   const adapter = useMemo(
-    () => createAdapter(sessionId, onComplete, onTerminated),
-    [sessionId, onComplete, onTerminated],
+    () => createAdapter(
+      sessionId, onComplete, onTerminated,
+      voiceMode ? onToken : undefined,
+      voiceMode ? onStreamDone : undefined,
+    ),
+    [sessionId, onComplete, onTerminated, voiceMode, onToken, onStreamDone],
   );
 
   const initialMessages = useMemo(
@@ -125,9 +144,32 @@ export default function InterviewChat({ sessionId, welcomeMessage, onComplete, o
 
   const runtime = useLocalRuntime(adapter, { initialMessages });
 
+  // Voice mode: send transcript programmatically via the runtime
+  const handleVoiceSend = useCallback((text) => {
+    runtime.thread.append({
+      role: 'user',
+      content: [{ type: 'text', text }],
+    });
+  }, [runtime]);
+
+  // Voice interview hook
+  const voice = useVoiceInterview({
+    sessionId,
+    onSendMessage: handleVoiceSend,
+  });
+
+  // Keep ref in sync so token callbacks can access voice methods
+  voiceRef.current = voice;
+
   return (
     <AssistantRuntimeProvider runtime={runtime}>
-      <ChatThread />
+      <ChatThread
+        voiceMode={voiceMode}
+        voiceState={voice.voiceState}
+        onVoiceStart={voice.startVoice}
+        onVoiceStop={voice.stopVoice}
+        onVoiceFinish={voice.finishRecording}
+      />
     </AssistantRuntimeProvider>
   );
 }

@@ -8,7 +8,9 @@ import {
 } from '@assistant-ui/react';
 import { motion } from 'framer-motion';
 import { SendHorizontal, Bot, ArrowDown, Mic } from 'lucide-react';
+import { PoweredBy } from '../shared';
 import { useSpeechToText } from '../../hooks';
+import VoiceChat from './VoiceChat';
 
 const messageVariants = {
   hidden: { opacity: 0, y: 8 },
@@ -101,7 +103,7 @@ function DictateButton() {
   );
 }
 
-export default function ChatThread() {
+export default function ChatThread({ voiceMode = false, voiceState, onVoiceStart, onVoiceStop, onVoiceFinish }) {
   return (
     <ThreadPrimitive.Root className="flex flex-col h-full relative">
       <ThreadPrimitive.Viewport className="flex-1 overflow-y-auto">
@@ -120,22 +122,36 @@ export default function ChatThread() {
         <ArrowDown className="w-4 h-4" />
       </ThreadPrimitive.ScrollToBottom>
 
-      {/* Composer */}
-      <div className="shrink-0 bg-background px-4 py-3">
-        <div className="max-w-2xl mx-auto">
-          <ComposerPrimitive.Root className="flex items-end gap-2 bg-white rounded-2xl border border-card-border shadow-lg px-3 py-2">
-            <ComposerPrimitive.Input
-              placeholder="Type your reply..."
-              className="flex-1 resize-none bg-transparent px-2 py-2 text-sm font-sans text-text-primary placeholder:text-text-muted/50 focus:outline-none"
-              autoFocus
-            />
-            <DictateButton />
-            <ComposerPrimitive.Send className="shrink-0 w-9 h-9 rounded-xl bg-accent hover:bg-accent-hover text-white flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed hover:shadow-md active:scale-95">
-              <SendHorizontal className="w-4 h-4" />
-            </ComposerPrimitive.Send>
-          </ComposerPrimitive.Root>
-        </div>
-      </div>
+      {/* Voice mode: show VoiceChat instead of text composer */}
+      {voiceMode ? (
+        <VoiceChat
+          voiceState={voiceState}
+          onStart={onVoiceStart}
+          onStop={onVoiceStop}
+          onFinishRecording={onVoiceFinish}
+        />
+      ) : (
+        <>
+          {/* Text composer */}
+          <div className="shrink-0 bg-background px-4 py-3">
+            <div className="max-w-2xl mx-auto">
+              <ComposerPrimitive.Root className="flex items-end gap-2 bg-white rounded-2xl border border-card-border shadow-lg px-3 py-2">
+                <ComposerPrimitive.Input
+                  placeholder="Type your reply..."
+                  className="flex-1 resize-none bg-transparent px-2 py-2 text-sm font-sans text-text-primary placeholder:text-text-muted/50 focus:outline-none"
+                  autoFocus
+                />
+                <DictateButton />
+                <ComposerPrimitive.Send className="shrink-0 w-9 h-9 rounded-xl bg-accent hover:bg-accent-hover text-white flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed hover:shadow-md active:scale-95">
+                  <SendHorizontal className="w-4 h-4" />
+                </ComposerPrimitive.Send>
+              </ComposerPrimitive.Root>
+            </div>
+          </div>
+
+          <PoweredBy className="shrink-0 py-1" />
+        </>
+      )}
     </ThreadPrimitive.Root>
   );
 }
