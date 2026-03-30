@@ -37,7 +37,11 @@
       "Bash(find /d/Desktop/2026/surveyagent/server -type f -name \"*.py\" -exec wc -l {})",
       "Bash(ls -lh /d/Desktop/2026/surveyagent/client/src/**/*.jsx /d/Desktop/2026/surveyagent/client/src/**/*.js)",
       "Bash(sort -k2)",
-      "Bash(find /d/Desktop/2026/surveyagent/client/src/components -type f -name *.jsx)"
+      "Bash(find /d/Desktop/2026/surveyagent/client/src/components -type f -name *.jsx)",
+      "Bash(git add:*)",
+      "Bash(ls D:Desktop2026surveyagent*.md D:Desktop2026surveyagentdeployment-guide.md)",
+      "Bash(dir /b \"D:\\\\Desktop\\\\2026\\\\surveyagent\\\\*.md\")",
+      "Bash(ls \"D:/Desktop/2026/surveyagent/\"*.md)"
     ]
   }
 }

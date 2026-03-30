@@ -278,6 +278,22 @@ az webapp config appsettings set \
     GEMINI_API_KEY="..."
 ```
 
+**Survey limits** (recommended for hosted/production deployments):
+
+```bash
+az webapp config appsettings set \
+  --name $APP_NAME \
+  --resource-group $RESOURCE_GROUP \
+  --settings \
+    MAX_SURVEYS_PER_USER="1" \
+    BYPASS_LIMIT_EMAILS="admin@example.com"
+```
+
+| Variable | Why |
+|---|---|
+| `MAX_SURVEYS_PER_USER` | Limits survey creation per user to prevent LLM API abuse. `0` = unlimited (default). Set to `1` for production. |
+| `BYPASS_LIMIT_EMAILS` | Comma-separated emails that skip the limit (e.g., platform admins). |
+
 ---
 
 ## Step 7: Configure Networking

@@ -89,6 +89,14 @@ Traditional survey tools give you structured data but miss the story behind the 
 - Fire-and-forget — never blocks the interview flow
 - Test runs are skipped
 
+### Per-User Survey Limits
+- Configurable per-user survey creation limit to prevent platform abuse
+- `MAX_SURVEYS_PER_USER` — set to 0 for unlimited (default for self-hosted), or any number for production
+- `BYPASS_LIMIT_EMAILS` — comma-separated list of emails exempt from limits (for platform admins)
+- All-time tracking — deleting a survey does not free up the quota
+- Dashboard shows an info banner and disables the Create Survey button when the limit is reached
+- Bypassed users see no restrictions
+
 ### Admin Dashboard
 - Create, edit, duplicate, and delete surveys
 - Owner/Admin can edit and publish any survey in their org

@@ -13,6 +13,7 @@ import {
   Eye,
   ExternalLink,
   BarChart3,
+  Info,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useClipboard } from '../hooks/useClipboard';
@@ -29,13 +30,21 @@ export default function Dashboard() {
   const [error, setError] = useState('');
   const [deleteId, setDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [surveyLimit, setSurveyLimit] = useState(0);
+  const [surveysCreated, setSurveysCreated] = useState(0);
+  const [limitBypassed, setLimitBypassed] = useState(false);
   const { copied: copySuccess, copy: copyToClipboard } = useClipboard();
+
+  const atLimit = surveyLimit > 0 && surveysCreated >= surveyLimit && !limitBypassed;
 
   useEffect(() => {
     const fetchSurveys = async () => {
       try {
         const res = await getSurveys();
         setSurveys(res.data?.surveys || []);
+        setSurveyLimit(res.data?.survey_limit ?? 0);
+        setSurveysCreated(res.data?.surveys_created ?? 0);
+        setLimitBypassed(res.data?.limit_bypassed ?? false);
       } catch (err) {
         setError(err.response?.data?.detail || 'Failed to load surveys');
       } finally {
@@ -102,14 +111,31 @@ export default function Dashboard() {
             </h2>
             <p className="text-text-muted font-sans mt-2">{user?.org_name}</p>
           </div>
-          <Link
-            to="/surveys/create"
-            className="btn-primary text-sm inline-flex items-center gap-2 shrink-0 self-start"
-          >
-            <PlusCircle className="w-4 h-4" />
-            Create Survey
-          </Link>
+          {atLimit ? (
+            <span className="btn-primary text-sm inline-flex items-center gap-2 shrink-0 self-start opacity-50 cursor-not-allowed">
+              <PlusCircle className="w-4 h-4" />
+              Create Survey
+            </span>
+          ) : (
+            <Link
+              to="/surveys/create"
+              className="btn-primary text-sm inline-flex items-center gap-2 shrink-0 self-start"
+            >
+              <PlusCircle className="w-4 h-4" />
+              Create Survey
+            </Link>
+          )}
         </motion.div>
+
+        {/* Survey limit banner */}
+        {atLimit && (
+          <div className="flex items-start gap-3 bg-accent/5 border border-accent/15 rounded-lg px-4 py-3 mb-6">
+            <Info className="w-4 h-4 text-accent mt-0.5 shrink-0" />
+            <p className="text-sm text-text-muted font-sans">
+              We currently allow one survey per account to keep the platform free for everyone.
+            </p>
+          </div>
+        )}
 
         {/* Error */}
         {error && (
@@ -137,13 +163,20 @@ export default function Dashboard() {
             <p className="text-sm text-text-muted font-sans mb-6">
               Create your first AI-powered survey to get started.
             </p>
-            <Link
-              to="/surveys/create"
-              className="btn-primary text-sm inline-flex items-center gap-2"
-            >
-              <PlusCircle className="w-4 h-4" />
-              Create Survey
-            </Link>
+            {atLimit ? (
+              <span className="btn-primary text-sm inline-flex items-center gap-2 opacity-50 cursor-not-allowed">
+                <PlusCircle className="w-4 h-4" />
+                Create Survey
+              </span>
+            ) : (
+              <Link
+                to="/surveys/create"
+                className="btn-primary text-sm inline-flex items-center gap-2"
+              >
+                <PlusCircle className="w-4 h-4" />
+                Create Survey
+              </Link>
+            )}
           </motion.div>
         )}
 

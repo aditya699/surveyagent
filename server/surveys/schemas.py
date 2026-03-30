@@ -130,6 +130,9 @@ class SurveyListResponse(BaseModel):
     message: str = Field(..., description="Response message")
     count: int = Field(..., description="Number of surveys returned")
     surveys: List[SurveyResponse] = Field(..., description="List of surveys")
+    survey_limit: int = Field(0, description="Max surveys per user (0 = unlimited)")
+    surveys_created: int = Field(0, description="Total surveys created by this user (all-time)")
+    limit_bypassed: bool = Field(False, description="True if user's email is in the bypass list")
 
 
 class SurveySingleResponse(BaseModel):

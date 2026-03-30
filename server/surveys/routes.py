@@ -19,6 +19,7 @@ from server.surveys.utils import (
     build_visibility_query,
 )
 from server.core.logging_config import get_logger
+from server.core.config import settings
 
 logger = get_logger(__name__)
 
@@ -45,6 +46,20 @@ async def create_survey(
 
         db = await get_db()
         surveys_collection = db["surveys"]
+
+        # Enforce all-time per-user survey limit
+        if settings.MAX_SURVEYS_PER_USER > 0:
+            bypass_emails = [e.strip().lower() for e in settings.BYPASS_LIMIT_EMAILS.split(",") if e.strip()]
+            user_email = current_user.get("email", "").lower()
+            if user_email not in bypass_emails:
+                admin = await db["admins"].find_one({"_id": ObjectId(user_id)}, {"surveys_created": 1})
+                counter = admin.get("surveys_created", 0)
+                existing = await surveys_collection.count_documents({"created_by": ObjectId(user_id)})
+                if max(counter, existing) >= settings.MAX_SURVEYS_PER_USER:
+                    raise HTTPException(
+                        status_code=403,
+                        detail="Survey limit reached. Each user can create one survey.",
+                    )
 
         # Convert team_ids to ObjectIds
         team_oids = []
@@ -90,6 +105,9 @@ async def create_survey(
 
         result = await surveys_collection.insert_one(doc)
         doc["_id"] = result.inserted_id
+
+        # Increment all-time survey creation counter
+        await db["admins"].update_one({"_id": ObjectId(user_id)}, {"$inc": {"surveys_created": 1}})
 
         logger.info(f"Survey created - id: {result.inserted_id}, visibility: {survey_data.visibility}")
 
@@ -143,12 +161,26 @@ async def get_surveys(
             doc["created_by_email"] = creator_email_map.get(doc["created_by"])
             surveys.append(survey_doc_to_response(doc))
 
+        # Fetch user's all-time survey creation count for limit info
+        admin_doc = await db["admins"].find_one({"_id": ObjectId(user_id)}, {"surveys_created": 1})
+        counter = admin_doc.get("surveys_created", 0) if admin_doc else 0
+        existing_count = await surveys_collection.count_documents({"created_by": ObjectId(user_id)})
+        surveys_created = max(counter, existing_count)
+
+        # Check if user is in bypass list
+        bypass_emails = [e.strip().lower() for e in settings.BYPASS_LIMIT_EMAILS.split(",") if e.strip()]
+        user_email = current_user.get("email", "").lower()
+        limit_bypassed = user_email in bypass_emails
+
         logger.info(f"Returned {len(surveys)} surveys for user_id: {user_id}")
 
         return SurveyListResponse(
             message="Surveys retrieved successfully",
             count=len(surveys),
             surveys=surveys,
+            survey_limit=settings.MAX_SURVEYS_PER_USER,
+            surveys_created=surveys_created,
+            limit_bypassed=limit_bypassed,
         )
 
     except HTTPException:

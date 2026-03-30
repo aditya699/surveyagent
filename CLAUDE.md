@@ -4,7 +4,7 @@
 
 SurveyAgent is an open-source AI survey platform that replaces static forms with dynamic conversations. It conducts interviews via text chat, voice, or video avatar. It's self-hostable, LLM-agnostic, and keeps survey data under the user's control.
 
-**Status:** Early development. Auth system, landing page, survey CRUD, AI question generation, AI field enhancement (with custom instructions), question test panel (per-question AI testing), multi-LLM provider support (OpenAI, Anthropic, Gemini), interviewer foundation, interviewer engine + routes, interview chat UI (text + speech-to-text dictation), voice interview mode (Whisper transcription + sentence-level TTS), analytics, data export, webhooks, multi-tenant org support (orgs, roles, teams, email OTP verification, invite system, survey visibility), email notifications on interview completion, custom analytics instructions, public feedback collection (with speech-to-text dictation), and Docker containerization are built. Video avatar is not yet implemented.
+**Status:** Early development. Auth system, landing page, survey CRUD, AI question generation, AI field enhancement (with custom instructions), question test panel (per-question AI testing), multi-LLM provider support (OpenAI, Anthropic, Gemini), interviewer foundation, interviewer engine + routes, interview chat UI (text + speech-to-text dictation), voice interview mode (Whisper transcription + sentence-level TTS), analytics, data export, webhooks, multi-tenant org support (orgs, roles, teams, email OTP verification, invite system, survey visibility), email notifications on interview completion, custom analytics instructions, public feedback collection (with speech-to-text dictation), Docker containerization, and per-user survey creation limits are built. Video avatar is not yet implemented.
 
 ## Tech Stack
 
@@ -396,6 +396,16 @@ Requires a `.env` file at the project root (copy `.env.example`).
 - Production SPA serving: root route serves `index.html`, custom 404 handler returns JSON for API routes and `index.html` for SPA client-side routes
 - `client/.env.production` with `VITE_API_URL=` (empty for same-origin deployment)
 
+### Per-User Survey Limits (complete)
+- Configurable per-user survey creation limit via `MAX_SURVEYS_PER_USER` env var (0 = unlimited, default for self-hosted/dev)
+- All-time counter (`surveys_created` field on admin doc) — incremented on create, never decremented on delete
+- Also checks actual survey count in DB as a floor (handles pre-existing users without the counter)
+- `BYPASS_LIMIT_EMAILS` env var: comma-separated emails that skip all limits (for platform admins in production)
+- Backend enforces limit in `create_survey` route with 403 response
+- `list_surveys` response includes `survey_limit`, `surveys_created`, and `limit_bypassed` fields
+- Frontend Dashboard shows info banner + disabled Create Survey button when at limit
+- Bypassed users see no banner and can create unlimited surveys
+
 ### Frontend Infrastructure (complete)
 - API layer: Axios client, endpoint constants, form helpers, interceptors, barrel exports
 - AI streaming via native `fetch()` (Axios doesn't support ReadableStream)
@@ -528,6 +538,14 @@ Requires a `.env` file at the project root (copy `.env.example`).
 - Both `build_interview_analysis_prompt()` and `build_survey_analysis_prompt()` in `server/analytics/prompts.py` append these instructions.
 - Instructions are prefixed with a note that they must still follow the JSON output format.
 
+### Per-User Survey Limits
+- `MAX_SURVEYS_PER_USER` env var (default 0 = unlimited). Set to `1` in production to restrict survey creation.
+- `BYPASS_LIMIT_EMAILS` env var: comma-separated emails that skip all limits (e.g., `meenakshi.bhtt@gmail.com`).
+- All-time counter: `surveys_created` field on admin doc, incremented via `$inc` after each `insert_one`. Never decremented on delete.
+- Limit check uses `max(counter, count_documents)` to handle pre-existing users who don't have the counter yet.
+- `SurveyListResponse` includes `survey_limit`, `surveys_created`, and `limit_bypassed` so the frontend can show/hide the limit banner.
+- Frontend Dashboard: info banner ("We currently allow one survey per account...") + disabled Create Survey button when `atLimit` is true. Bypassed users see no restrictions.
+
 ### Production SPA Serving
 - `server/main.py` uses `redirect_slashes=False` on FastAPI initialization.
 - Root route (`GET /`) explicitly serves `index.html` from the built frontend.
@@ -537,7 +555,7 @@ Requires a `.env` file at the project root (copy `.env.example`).
 ### MongoDB
 - Database name: `surveyagent` (configurable via `MONGO_DB_NAME`)
 - Collections: `admins` (user accounts), `surveys` (survey definitions), `interviews` (chat sessions), `error_logs` (error tracking), `orgs` (organizations), `teams` (teams/sub-teams), `invites` (pending invitations, TTL-indexed), `otp_codes` (email verification codes, TTL-indexed), `feedback` (public feedback submissions, independent of app logic)
-- Admin document fields: `name`, `email`, `password`, `org_name`, `org_id`, `role` (owner/admin/member), `email_verified`, `token_version`, `is_active`, `created_at`, `updated_at`, `last_login`
+- Admin document fields: `name`, `email`, `password`, `org_name`, `org_id`, `role` (owner/admin/member), `email_verified`, `token_version`, `is_active`, `surveys_created` (all-time counter, default 0), `created_at`, `updated_at`, `last_login`
 - Survey document fields: `title`, `description`, `goal`, `context`, `questions` (array of {text, ai_instructions}), `estimated_duration`, `welcome_message`, `personality_tone`, `webhook_url` (optional), `notify_on_completion` (bool), `analytics_instructions` (optional), `status`, `token`, `created_by`, `org_id`, `visibility` (private/team/org), `team_ids` (array of team ObjectIds), `created_at`, `updated_at`, `analysis` (cached aggregate AI analysis, optional)
 - Interview document fields: `survey_id`, `respondent` (embedded: name, age, gender, occupation, phone_number, email — all optional), `conversation` (list of {role, content, timestamp}), `status` (in_progress/completed/abandoned), `is_test_run`, `questions_covered` (list of ints), `started_at`, `completed_at`, `analysis` (cached AI analysis, optional)
 - Org document fields: `name`, `slug`, `owner_id`, `created_at`, `updated_at`

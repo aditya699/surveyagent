@@ -59,6 +59,8 @@ Self-hostable. Open-source. Your data stays with you.
 
 **Speech-to-Text Dictation** — In text mode, respondents can dictate replies using the browser's native Web Speech API. No backend needed — runs entirely client-side.
 
+**Per-User Survey Limits** — Configurable survey creation limits to prevent abuse. Set `MAX_SURVEYS_PER_USER=0` for unlimited (self-hosted default) or any number for production. Bypass specific emails with `BYPASS_LIMIT_EMAILS`. All-time tracking survives deletes.
+
 **Docker Deployment** — Single container serves both API and frontend. Multi-stage Dockerfile with Gunicorn + Uvicorn workers. Production-ready.
 
 ---
