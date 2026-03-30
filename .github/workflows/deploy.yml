@@ -1,0 +1,28 @@
+name: Build and Deploy to Azure
+
+on:
+  push:
+    branches: [main]
+
+env:
+  ACR_NAME: sunosekho
+  APP_NAME: getsurveyagent
+  RESOURCE_GROUP: AdityaGeneral
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to ACR
+        uses: azure/docker-login@v2
+        with:
+          login-server: ${{ env.ACR_NAME }}.azurecr.io
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build and push image
+        run: |
+          docker build -t ${{ env.ACR_NAME }}.azurecr.io/surveyagent:latest .
+          docker push ${{ env.ACR_NAME }}.azurecr.io/surveyagent:latest
