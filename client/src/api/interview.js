@@ -23,8 +23,10 @@ export function startTestInterview(surveyId) {
 
 /** Transcribe audio via Whisper (public, session-gated). */
 export async function transcribeAudio(sessionId, audioBlob) {
+  // Use correct extension based on the blob's MIME type
+  const ext = audioBlob.type?.includes('mp4') ? 'mp4' : 'webm';
   const form = new FormData();
-  form.append('audio', audioBlob, 'recording.webm');
+  form.append('audio', audioBlob, `recording.${ext}`);
   const res = await fetch(`${API_URL}${ENDPOINTS.INTERVIEW.TRANSCRIBE(sessionId)}`, {
     method: 'POST',
     body: form,

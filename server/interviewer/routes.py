@@ -378,9 +378,24 @@ async def transcribe_audio(
         client = await get_openai_client()
         audio_bytes = await audio.read()
 
+        # Map content type to a file extension Whisper accepts
+        ext_map = {
+            "audio/webm": "webm",
+            "audio/webm;codecs=opus": "webm",
+            "audio/mp4": "mp4",
+            "audio/mpeg": "mp3",
+            "audio/ogg": "ogg",
+            "audio/wav": "wav",
+            "audio/x-wav": "wav",
+            "audio/flac": "flac",
+        }
+        content_type = (audio.content_type or "audio/webm").split(";")[0].strip()
+        ext = ext_map.get(content_type, ext_map.get(audio.content_type or "", "webm"))
+        filename = f"audio.{ext}"
+
         transcript = await client.audio.transcriptions.create(
             model="whisper-1",
-            file=(audio.filename or "audio.webm", audio_bytes, audio.content_type or "audio/webm"),
+            file=(filename, audio_bytes),
         )
 
         return {"text": transcript.text}
