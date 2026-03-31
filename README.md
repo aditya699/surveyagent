@@ -13,9 +13,9 @@ Every respondent gets a one-on-one interview with an AI that listens, adapts, an
 [![Docker Ready](https://img.shields.io/badge/docker-ready-2496ED?logo=docker&logoColor=white)](Dockerfile)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/aditya699/surveyagent/pulls)
 
-### Try it live: [getsurveyagent.azurewebsites.net](https://getsurveyagent.azurewebsites.net)
+### Try it live: [getsurveyagent.com](https://getsurveyagent.com)
 
-We'd love your feedback! Create an account, build a survey, and let the AI interview you. Report bugs or share thoughts via [Issues](https://github.com/aditya699/surveyagent/issues) or the in-app [Feedback](https://getsurveyagent.azurewebsites.net/feedback) page.
+We'd love your feedback! Create an account, build a survey, and let the AI interview you. Report bugs or share thoughts via [Issues](https://github.com/aditya699/surveyagent/issues) or the in-app [Feedback](https://getsurveyagent.com/feedback) page.
 
 [Features](#features) · [Quick Start](#quick-start) · [Documentation](#documentation) · [Contributing](#contributing)
 
