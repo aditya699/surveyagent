@@ -41,7 +41,8 @@
       "Bash(git add:*)",
       "Bash(ls D:Desktop2026surveyagent*.md D:Desktop2026surveyagentdeployment-guide.md)",
       "Bash(dir /b \"D:\\\\Desktop\\\\2026\\\\surveyagent\\\\*.md\")",
-      "Bash(ls \"D:/Desktop/2026/surveyagent/\"*.md)"
+      "Bash(ls \"D:/Desktop/2026/surveyagent/\"*.md)",
+      "Bash(gh run:*)"
     ]
   }
 }

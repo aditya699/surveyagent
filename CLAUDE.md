@@ -4,7 +4,7 @@
 
 SurveyAgent is an open-source AI survey platform that replaces static forms with dynamic conversations. It conducts interviews via text chat, voice, or video avatar. It's self-hostable, LLM-agnostic, and keeps survey data under the user's control.
 
-**Status:** Early development. Auth system, landing page, survey CRUD, AI question generation, AI field enhancement (with custom instructions), question test panel (per-question AI testing), multi-LLM provider support (OpenAI, Anthropic, Gemini), interviewer foundation, interviewer engine + routes, interview chat UI (text + speech-to-text dictation), voice interview mode (Whisper transcription + sentence-level TTS), analytics, data export, webhooks, multi-tenant org support (orgs, roles, teams, email OTP verification, invite system, survey visibility), email notifications on interview completion, custom analytics instructions, public feedback collection (with speech-to-text dictation), Docker containerization, and per-user survey creation limits are built. Video avatar is not yet implemented.
+**Status:** Early development. Auth system, landing page, survey CRUD, AI question generation, AI field enhancement (with custom instructions), question test panel (per-question AI testing), multi-LLM provider support (OpenAI, Anthropic, Gemini), interviewer foundation, interviewer engine + routes, interview chat UI (text + speech-to-text dictation), voice interview mode (Whisper transcription + sentence-level TTS), analytics, data export, webhooks, multi-tenant org support (orgs, roles, teams, email OTP verification, invite system, survey visibility), email notifications on interview completion, custom analytics instructions, public feedback collection (with speech-to-text dictation), Docker containerization, per-user survey creation limits, and abandoned interview detection (auto-timeout with lazy evaluation) are built. Video avatar is not yet implemented.
 
 ## Tech Stack
 
@@ -406,6 +406,16 @@ Requires a `.env` file at the project root (copy `.env.example`).
 - Frontend Dashboard shows info banner + disabled Create Survey button when at limit
 - Bypassed users see no banner and can create unlimited surveys
 
+### Abandoned Interview Detection (complete)
+- Auto-detects stale "in_progress" interviews and marks them as "abandoned" after configurable inactivity timeout
+- `last_activity_at` timestamp tracked on every interview, updated on each message (piggybacks on existing DB write — zero extra calls)
+- Lazy evaluation: `mark_stale_interviews_abandoned()` runs a single `update_many` when analytics endpoints are hit (overview, survey detail, interview list)
+- Configurable via `INTERVIEW_ABANDON_TIMEOUT_MINUTES` env var (default 120 min / 2 hours, 0 = disabled)
+- Backward compatible: old interview documents without `last_activity_at` fall back to `started_at` for timeout calculation
+- `abandoned_reason` set to `"inactive_timeout"` (distinct from existing `"abuse_detected"`)
+- No background tasks, no new API endpoints, no frontend changes needed — `InterviewStatusBadge` already renders "Abandoned" status
+- Works with multiple Gunicorn workers and Docker single-container deployment
+
 ### Frontend Infrastructure (complete)
 - API layer: Axios client, endpoint constants, form helpers, interceptors, barrel exports
 - AI streaming via native `fetch()` (Axios doesn't support ReadableStream)
@@ -546,6 +556,15 @@ Requires a `.env` file at the project root (copy `.env.example`).
 - `SurveyListResponse` includes `survey_limit`, `surveys_created`, and `limit_bypassed` so the frontend can show/hide the limit banner.
 - Frontend Dashboard: info banner ("We currently allow one survey per account...") + disabled Create Survey button when `atLimit` is true. Bypassed users see no restrictions.
 
+### Abandoned Interview Detection
+- `INTERVIEW_ABANDON_TIMEOUT_MINUTES` env var (default 120 = 2 hours, 0 = disabled). Configurable per deployment.
+- `last_activity_at` field on interview documents, set to `now` on creation and updated via `$set` alongside the existing `$push` in `add_message()` — zero extra DB calls.
+- `mark_stale_interviews_abandoned()` in `server/interviewer/db.py`: single `update_many` query using `$or` clause — checks `last_activity_at` for new docs, falls back to `started_at` for old docs without the field.
+- Lazy evaluation: called at the top of `get_overview_stats()`, `get_survey_detail_stats()`, and `get_interview_list()` in `server/analytics/db.py`. Stale sessions are resolved transparently when any admin views analytics.
+- Scoped queries: survey-specific analytics functions pass `survey_id` to limit the `update_many` scan; overview endpoint scans all surveys.
+- `abandoned_reason` distinguishes timeout (`"inactive_timeout"`) from abuse (`"abuse_detected"`).
+- Test runs (`is_test_run=True`) are excluded from abandonment marking.
+
 ### Production SPA Serving
 - `server/main.py` uses `redirect_slashes=False` on FastAPI initialization.
 - Root route (`GET /`) explicitly serves `index.html` from the built frontend.
@@ -557,7 +576,7 @@ Requires a `.env` file at the project root (copy `.env.example`).
 - Collections: `admins` (user accounts), `surveys` (survey definitions), `interviews` (chat sessions), `error_logs` (error tracking), `orgs` (organizations), `teams` (teams/sub-teams), `invites` (pending invitations, TTL-indexed), `otp_codes` (email verification codes, TTL-indexed), `feedback` (public feedback submissions, independent of app logic)
 - Admin document fields: `name`, `email`, `password`, `org_name`, `org_id`, `role` (owner/admin/member), `email_verified`, `token_version`, `is_active`, `surveys_created` (all-time counter, default 0), `created_at`, `updated_at`, `last_login`
 - Survey document fields: `title`, `description`, `goal`, `context`, `questions` (array of {text, ai_instructions}), `estimated_duration`, `welcome_message`, `personality_tone`, `webhook_url` (optional), `notify_on_completion` (bool), `analytics_instructions` (optional), `status`, `token`, `created_by`, `org_id`, `visibility` (private/team/org), `team_ids` (array of team ObjectIds), `created_at`, `updated_at`, `analysis` (cached aggregate AI analysis, optional)
-- Interview document fields: `survey_id`, `respondent` (embedded: name, age, gender, occupation, phone_number, email — all optional), `conversation` (list of {role, content, timestamp}), `status` (in_progress/completed/abandoned), `is_test_run`, `questions_covered` (list of ints), `started_at`, `completed_at`, `analysis` (cached AI analysis, optional)
+- Interview document fields: `survey_id`, `respondent` (embedded: name, age, gender, occupation, phone_number, email — all optional), `conversation` (list of {role, content, timestamp}), `status` (in_progress/completed/abandoned), `is_test_run`, `questions_covered` (list of ints), `abandoned_reason` (optional, e.g. "abuse_detected", "inactive_timeout"), `started_at`, `completed_at`, `last_activity_at` (updated on every message, used for abandonment detection), `analysis` (cached AI analysis, optional)
 - Org document fields: `name`, `slug`, `owner_id`, `created_at`, `updated_at`
 - Team document fields: `name`, `org_id`, `parent_id` (null for top-level), `members` (array of {user_id, name, email}), `created_at`, `updated_at`
 - Invite document fields: `email`, `org_id`, `role`, `token`, `invited_by`, `expires_at`, `used`, `created_at`

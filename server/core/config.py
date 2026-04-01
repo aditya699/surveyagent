@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     ENABLE_DOCS: bool = True  # Set to False in production
     MAX_SURVEYS_PER_USER: int = 0  # 0 = unlimited (default for self-hosted/dev)
     BYPASS_LIMIT_EMAILS: str = ""  # comma-separated emails that skip survey limits
+    INTERVIEW_ABANDON_TIMEOUT_MINUTES: int = 120  # 2 hours; 0 = disabled
 
     model_config = SettingsConfigDict(
         env_file=Path(__file__).resolve().parent.parent.parent / ".env",

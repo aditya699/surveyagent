@@ -1,5 +1,5 @@
 # interviewer/db.py
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from bson import ObjectId
@@ -33,6 +33,7 @@ def _interview_doc_to_response(doc: dict) -> InterviewResponse:
         abandoned_reason=doc.get("abandoned_reason"),
         started_at=doc.get("started_at", datetime.utcnow()),
         completed_at=doc.get("completed_at"),
+        last_activity_at=doc.get("last_activity_at"),
     )
 
 
@@ -54,6 +55,7 @@ async def create_interview(
         "questions_covered": [],
         "started_at": now,
         "completed_at": None,
+        "last_activity_at": now,
     }
 
     result = await db[COLLECTION].insert_one(doc)
@@ -79,6 +81,7 @@ async def add_message(
 ) -> bool:
     """Append a message to the interview conversation. Returns True if successful."""
     db = await get_db()
+    now = datetime.utcnow()
     result = await db[COLLECTION].update_one(
         {"_id": ObjectId(interview_id)},
         {
@@ -86,9 +89,10 @@ async def add_message(
                 "conversation": {
                     "role": role,
                     "content": content,
-                    "timestamp": datetime.utcnow(),
+                    "timestamp": now,
                 }
-            }
+            },
+            "$set": {"last_activity_at": now},
         },
     )
     return result.modified_count > 0
@@ -126,3 +130,41 @@ async def update_questions_covered(
         {"$set": {"questions_covered": questions_covered}},
     )
     return result.modified_count > 0
+
+
+async def mark_stale_interviews_abandoned(
+    survey_id: Optional[str] = None,
+    timeout_minutes: int = 120,
+) -> int:
+    """Mark in_progress interviews as abandoned if inactive beyond timeout. Returns count marked."""
+    if timeout_minutes <= 0:
+        return 0
+
+    db = await get_db()
+    cutoff = datetime.utcnow() - timedelta(minutes=timeout_minutes)
+
+    query = {
+        "status": "in_progress",
+        "is_test_run": False,
+        "$or": [
+            {"last_activity_at": {"$lt": cutoff}},
+            # Backward compat: old docs without last_activity_at fall back to started_at
+            {"last_activity_at": {"$exists": False}, "started_at": {"$lt": cutoff}},
+        ],
+    }
+    if survey_id:
+        query["survey_id"] = ObjectId(survey_id)
+
+    result = await db[COLLECTION].update_many(
+        query,
+        {
+            "$set": {
+                "status": "abandoned",
+                "completed_at": datetime.utcnow(),
+                "abandoned_reason": "inactive_timeout",
+            }
+        },
+    )
+    if result.modified_count > 0:
+        logger.info(f"Marked {result.modified_count} stale interviews as abandoned (cutoff: {cutoff})")
+    return result.modified_count

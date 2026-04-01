@@ -1,6 +1,8 @@
 from bson import ObjectId
 from server.db.mongo import get_db
 from server.core.logging_config import get_logger
+from server.core.config import settings
+from server.interviewer.db import mark_stale_interviews_abandoned
 
 logger = get_logger(__name__)
 
@@ -12,6 +14,10 @@ async def get_overview_stats(current_user: dict) -> list[dict]:
     Excludes test runs.
     """
     from server.surveys.utils import build_visibility_query
+
+    await mark_stale_interviews_abandoned(
+        timeout_minutes=settings.INTERVIEW_ABANDON_TIMEOUT_MINUTES,
+    )
 
     db = await get_db()
 
@@ -107,6 +113,11 @@ async def get_survey_detail_stats(survey_id: str, questions: list) -> dict:
     Detailed stats for a single survey including question coverage frequencies.
     Excludes test runs.
     """
+    await mark_stale_interviews_abandoned(
+        survey_id=survey_id,
+        timeout_minutes=settings.INTERVIEW_ABANDON_TIMEOUT_MINUTES,
+    )
+
     db = await get_db()
     survey_oid = ObjectId(survey_id)
 
@@ -213,6 +224,11 @@ async def get_interview_list(survey_id: str, page: int = 1, page_size: int = 20)
     Paginated list of interviews for a survey. Excludes test runs.
     Returns dict with total count and interview list.
     """
+    await mark_stale_interviews_abandoned(
+        survey_id=survey_id,
+        timeout_minutes=settings.INTERVIEW_ABANDON_TIMEOUT_MINUTES,
+    )
+
     db = await get_db()
     survey_oid = ObjectId(survey_id)
     query = {"survey_id": survey_oid, "is_test_run": False}
