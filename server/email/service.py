@@ -12,7 +12,7 @@ from server.email.templates import (
 logger = get_logger(__name__)
 
 RESEND_API_URL = "https://api.resend.com/emails"
-FROM_ADDRESS = "SurveyAgent <noreply@getsurveyagent.com>"
+FROM_ADDRESS = "SurveyAgent <hello@getsurveyagent.com>"
 
 
 async def _send_email(to_email: str, subject: str, html: str) -> dict:
