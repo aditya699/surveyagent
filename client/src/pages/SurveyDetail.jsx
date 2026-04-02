@@ -217,38 +217,40 @@ export default function SurveyDetail() {
           )}
 
           {/* Actions */}
-          <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-card-border">
-            <Link
-              to={`/surveys/${survey.id}/edit`}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-sans font-medium bg-accent text-white hover:bg-accent-hover transition-colors"
-            >
-              <Pencil className="w-3.5 h-3.5" />
-              Edit Survey
-            </Link>
-            <Link
-              to={`/interview/test/${survey.id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-sans font-medium border border-card-border text-text-primary hover:bg-white transition-colors"
-            >
-              <MessageSquare className="w-3.5 h-3.5" />
-              Test Survey
-            </Link>
-            <Link
-              to={`/surveys/${survey.id}/analytics`}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-sans font-medium border border-card-border text-text-primary hover:bg-white transition-colors"
-            >
-              <BarChart3 className="w-3.5 h-3.5" />
-              Analytics
-            </Link>
-            <ExportButton
-              size="md"
-              options={[{ label: 'Export Survey (PDF)', onClick: () => exportSurveyDefinitionPDF(survey) }]}
-            />
+          <div className="pt-6 border-t border-card-border space-y-4">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <Link
+                to={`/surveys/${survey.id}/edit`}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-sans font-medium bg-accent text-white hover:bg-accent-hover transition-colors"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                Edit Survey
+              </Link>
+              <Link
+                to={`/interview/test/${survey.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-sans font-medium border border-card-border text-text-primary hover:bg-white transition-colors"
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                Test Survey
+              </Link>
+              <Link
+                to={`/surveys/${survey.id}/analytics`}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-sans font-medium border border-card-border text-text-primary hover:bg-white transition-colors"
+              >
+                <BarChart3 className="w-3.5 h-3.5" />
+                Analytics
+              </Link>
+              <ExportButton
+                options={[{ label: 'Export Survey (PDF)', onClick: () => exportSurveyDefinitionPDF(survey) }]}
+              />
+            </div>
             <Link
               to="/dashboard"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-sans font-medium border border-card-border text-text-primary hover:bg-white transition-colors"
+              className="inline-flex items-center gap-1.5 text-sm font-sans text-text-muted hover:text-text-primary transition-colors"
             >
+              <ArrowLeft className="w-3.5 h-3.5" />
               Back to Dashboard
             </Link>
           </div>
