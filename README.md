@@ -19,6 +19,18 @@
 
 ---
 
+<div align="center">
+
+### See it in action
+
+[![SurveyAgent Demo](https://img.youtube.com/vi/Z_Xl8a2la2E/maxresdefault.jpg)](https://www.youtube.com/watch?v=Z_Xl8a2la2E)
+
+*Click to watch the demo*
+
+</div>
+
+---
+
 > Google Forms gives you checkboxes. SurveyAgent gives you conversations.
 >
 > A static form asks "Rate your experience 1-5." SurveyAgent asks "What was your experience like?" — then follows up with "That's interesting, tell me more about the onboarding issues you mentioned." That's the difference between data and insight.
