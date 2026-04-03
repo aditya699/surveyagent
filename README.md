@@ -13,7 +13,9 @@
 [![Docker Ready](https://img.shields.io/badge/docker-ready-2496ED?logo=docker&logoColor=white)](Dockerfile)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/aditya699/surveyagent/pulls)
 
-[**Try it live**](https://getsurveyagent.com) · [Features](#-what-you-get) · [Quick Start](#-quick-start) · [Self-Host](#-self-host-in-2-minutes) · [Contributing](#-contributing)
+[![Try it live](https://img.shields.io/badge/Try_it_live-getsurveyagent.com-C4956A?style=for-the-badge&logo=googlechrome&logoColor=white)](https://getsurveyagent.com)
+
+[Features](#-what-you-get) · [Quick Start](#-quick-start) · [Self-Host](#-self-host-in-2-minutes) · [Contributing](#-contributing)
 
 </div>
 
