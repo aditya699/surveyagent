@@ -119,6 +119,7 @@ async def start_interview(
             survey_id=survey_id,
             respondent=respondent_dict,
             is_test_run=False,
+            language=body.language,
         )
 
         # Build and save welcome message
@@ -187,6 +188,12 @@ async def send_message(
         personality = survey.get("personality_tone", "friendly")
         num_questions = len(survey.get("questions", []))
 
+        # Get respondent's chosen language from the interview document
+        raw_interview = await db["interviews"].find_one(
+            {"_id": ObjectId(session_id)}, {"language": 1}
+        )
+        interview_language = (raw_interview or {}).get("language", "English")
+
         async def event_stream():
             clean_text = ""
             questions_covered = []
@@ -197,6 +204,7 @@ async def send_message(
                 conversation=conversation,
                 remaining_minutes=remaining,
                 personality_tone=personality,
+                language=interview_language,
             ):
                 yield chunk
 
@@ -525,6 +533,12 @@ async def get_realtime_token(session_id: str):
         personality = survey.get("personality_tone", "friendly")
         voice = PERSONALITY_VOICE_MAP.get(personality, "coral")
 
+        # Get respondent's chosen language from the interview document
+        raw_interview = await db["interviews"].find_one(
+            {"_id": ObjectId(session_id)}, {"language": 1}
+        )
+        interview_language = (raw_interview or {}).get("language", "English")
+
         # Build the system prompt with realtime-mode tool instructions
         instructions = build_interviewer_prompt(
             survey_title=survey.get("title", ""),
@@ -534,7 +548,7 @@ async def get_realtime_token(session_id: str):
             remaining_minutes=remaining,
             personality_tone=personality,
             realtime_mode=True,
-            language=survey.get("language", "English"),
+            language=interview_language,
         )
 
         # Build conversation history for context injection

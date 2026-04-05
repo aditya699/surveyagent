@@ -35,6 +35,7 @@ class Message(BaseModel):
 class StartInterviewRequest(BaseModel):
     """Request body for starting an interview session."""
     respondent: Optional[RespondentDetails] = None
+    language: str = Field("English", description="Respondent's preferred interview language")
 
 
 class SendMessageRequest(BaseModel):

@@ -46,11 +46,15 @@ Traditional survey tools give you structured data but miss the story behind the 
 - Context flows naturally: enhancing a description uses your title as context, enhancing a goal uses both title and description, and so on
 - **Custom instructions** — provide direction when enhancing (e.g., "Make it crisp", "Keep it formal", "More conversational") and the AI follows your guidance alongside its default behavior
 
-### Interviewer Personality & Language
+### Interviewer Personality
 - Choose a tone for your interviewer: professional, friendly, casual, or fun
-- **Multi-language support** — select the interview language (English, Spanish, French, German, Hindi, Portuguese, Mandarin Chinese, Japanese, Korean, Arabic, Italian, Dutch) and the AI conducts the entire interview in that language across all modes (Text, Voice, Live)
 - The personality shapes how the AI asks questions, responds to answers, and manages the conversation
 - Custom welcome messages let you set the first impression
+
+### Multi-Language Interviews
+- **Respondent chooses their language** — before starting an interview, each respondent picks their preferred language from 20+ options (English, Spanish, French, German, Hindi, Mandarin Chinese, Japanese, Korean, Arabic, and more)
+- The AI conducts the entire interview in that language across all three modes (Text, Voice, Live)
+- Same survey, different languages — a global team can create one survey and respondents worldwide take it in their own language
 
 ### Multi-LLM Provider Support
 - Choose between OpenAI, Anthropic (Claude), and Google Gemini as your AI backend

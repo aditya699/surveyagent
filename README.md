@@ -53,7 +53,7 @@ Open source. Self-hostable. Your data never leaves your infrastructure.
 
 ### Talk, not click
 
-Respondents have a real conversation instead of picking radio buttons. The AI knows when to probe deeper, when to move on, and when to wrap up. Set the personality — professional, friendly, casual, or fun. Choose the interview language — English, Spanish, French, Hindi, and 8 more.
+Respondents have a real conversation instead of picking radio buttons. The AI knows when to probe deeper, when to move on, and when to wrap up. Set the personality — professional, friendly, casual, or fun. Respondents choose their own language — English, Spanish, French, Hindi, and 16 more — so one survey works worldwide.
 
 ### Three ways to respond
 

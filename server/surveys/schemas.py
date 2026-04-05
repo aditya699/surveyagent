@@ -26,7 +26,7 @@ class SurveyCreate(BaseModel):
     estimated_duration: int = Field(5, description="Estimated interview duration in minutes", ge=1, le=60)
     welcome_message: Optional[str] = Field(None, description="Custom welcome message for respondents", max_length=1000)
     personality_tone: str = Field("friendly", description="Interviewer tone: professional, friendly, casual, or fun")
-    language: str = Field("English", description="Interview language (e.g. English, Spanish, French, Hindi)")
+
     webhook_url: Optional[str] = Field(None, description="Webhook URL to POST interview results on completion", max_length=2000)
     notify_on_completion: bool = Field(False, description="Email the survey creator when an interview is completed")
     llm_provider: Optional[str] = Field(None, description="LLM provider: openai, anthropic, or gemini")
@@ -52,7 +52,7 @@ class SurveyUpdate(BaseModel):
     estimated_duration: Optional[int] = Field(None, description="Estimated interview duration in minutes", ge=1, le=60)
     welcome_message: Optional[str] = Field(None, description="Custom welcome message for respondents", max_length=1000)
     personality_tone: Optional[str] = Field(None, description="Interviewer tone: professional, friendly, casual, or fun")
-    language: Optional[str] = Field(None, description="Interview language")
+
     webhook_url: Optional[str] = Field(None, description="Webhook URL to POST interview results on completion", max_length=2000)
     notify_on_completion: Optional[bool] = Field(None, description="Email the survey creator when an interview is completed")
     llm_provider: Optional[str] = Field(None, description="LLM provider: openai, anthropic, or gemini")
@@ -78,7 +78,7 @@ class SurveyInDB(BaseModel):
     estimated_duration: int = Field(5, description="Estimated interview duration in minutes")
     welcome_message: Optional[str] = Field(None, description="Custom welcome message for respondents")
     personality_tone: str = Field("friendly", description="Interviewer tone: professional, friendly, casual, or fun")
-    language: str = Field("English", description="Interview language")
+
     webhook_url: Optional[str] = Field(None, description="Webhook URL to POST interview results on completion")
     notify_on_completion: bool = Field(False, description="Email the survey creator when an interview is completed")
     llm_provider: Optional[str] = Field(None, description="LLM provider: openai, anthropic, or gemini")
@@ -107,7 +107,7 @@ class SurveyResponse(BaseModel):
     estimated_duration: int = Field(5, description="Estimated interview duration in minutes")
     welcome_message: Optional[str] = Field(None, description="Custom welcome message for respondents")
     personality_tone: str = Field("friendly", description="Interviewer tone: professional, friendly, casual, or fun")
-    language: str = Field("English", description="Interview language")
+
     webhook_url: Optional[str] = Field(None, description="Webhook URL to POST interview results on completion")
     notify_on_completion: bool = Field(False, description="Email the survey creator when an interview is completed")
     llm_provider: Optional[str] = Field(None, description="LLM provider: openai, anthropic, or gemini")
