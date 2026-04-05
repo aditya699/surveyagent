@@ -47,12 +47,21 @@ class TestQuestionRequest(BaseModel):
     question_text: str = Field(..., description="The question text to test", min_length=1, max_length=5000)
     ai_instructions: Optional[str] = Field(None, description="AI instructions for this question", max_length=2000)
     personality_tone: str = Field("friendly", description="Interviewer personality tone")
+    language: str = Field("English", description="Interview language")
     survey_title: Optional[str] = Field(None, max_length=500)
     survey_goal: Optional[str] = Field(None, max_length=2000)
     survey_context: Optional[str] = Field(None, max_length=5000)
     conversation: List[dict] = Field(default_factory=list, description="Chat history [{role, content}]")
     llm_provider: Optional[str] = None
     llm_model: Optional[str] = None
+
+
+class RealtimeTurnRequest(BaseModel):
+    """Request body for saving a single turn from a Realtime API session."""
+    role: str = Field(..., pattern=r"^(user|assistant)$", description="Turn role")
+    content: str = Field(..., min_length=1, max_length=10000, description="Transcript text")
+    questions_covered: Optional[List[int]] = Field(None, description="1-based indices from update_coverage tool call")
+    abuse_detected: bool = Field(False, description="True if report_abuse tool was called")
 
 
 class InterviewCreate(BaseModel):

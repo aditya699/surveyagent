@@ -53,13 +53,15 @@ Open source. Self-hostable. Your data never leaves your infrastructure.
 
 ### Talk, not click
 
-Respondents have a real conversation instead of picking radio buttons. The AI knows when to probe deeper, when to move on, and when to wrap up. Set the personality — professional, friendly, casual, or fun.
+Respondents have a real conversation instead of picking radio buttons. The AI knows when to probe deeper, when to move on, and when to wrap up. Set the personality — professional, friendly, casual, or fun. Choose the interview language — English, Spanish, French, Hindi, and 8 more.
 
 ### Three ways to respond
 
 **Text** — Chat naturally in the browser. Speech-to-text dictation built in.
 
 **Voice** — Speak to the AI. Whisper transcribes, the AI responds with sentence-level TTS streaming (speaks the first sentence while still thinking about the rest), then auto-listens for your reply.
+
+**Live** — Real-time full-duplex voice via OpenAI Realtime API over WebRTC. No turn-taking — talk naturally as if you were on a phone call. Sub-second latency, automatic turn detection, transcripts saved in real time.
 
 **Video avatar** — Coming soon. A face on the other side of the conversation.
 

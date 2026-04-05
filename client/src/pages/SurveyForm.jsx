@@ -29,6 +29,7 @@ export default function SurveyForm() {
     context, setContext,
     estimatedDuration, setEstimatedDuration,
     personalityTone, setPersonalityTone,
+    language, setLanguage,
     welcomeMessage, setWelcomeMessage,
     webhookUrl, setWebhookUrl,
     notifyOnCompletion, setNotifyOnCompletion,
@@ -227,6 +228,32 @@ export default function SurveyForm() {
                 <option value="friendly">Friendly</option>
                 <option value="casual">Casual</option>
                 <option value="fun">Fun</option>
+              </select>
+            </div>
+
+            {/* Interview Language */}
+            <div>
+              <label htmlFor="language" className="block text-sm font-sans text-text-muted mb-1.5">
+                Interview Language
+              </label>
+              <select
+                id="language"
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                className="w-full sm:w-48 bg-white border border-card-border rounded-lg px-4 py-3 text-sm font-sans text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-all"
+              >
+                <option value="English">English</option>
+                <option value="Spanish">Spanish</option>
+                <option value="French">French</option>
+                <option value="German">German</option>
+                <option value="Hindi">Hindi</option>
+                <option value="Portuguese">Portuguese</option>
+                <option value="Mandarin Chinese">Mandarin Chinese</option>
+                <option value="Japanese">Japanese</option>
+                <option value="Korean">Korean</option>
+                <option value="Arabic">Arabic</option>
+                <option value="Italian">Italian</option>
+                <option value="Dutch">Dutch</option>
               </select>
             </div>
 

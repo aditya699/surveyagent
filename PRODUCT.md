@@ -21,6 +21,17 @@ Traditional survey tools give you structured data but miss the story behind the 
 - The interviewer follows your questions but adapts the conversation in real time
 - It knows when to probe deeper, when to move on, and when to wrap up
 - Time-aware — respects your estimated duration and wraps up gracefully
+- **Three interview modes:** Text chat, Voice (Whisper + TTS), and Live (real-time full-duplex via OpenAI Realtime API over WebRTC)
+
+### Live Interview Mode
+- Real-time full-duplex voice conversations — no turn-taking, speak naturally as on a phone call
+- Powered by OpenAI Realtime API over WebRTC for sub-second latency
+- Backend mints ephemeral tokens — your API key never reaches the browser
+- Transcripts saved to MongoDB turn-by-turn in parallel with the live audio
+- Coverage tracking via tool/function calls (the AI never speaks metadata tags aloud)
+- Automatic turn detection via server-side Voice Activity Detection (VAD)
+- Mic mute/unmute and end session controls
+- Seamless fallback — switch between Text, Voice, and Live modes mid-session
 
 ### Smart Survey Creation
 - Define your survey with a title, description, goal, and context
@@ -35,8 +46,9 @@ Traditional survey tools give you structured data but miss the story behind the 
 - Context flows naturally: enhancing a description uses your title as context, enhancing a goal uses both title and description, and so on
 - **Custom instructions** — provide direction when enhancing (e.g., "Make it crisp", "Keep it formal", "More conversational") and the AI follows your guidance alongside its default behavior
 
-### Interviewer Personality
+### Interviewer Personality & Language
 - Choose a tone for your interviewer: professional, friendly, casual, or fun
+- **Multi-language support** — select the interview language (English, Spanish, French, German, Hindi, Portuguese, Mandarin Chinese, Japanese, Korean, Arabic, Italian, Dutch) and the AI conducts the entire interview in that language across all modes (Text, Voice, Live)
 - The personality shapes how the AI asks questions, responds to answers, and manages the conversation
 - Custom welcome messages let you set the first impression
 

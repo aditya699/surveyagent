@@ -31,6 +31,8 @@ export {
   streamInterviewMessage,
   transcribeAudio,
   synthesizeInterviewSpeech,
+  getRealtimeToken,
+  saveRealtimeTurn,
 } from './interview';
 export {
   getAnalyticsOverview,

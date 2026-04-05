@@ -4,7 +4,7 @@
 
 SurveyAgent is an open-source AI survey platform that replaces static forms with dynamic conversations. It conducts interviews via text chat, voice, or video avatar. It's self-hostable, LLM-agnostic, and keeps survey data under the user's control.
 
-**Status:** Early development. Auth system, landing page, survey CRUD, AI question generation, AI field enhancement (with custom instructions), question test panel (per-question AI testing), multi-LLM provider support (OpenAI, Anthropic, Gemini), interviewer foundation, interviewer engine + routes, interview chat UI (text + speech-to-text dictation), voice interview mode (Whisper transcription + sentence-level TTS), analytics, data export, webhooks, multi-tenant org support (orgs, roles, teams, email OTP verification, invite system, survey visibility), email notifications on interview completion, custom analytics instructions, public feedback collection (with speech-to-text dictation), Docker containerization, per-user survey creation limits, and abandoned interview detection (auto-timeout with lazy evaluation) are built. Video avatar is not yet implemented.
+**Status:** Early development. Auth system, landing page, survey CRUD, AI question generation, AI field enhancement (with custom instructions), question test panel (per-question AI testing), multi-LLM provider support (OpenAI, Anthropic, Gemini), interviewer foundation, interviewer engine + routes, interview chat UI (text + speech-to-text dictation), voice interview mode (Whisper transcription + sentence-level TTS), live interview mode (OpenAI Realtime API via WebRTC), analytics, data export, webhooks, multi-tenant org support (orgs, roles, teams, email OTP verification, invite system, survey visibility), email notifications on interview completion, custom analytics instructions, public feedback collection (with speech-to-text dictation), Docker containerization, per-user survey creation limits, and abandoned interview detection (auto-timeout with lazy evaluation) are built. Video avatar is not yet implemented.
 
 ## Tech Stack
 
@@ -120,7 +120,8 @@ surveyagent/
 │   │   │   ├── useSurveyAnalysis.js   # Survey aggregate analysis streaming state
 │   │   │   ├── useTts.js         # Text-to-speech playback via OpenAI TTS API
 │   │   │   ├── useSpeechToText.js # Browser Speech Recognition API wrapper for dictation
-│   │   │   └── useVoiceInterview.js # Voice interview loop state machine (record → transcribe → TTS)
+│   │   │   ├── useVoiceInterview.js # Voice interview loop state machine (record → transcribe → TTS)
+│   │   │   └── useRealtimeInterview.js # WebRTC peer connection lifecycle for live interview mode
 │   │   ├── components/
 │   │   │   ├── shared/
 │   │   │   │   ├── index.js           # Barrel export
@@ -150,6 +151,7 @@ surveyagent/
 │   │   │   │   ├── ChatThread.jsx      # Chat UI with assistant-ui primitives
 │   │   │   │   ├── InterviewChat.jsx   # Runtime adapter + AssistantRuntimeProvider
 │   │   │   │   ├── VoiceChat.jsx       # Voice mode UI (tap-to-talk mic button)
+│   │   │   │   ├── RealtimeChat.jsx   # Live mode UI (WebRTC, transcript, mic controls)
 │   │   │   │   ├── QuestionTestPanel.jsx # Slide-over panel for testing individual questions with AI
 │   │   │   │   ├── RespondentForm.jsx  # Optional respondent details form
 │   │   │   │   ├── CompletionScreen.jsx # Thank-you screen after interview
@@ -228,7 +230,7 @@ Requires a `.env` file at the project root (copy `.env.example`).
 
 ### Survey Management (complete)
 - Full CRUD: create, list, view, edit, delete surveys
-- Survey fields: title, description, goal, context, questions (array of QuestionItem: {text, ai_instructions}), estimated_duration (int, minutes, default 5), welcome_message (optional string), personality_tone (professional/friendly/casual/fun, default "friendly"), webhook_url (optional string, max 2000 chars), notify_on_completion (bool, default false), analytics_instructions (optional string, max 2000 chars). Response includes `created_by_name` and `created_by_email` for shared survey context.
+- Survey fields: title, description, goal, context, questions (array of QuestionItem: {text, ai_instructions}), estimated_duration (int, minutes, default 5), welcome_message (optional string), personality_tone (professional/friendly/casual/fun, default "friendly"), language (string, default "English"), webhook_url (optional string, max 2000 chars), notify_on_completion (bool, default false), analytics_instructions (optional string, max 2000 chars). Response includes `created_by_name` and `created_by_email` for shared survey context.
 - Draft → Published workflow with uuid4 token generation
 - Visibility-based access: admins see their own surveys + org/team-shared surveys
 - Owner/Admin can update and publish any survey in their org (not just their own)
@@ -416,6 +418,22 @@ Requires a `.env` file at the project root (copy `.env.example`).
 - No background tasks, no new API endpoints, no frontend changes needed — `InterviewStatusBadge` already renders "Abandoned" status
 - Works with multiple Gunicorn workers and Docker single-container deployment
 
+### Live Interview Mode (complete)
+- Real-time full-duplex voice via OpenAI Realtime API over WebRTC — no turn-taking
+- Backend mints ephemeral tokens via `POST /v1/realtime/sessions` — API key never reaches the browser
+- Two parallel connections: WebRTC to OpenAI (audio), HTTP POSTs to backend (turn persistence)
+- Transcripts saved turn-by-turn to MongoDB via `POST /{session_id}/realtime-turn`
+- Coverage tracking via Realtime API tool/function calls (`update_coverage`, `report_abuse`) instead of text tags
+- System prompt adapted with `realtime_mode=True` — replaces tag-based coverage/abuse sections with tool-based instructions
+- `PERSONALITY_VOICE_MAP` maps personality tones to OpenAI voices (professional→ash, friendly→coral, casual→sage, fun→shimmer)
+- Server-side VAD (Voice Activity Detection) for automatic turn detection
+- Conversation history injected into WebRTC session via data channel `conversation.item.create` events
+- Frontend hook `useRealtimeInterview` manages full WebRTC lifecycle: token fetch, peer connection, data channel events, turn saving, mute, cleanup
+- `RealtimeChat` component shows live transcript, connection status, mic mute/unmute, end session
+- Three-way mode toggle on interview page: Text / Voice / Live — seamless switching mid-session
+- Reuses existing `add_message()`, `process_turn_result()`, completion flow (webhooks, emails)
+- No changes to MongoDB schema — same interview document structure
+
 ### Frontend Infrastructure (complete)
 - API layer: Axios client, endpoint constants, form helpers, interceptors, barrel exports
 - AI streaming via native `fetch()` (Axios doesn't support ReadableStream)
@@ -502,10 +520,26 @@ Requires a `.env` file at the project root (copy `.env.example`).
 - **Sentence-level TTS:** `feedToken(token)` accumulates text, splits on sentence boundaries (`/([.!?])(\s+)/`), immediately starts fetching TTS audio for each sentence. `Audio.onended` chains sequential playback. `flushSpeech()` sends remaining buffer when SSE stream ends.
 - `createAdapter` in `InterviewChat.jsx` accepts optional `onToken` and `onStreamDone` callbacks — forwards SSE tokens to `feedToken/flushSpeech` in voice mode.
 - `VoiceChat` component (`client/src/components/interview/VoiceChat.jsx`) renders state-dependent mic button: idle (muted), listening (red filled + pulse rings, "tap to send"), processing (spinner, disabled), speaking (speaker icon, tap to interrupt).
-- Segmented pill toggle in chat header (`InterviewPage.jsx`): `[Text | Voice]` — clear labels with icons, active segment gets white bg + shadow.
+- Segmented pill toggle in chat header (`InterviewPage.jsx`): `[Text | Voice | Live]` — clear labels with icons, active segment gets white bg + shadow.
 - `handleVoiceSend` uses `runtime.thread.append()` to programmatically submit user messages from voice transcripts.
 - `stopRecording()` detaches `onstop` handler before stopping to prevent accidental transcription when force-stopping.
 - Audio recording uses `MediaRecorder` API; codec selection: `audio/webm;codecs=opus` > `audio/webm` > `audio/mp4` (Safari fallback).
+
+### Live Interview Mode (Realtime API via WebRTC)
+- Uses OpenAI Realtime API with ephemeral token approach — backend holds `OPENAI_API_KEY`, mints short-lived token via `POST https://api.openai.com/v1/realtime/sessions`.
+- Ephemeral token returned to frontend along with voice config and conversation history.
+- Frontend creates `RTCPeerConnection`, adds local mic track, creates data channel `"oai-events"`, performs SDP exchange with `https://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview`.
+- Conversation history from MongoDB injected into WebRTC session via `conversation.item.create` data channel events.
+- Coverage tracking uses **tool/function calls** instead of text tags. Two tools defined in session config: `update_coverage` (params: `questions_covered: [int]`) and `report_abuse` (no params). The system prompt's COVERAGE TRACKING and ABUSE DETECTION sections are swapped for tool-based instructions when `realtime_mode=True`.
+- `PERSONALITY_VOICE_MAP` in `server/interviewer/prompts.py` maps personality tones to OpenAI Realtime voices.
+- `SYSTEM_PROMPT` refactored into composable parts: `SYSTEM_PROMPT_BASE` + `COVERAGE_TRACKING_TEXT`/`COVERAGE_TRACKING_REALTIME` + `ABUSE_DETECTION_TEXT`/`ABUSE_DETECTION_REALTIME`. The old `SYSTEM_PROMPT` constant preserved for backward compatibility.
+- `process_stream_result()` refactored into `process_turn_result()` (returns dict) + SSE wrapper. The realtime-turn endpoint calls `process_turn_result()` directly.
+- Data channel events handled: `conversation.item.input_audio_transcription.completed` (user turn), `response.audio_transcript.done` (assistant turn), `response.function_call_arguments.done` (coverage/abuse tool calls).
+- Tool call results sent back via data channel (`conversation.item.create` with `function_call_output`) followed by `response.create` to continue the conversation.
+- `useRealtimeInterview` hook (`client/src/hooks/useRealtimeInterview.js`) manages full lifecycle: token fetch, peer connection, data channel events, turn saving via HTTP POST, mute toggle, cleanup on unmount.
+- `RealtimeChat` component (`client/src/components/interview/RealtimeChat.jsx`) renders transcript bubbles (same styling as ChatThread), connection status, mic controls, end session button.
+- Mode switching mid-session is allowed — WebRTC connection closes on unmount (hook cleanup), subsequent turns go through standard SSE path. Conversation history in MongoDB is continuous.
+- `InterviewPage.jsx` uses `interviewMode` state (`'text' | 'voice' | 'live'`) instead of `voiceMode` boolean.
 
 ### Question Test Panel
 - Completely stateless design — no interview session in MongoDB, no DB reads/writes
@@ -575,7 +609,7 @@ Requires a `.env` file at the project root (copy `.env.example`).
 - Database name: `surveyagent` (configurable via `MONGO_DB_NAME`)
 - Collections: `admins` (user accounts), `surveys` (survey definitions), `interviews` (chat sessions), `error_logs` (error tracking), `orgs` (organizations), `teams` (teams/sub-teams), `invites` (pending invitations, TTL-indexed), `otp_codes` (email verification codes, TTL-indexed), `feedback` (public feedback submissions, independent of app logic)
 - Admin document fields: `name`, `email`, `password`, `org_name`, `org_id`, `role` (owner/admin/member), `email_verified`, `token_version`, `is_active`, `surveys_created` (all-time counter, default 0), `created_at`, `updated_at`, `last_login`
-- Survey document fields: `title`, `description`, `goal`, `context`, `questions` (array of {text, ai_instructions}), `estimated_duration`, `welcome_message`, `personality_tone`, `webhook_url` (optional), `notify_on_completion` (bool), `analytics_instructions` (optional), `status`, `token`, `created_by`, `org_id`, `visibility` (private/team/org), `team_ids` (array of team ObjectIds), `created_at`, `updated_at`, `analysis` (cached aggregate AI analysis, optional)
+- Survey document fields: `title`, `description`, `goal`, `context`, `questions` (array of {text, ai_instructions}), `estimated_duration`, `welcome_message`, `personality_tone`, `language` (string, default "English"), `webhook_url` (optional), `notify_on_completion` (bool), `analytics_instructions` (optional), `status`, `token`, `created_by`, `org_id`, `visibility` (private/team/org), `team_ids` (array of team ObjectIds), `created_at`, `updated_at`, `analysis` (cached aggregate AI analysis, optional)
 - Interview document fields: `survey_id`, `respondent` (embedded: name, age, gender, occupation, phone_number, email — all optional), `conversation` (list of {role, content, timestamp}), `status` (in_progress/completed/abandoned), `is_test_run`, `questions_covered` (list of ints), `abandoned_reason` (optional, e.g. "abuse_detected", "inactive_timeout"), `started_at`, `completed_at`, `last_activity_at` (updated on every message, used for abandonment detection), `analysis` (cached AI analysis, optional)
 - Org document fields: `name`, `slug`, `owner_id`, `created_at`, `updated_at`
 - Team document fields: `name`, `org_id`, `parent_id` (null for top-level), `members` (array of {user_id, name, email}), `created_at`, `updated_at`
@@ -624,6 +658,8 @@ Requires a `.env` file at the project root (copy `.env.example`).
 | POST   | /test-question          | Bearer   | Stateless per-question test — streams AI response via SSE |
 | POST   | /{session_id}/transcribe | None    | Transcribe audio via Whisper (session-gated)              |
 | POST   | /{session_id}/synthesize | None    | Text-to-speech via OpenAI TTS (session-gated)             |
+| POST   | /{session_id}/realtime-token | None | Mint ephemeral OpenAI Realtime API token (session-gated)  |
+| POST   | /{session_id}/realtime-turn  | None | Save a conversation turn from WebRTC session (session-gated) |
 
 ### Analytics — `/api/v1/analytics`
 
