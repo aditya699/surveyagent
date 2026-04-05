@@ -12,7 +12,6 @@ export function useSurveyForm({ id, setQuestions }) {
   const [context, setContext] = useState('');
   const [estimatedDuration, setEstimatedDuration] = useState(5);
   const [personalityTone, setPersonalityTone] = useState('friendly');
-  const [language, setLanguage] = useState('English');
   const [welcomeMessage, setWelcomeMessage] = useState('');
   const [webhookUrl, setWebhookUrl] = useState('');
   const [notifyOnCompletion, setNotifyOnCompletion] = useState(false);
@@ -52,7 +51,6 @@ export function useSurveyForm({ id, setQuestions }) {
         setQuestions(normalized.length > 0 ? normalized : [{ text: '', aiInstructions: '' }]);
         setEstimatedDuration(s.estimated_duration ?? 5);
         setPersonalityTone(s.personality_tone ?? 'friendly');
-        setLanguage(s.language ?? 'English');
         setWelcomeMessage(s.welcome_message ?? '');
         setWebhookUrl(s.webhook_url ?? '');
         setNotifyOnCompletion(s.notify_on_completion ?? false);
@@ -88,7 +86,6 @@ export function useSurveyForm({ id, setQuestions }) {
         })),
       estimated_duration: estimatedDuration,
       personality_tone: personalityTone,
-      language,
       welcome_message: welcomeMessage.trim() || null,
       webhook_url: webhookUrl.trim() || null,
       notify_on_completion: notifyOnCompletion,
@@ -98,7 +95,7 @@ export function useSurveyForm({ id, setQuestions }) {
       visibility,
       team_ids: visibility === 'team' ? teamIds : [],
     }),
-    [title, description, goal, context, estimatedDuration, personalityTone, language, welcomeMessage, webhookUrl, notifyOnCompletion, llmProvider, llmModel, analyticsInstructions, visibility, teamIds],
+    [title, description, goal, context, estimatedDuration, personalityTone, welcomeMessage, webhookUrl, notifyOnCompletion, llmProvider, llmModel, analyticsInstructions, visibility, teamIds],
   );
 
   const handleSave = useCallback(
@@ -175,7 +172,6 @@ export function useSurveyForm({ id, setQuestions }) {
     context, setContext,
     estimatedDuration, setEstimatedDuration,
     personalityTone, setPersonalityTone,
-    language, setLanguage,
     welcomeMessage, setWelcomeMessage,
     webhookUrl, setWebhookUrl,
     notifyOnCompletion, setNotifyOnCompletion,

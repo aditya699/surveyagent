@@ -12,8 +12,8 @@ export function getInterviewInfo(token) {
 }
 
 /** Start a new interview session for a published survey (public). */
-export function startInterview(token, respondent = null) {
-  return api.post(ENDPOINTS.INTERVIEW.START(token), { respondent });
+export function startInterview(token, respondent = null, language = 'English') {
+  return api.post(ENDPOINTS.INTERVIEW.START(token), { respondent, language });
 }
 
 /** Start an admin test interview session (requires Bearer auth). */

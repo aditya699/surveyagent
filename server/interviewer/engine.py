@@ -110,6 +110,7 @@ async def run_interview_turn(
     conversation: list[dict],
     remaining_minutes: int,
     personality_tone: str = "friendly",
+    language: str = "English",
 ) -> AsyncGenerator[str, None]:
     """
     Stream one interviewer turn via SSE.
@@ -131,7 +132,7 @@ async def run_interview_turn(
         questions=survey.get("questions", []),
         remaining_minutes=remaining_minutes,
         personality_tone=personality_tone,
-        language=survey.get("language", "English"),
+        language=language,
     )
 
     # If time is up, add urgency instruction

@@ -111,10 +111,10 @@ export default function InterviewPage() {
   }, [isTestMode, token]);
 
   // --- Start interview (respondent mode) ---
-  const handleStart = async (respondent) => {
+  const handleStart = async (respondent, language = 'English') => {
     setStarting(true);
     try {
-      const res = await startInterview(token, respondent);
+      const res = await startInterview(token, respondent, language);
       const d = res.data;
       setSurveyInfo((prev) => ({ ...prev, title: d.survey_title }));
       setSessionId(d.session_id);
