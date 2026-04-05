@@ -52,6 +52,32 @@ export async function synthesizeInterviewSpeech(sessionId, text, voice = 'coral'
   return res;
 }
 
+/** Request an ephemeral Realtime API token for a WebRTC session (public, session-gated). */
+export async function getRealtimeToken(sessionId) {
+  const res = await fetch(`${API_URL}${ENDPOINTS.INTERVIEW.REALTIME_TOKEN(sessionId)}`, {
+    method: 'POST',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Failed to get realtime token' }));
+    throw new Error(err.detail || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+/** Save a single conversation turn from a Realtime API session (public, session-gated). */
+export async function saveRealtimeTurn(sessionId, { role, content, questions_covered, abuse_detected }) {
+  const res = await fetch(`${API_URL}${ENDPOINTS.INTERVIEW.REALTIME_TURN(sessionId)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ role, content, questions_covered, abuse_detected }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Failed to save turn' }));
+    throw new Error(err.detail || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
 /**
  * Stream an interview message via Server-Sent Events.
  *

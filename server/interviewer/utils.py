@@ -44,17 +44,19 @@ def calc_remaining_minutes(started_at: datetime, estimated_duration: int) -> int
     return max(0, int(estimated_duration - elapsed))
 
 
-async def process_stream_result(
+async def process_turn_result(
     session_id: str,
     clean_text: str,
     questions_covered: list[int],
     abuse_detected: bool,
     num_questions: int,
     remaining: int,
-) -> Optional[str]:
+) -> Optional[dict]:
     """
-    Post-stream processing: save assistant message, update coverage,
-    handle abuse/completion. Returns an optional final SSE event string.
+    Core post-turn processing: save assistant message, update coverage,
+    handle abuse/completion. Returns a dict or None.
+
+    Used by both the SSE streaming route and the realtime-turn REST endpoint.
     """
     if clean_text:
         await add_message(session_id, "assistant", clean_text)
@@ -69,7 +71,7 @@ async def process_stream_result(
             {"$set": {"abandoned_reason": "abuse_detected"}},
         )
         logger.info(f"Interview terminated for abuse - session: {session_id}")
-        return 'data: {"type": "terminated", "reason": "abuse"}\n\n'
+        return {"type": "terminated", "reason": "abuse"}
 
     should_complete = (
         (num_questions > 0 and len(questions_covered) >= num_questions)
@@ -79,9 +81,30 @@ async def process_stream_result(
         await update_status(session_id, "completed")
         asyncio.create_task(fire_webhook(session_id))
         asyncio.create_task(fire_completion_emails(session_id))
-        return 'data: {"type": "complete"}\n\n'
+        return {"type": "complete"}
 
     return None
+
+
+async def process_stream_result(
+    session_id: str,
+    clean_text: str,
+    questions_covered: list[int],
+    abuse_detected: bool,
+    num_questions: int,
+    remaining: int,
+) -> Optional[str]:
+    """
+    Post-stream processing wrapper that returns an SSE event string.
+    Delegates to process_turn_result() for the core logic.
+    """
+    result = await process_turn_result(
+        session_id, clean_text, questions_covered,
+        abuse_detected, num_questions, remaining,
+    )
+    if result is None:
+        return None
+    return f"data: {json.dumps(result)}\n\n"
 
 
 async def fire_webhook(session_id: str) -> None:

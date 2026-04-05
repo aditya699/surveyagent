@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useSearchParams, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Clock, MessageSquare, Timer, Mic, Keyboard } from 'lucide-react';
+import { Clock, MessageSquare, Timer, Mic, Keyboard, Radio } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { getInterviewInfo, startInterview, startTestInterview, publishSurvey } from '../api';
 import InterviewChat from '../components/interview/InterviewChat';
+import RealtimeChat from '../components/interview/RealtimeChat';
 import RespondentForm from '../components/interview/RespondentForm';
 import CompletionScreen from '../components/interview/CompletionScreen';
 import TerminationScreen from '../components/interview/TerminationScreen';
@@ -31,8 +32,8 @@ export default function InterviewPage() {
   const [elapsed, setElapsed] = useState(0);
   const [duration, setDuration] = useState(null);
 
-  // Voice mode
-  const [voiceMode, setVoiceMode] = useState(false);
+  // Interview mode: 'text' | 'voice' | 'live'
+  const [interviewMode, setInterviewMode] = useState('text');
 
   const onComplete = useCallback(() => {
     if (startTimeRef.current) {
@@ -242,32 +243,27 @@ export default function InterviewPage() {
             <Timer className="w-3.5 h-3.5" />
             {formatTimer(elapsed)}
           </span>
-          {/* Voice / Text mode toggle — segmented pill */}
+          {/* Mode toggle — segmented pill: Text / Voice / Live */}
           <div className="flex items-center bg-background rounded-full p-0.5 border border-card-border/60">
-            <button
-              type="button"
-              onClick={() => setVoiceMode(false)}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-sans font-medium transition-all duration-200 ${
-                !voiceMode
-                  ? 'bg-white text-text-primary shadow-sm'
-                  : 'text-text-muted hover:text-text-primary'
-              }`}
-            >
-              <Keyboard className="w-3 h-3" />
-              Text
-            </button>
-            <button
-              type="button"
-              onClick={() => setVoiceMode(true)}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-sans font-medium transition-all duration-200 ${
-                voiceMode
-                  ? 'bg-white text-text-primary shadow-sm'
-                  : 'text-text-muted hover:text-text-primary'
-              }`}
-            >
-              <Mic className="w-3 h-3" />
-              Voice
-            </button>
+            {[
+              { key: 'text', icon: Keyboard, label: 'Text' },
+              { key: 'voice', icon: Mic, label: 'Voice' },
+              { key: 'live', icon: Radio, label: 'Live' },
+            ].map(({ key, icon: Icon, label }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setInterviewMode(key)}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-sans font-medium transition-all duration-200 ${
+                  interviewMode === key
+                    ? 'bg-white text-text-primary shadow-sm'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+              >
+                <Icon className="w-3 h-3" />
+                {label}
+              </button>
+            ))}
           </div>
           {isTestMode && (
             <span className="text-[10px] font-sans font-medium bg-accent/10 text-accent px-2 py-0.5 rounded-full">
@@ -278,13 +274,22 @@ export default function InterviewPage() {
 
         {/* Chat area fills remaining space */}
         <div className="flex-1 min-h-0">
-          <InterviewChat
-            sessionId={sessionId}
-            welcomeMessage={welcomeMessage}
-            onComplete={onComplete}
-            onTerminated={onTerminated}
-            voiceMode={voiceMode}
-          />
+          {interviewMode === 'live' ? (
+            <RealtimeChat
+              sessionId={sessionId}
+              welcomeMessage={welcomeMessage}
+              onComplete={onComplete}
+              onTerminated={onTerminated}
+            />
+          ) : (
+            <InterviewChat
+              sessionId={sessionId}
+              welcomeMessage={welcomeMessage}
+              onComplete={onComplete}
+              onTerminated={onTerminated}
+              voiceMode={interviewMode === 'voice'}
+            />
+          )}
         </div>
       </div>
     );

@@ -55,6 +55,14 @@ class TestQuestionRequest(BaseModel):
     llm_model: Optional[str] = None
 
 
+class RealtimeTurnRequest(BaseModel):
+    """Request body for saving a single turn from a Realtime API session."""
+    role: str = Field(..., pattern=r"^(user|assistant)$", description="Turn role")
+    content: str = Field(..., min_length=1, max_length=10000, description="Transcript text")
+    questions_covered: Optional[List[int]] = Field(None, description="1-based indices from update_coverage tool call")
+    abuse_detected: bool = Field(False, description="True if report_abuse tool was called")
+
+
 class InterviewCreate(BaseModel):
     """
     Deep Technical Context:

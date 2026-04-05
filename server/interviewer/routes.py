@@ -4,9 +4,12 @@ All interview endpoints are mounted at /api/v1/interview.
 """
 
 import json
+import httpx
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
 from fastapi.responses import StreamingResponse
+
+from server.core.config import settings
 
 from server.auth.utils import get_current_user
 from server.core.logging_config import get_logger
@@ -16,6 +19,7 @@ from server.interviewer.db import (
     add_message,
     create_interview,
     get_interview,
+    update_questions_covered,
 )
 from server.interviewer.engine import run_interview_turn, run_question_test_turn
 from server.interviewer.schemas import (
@@ -23,8 +27,10 @@ from server.interviewer.schemas import (
     StartInterviewRequest,
     SendMessageRequest,
     TestQuestionRequest,
+    RealtimeTurnRequest,
 )
-from server.interviewer.utils import build_welcome, calc_remaining_minutes, process_stream_result, sanitize_user_input
+from server.interviewer.prompts import PERSONALITY_VOICE_MAP, build_interviewer_prompt
+from server.interviewer.utils import build_welcome, calc_remaining_minutes, process_stream_result, process_turn_result, sanitize_user_input
 from server.ai.schemas import SynthesizeSpeechRequest
 
 logger = get_logger(__name__)
@@ -461,3 +467,179 @@ async def synthesize_interview_speech(
             additional_info={"session_id": session_id},
         )
         raise HTTPException(status_code=500, detail="Failed to synthesize speech")
+
+
+# ---------------------------------------------------------------------------
+# POST /{session_id}/realtime-token — Public, session-gated
+# ---------------------------------------------------------------------------
+
+REALTIME_TOOLS = [
+    {
+        "type": "function",
+        "name": "update_coverage",
+        "description": "Call this after each response to report which survey questions have been sufficiently covered so far.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "questions_covered": {
+                    "type": "array",
+                    "items": {"type": "integer"},
+                    "description": "1-based indices of all survey questions sufficiently answered so far",
+                }
+            },
+            "required": ["questions_covered"],
+        },
+    },
+    {
+        "type": "function",
+        "name": "report_abuse",
+        "description": "Call this if the respondent is persistently abusive after being warned once.",
+        "parameters": {
+            "type": "object",
+            "properties": {},
+        },
+    },
+]
+
+
+@router.post("/{session_id}/realtime-token")
+async def get_realtime_token(session_id: str):
+    """
+    Mint an ephemeral OpenAI Realtime API token for a WebRTC session.
+    Public endpoint, validated by active session_id.
+    Returns the client_secret, voice, and conversation history.
+    """
+    try:
+        interview = await _get_active_interview(session_id)
+
+        db = await get_db()
+        survey = await db["surveys"].find_one({"_id": ObjectId(interview.survey_id)})
+        if not survey:
+            raise HTTPException(status_code=404, detail="Associated survey not found")
+
+        remaining = calc_remaining_minutes(
+            interview.started_at,
+            survey.get("estimated_duration", 5),
+        )
+        personality = survey.get("personality_tone", "friendly")
+        voice = PERSONALITY_VOICE_MAP.get(personality, "coral")
+
+        # Build the system prompt with realtime-mode tool instructions
+        instructions = build_interviewer_prompt(
+            survey_title=survey.get("title", ""),
+            survey_goal=survey.get("goal", ""),
+            survey_context=survey.get("context", ""),
+            questions=survey.get("questions", []),
+            remaining_minutes=remaining,
+            personality_tone=personality,
+            realtime_mode=True,
+        )
+
+        # Build conversation history for context injection
+        conversation_history = [
+            {"role": msg.role, "content": msg.content}
+            for msg in interview.conversation
+        ]
+
+        # Request ephemeral key from OpenAI Realtime sessions endpoint
+        session_config = {
+            "model": "gpt-4o-realtime-preview",
+            "voice": voice,
+            "instructions": instructions,
+            "tools": REALTIME_TOOLS,
+            "input_audio_transcription": {"model": "whisper-1"},
+            "turn_detection": {"type": "server_vad"},
+        }
+
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.post(
+                "https://api.openai.com/v1/realtime/sessions",
+                headers={
+                    "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json=session_config,
+            )
+            if resp.status_code != 200:
+                logger.error(f"OpenAI Realtime sessions error: {resp.status_code} {resp.text}")
+                raise HTTPException(status_code=502, detail="Failed to create realtime session")
+
+            data = resp.json()
+
+        return {
+            "client_secret": data["client_secret"]["value"],
+            "voice": voice,
+            "conversation_history": conversation_history,
+            "expires_at": data["client_secret"].get("expires_at"),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Realtime token error - session: {session_id}: {e}", exc_info=True)
+        await log_error(
+            e, "interviewer/routes.py::get_realtime_token",
+            additional_info={"session_id": session_id},
+        )
+        raise HTTPException(status_code=500, detail="Failed to create realtime token")
+
+
+# ---------------------------------------------------------------------------
+# POST /{session_id}/realtime-turn — Public, session-gated
+# ---------------------------------------------------------------------------
+
+@router.post("/{session_id}/realtime-turn")
+async def save_realtime_turn(session_id: str, body: RealtimeTurnRequest):
+    """
+    Save a single conversation turn from a Realtime API WebRTC session.
+    Handles coverage updates, completion detection, and abuse handling.
+    """
+    try:
+        interview = await _get_active_interview(session_id)
+
+        # Sanitize user content
+        content = sanitize_user_input(body.content) if body.role == "user" else body.content
+
+        # Save the message
+        await add_message(session_id, body.role, content)
+
+        # For assistant turns, handle coverage and completion
+        result = None
+        if body.role == "assistant":
+            questions_covered = body.questions_covered or []
+
+            db = await get_db()
+            survey = await db["surveys"].find_one({"_id": ObjectId(interview.survey_id)})
+            num_questions = len(survey.get("questions", [])) if survey else 0
+            remaining = calc_remaining_minutes(
+                interview.started_at,
+                survey.get("estimated_duration", 5) if survey else 5,
+            )
+
+            # process_turn_result handles coverage update, completion,
+            # abuse, webhooks, and emails. Pass clean_text="" since the
+            # message was already saved above.
+            result = await process_turn_result(
+                session_id=session_id,
+                clean_text="",
+                questions_covered=questions_covered,
+                abuse_detected=body.abuse_detected,
+                num_questions=num_questions,
+                remaining=remaining,
+            )
+
+        return {
+            "status": "saved",
+            "completed": result is not None and result.get("type") == "complete",
+            "terminated": result is not None and result.get("type") == "terminated",
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Realtime turn error - session: {session_id}: {e}", exc_info=True)
+        await log_error(
+            e, "interviewer/routes.py::save_realtime_turn",
+            additional_info={"session_id": session_id},
+        )
+        raise HTTPException(status_code=500, detail="Failed to save realtime turn")

@@ -29,6 +29,8 @@ export const ENDPOINTS = {
     TEST_QUESTION: `${PREFIX}/interview/test-question`,
     TRANSCRIBE: (sessionId) => `${PREFIX}/interview/${sessionId}/transcribe`,
     SYNTHESIZE: (sessionId) => `${PREFIX}/interview/${sessionId}/synthesize`,
+    REALTIME_TOKEN: (sessionId) => `${PREFIX}/interview/${sessionId}/realtime-token`,
+    REALTIME_TURN:  (sessionId) => `${PREFIX}/interview/${sessionId}/realtime-turn`,
   },
 
   SURVEYS: {

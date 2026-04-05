@@ -61,6 +61,8 @@ Respondents have a real conversation instead of picking radio buttons. The AI kn
 
 **Voice** — Speak to the AI. Whisper transcribes, the AI responds with sentence-level TTS streaming (speaks the first sentence while still thinking about the rest), then auto-listens for your reply.
 
+**Live** — Real-time full-duplex voice via OpenAI Realtime API over WebRTC. No turn-taking — talk naturally as if you were on a phone call. Sub-second latency, automatic turn detection, transcripts saved in real time.
+
 **Video avatar** — Coming soon. A face on the other side of the conversation.
 
 ### Smart survey builder
