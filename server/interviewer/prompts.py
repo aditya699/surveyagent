@@ -24,7 +24,7 @@ Your conversational style is {personality_tone} — {personality_description}.
 Adapt your language, greetings, and transitions to match this tone throughout the interview.
 
 LANGUAGE:
-Always respond in the same language as the survey content below. If the survey title, goal, and questions are in English, you MUST respond in English. Never switch languages unless the respondent explicitly speaks another language first.
+Always respond in {language}. All your questions, follow-ups, and conversation must be in {language}. Do not switch languages unless the respondent explicitly speaks a different language first.
 
 RULES:
 1. Ask ONE question at a time. Wait for the respondent's answer before proceeding.
@@ -93,6 +93,9 @@ PERSONALITY:
 Your conversational style is {personality_tone} — {personality_description}.
 Adapt your language and transitions to match this tone.
 
+LANGUAGE:
+Always respond in {language}. Do not switch languages unless the respondent explicitly speaks a different language first.
+
 RULES:
 1. Focus ONLY on the single question provided below. Do not ask unrelated questions.
 2. If the respondent's answer is vague, too short, or off-topic, ask a brief follow-up to get a better response. Limit follow-ups to 2 before accepting the answer.
@@ -121,6 +124,7 @@ def build_question_test_prompt(
     survey_title: str | None = None,
     survey_goal: str | None = None,
     survey_context: str | None = None,
+    language: str = "English",
 ) -> str:
     """Build a focused system prompt for testing a single question."""
     personality_description = PERSONALITY_DESCRIPTIONS.get(
@@ -129,6 +133,7 @@ def build_question_test_prompt(
     parts = [QUESTION_TEST_PROMPT.format(
         personality_tone=personality_tone,
         personality_description=personality_description,
+        language=language,
     )]
 
     # Survey context (optional)
@@ -159,6 +164,7 @@ def build_interviewer_prompt(
     remaining_minutes: int,
     personality_tone: str = "friendly",
     realtime_mode: bool = False,
+    language: str = "English",
 ) -> str:
     """Build the full system prompt for the interviewer LLM.
 
@@ -172,6 +178,7 @@ def build_interviewer_prompt(
         remaining_minutes=remaining_minutes,
         personality_tone=personality_tone,
         personality_description=personality_description,
+        language=language,
     )
 
     if realtime_mode:

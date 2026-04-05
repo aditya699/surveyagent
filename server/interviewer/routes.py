@@ -344,6 +344,7 @@ async def test_question(
                 survey_context=body.survey_context,
                 llm_provider=body.llm_provider,
                 llm_model=body.llm_model,
+                language=body.language,
             ):
                 yield chunk
 
@@ -533,6 +534,7 @@ async def get_realtime_token(session_id: str):
             remaining_minutes=remaining,
             personality_tone=personality,
             realtime_mode=True,
+            language=survey.get("language", "English"),
         )
 
         # Build conversation history for context injection

@@ -47,6 +47,7 @@ class TestQuestionRequest(BaseModel):
     question_text: str = Field(..., description="The question text to test", min_length=1, max_length=5000)
     ai_instructions: Optional[str] = Field(None, description="AI instructions for this question", max_length=2000)
     personality_tone: str = Field("friendly", description="Interviewer personality tone")
+    language: str = Field("English", description="Interview language")
     survey_title: Optional[str] = Field(None, max_length=500)
     survey_goal: Optional[str] = Field(None, max_length=2000)
     survey_context: Optional[str] = Field(None, max_length=5000)
