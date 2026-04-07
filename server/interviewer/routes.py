@@ -29,7 +29,7 @@ from server.interviewer.schemas import (
     TestQuestionRequest,
     RealtimeTurnRequest,
 )
-from server.interviewer.prompts import PERSONALITY_VOICE_MAP, build_interviewer_prompt
+from server.interviewer.prompts import PERSONALITY_VOICE_MAP, build_interviewer_prompt, build_realtime_interviewer_prompt
 from server.interviewer.utils import build_welcome, calc_remaining_minutes, process_stream_result, process_turn_result, sanitize_user_input
 from server.ai.schemas import SynthesizeSpeechRequest
 
@@ -539,15 +539,14 @@ async def get_realtime_token(session_id: str):
         )
         interview_language = (raw_interview or {}).get("language", "English")
 
-        # Build the system prompt with realtime-mode tool instructions
-        instructions = build_interviewer_prompt(
+        # Build the system prompt optimised for realtime speech-to-speech
+        instructions = build_realtime_interviewer_prompt(
             survey_title=survey.get("title", ""),
             survey_goal=survey.get("goal", ""),
             survey_context=survey.get("context", ""),
             questions=survey.get("questions", []),
             remaining_minutes=remaining,
             personality_tone=personality,
-            realtime_mode=True,
             language=interview_language,
         )
 
@@ -559,7 +558,7 @@ async def get_realtime_token(session_id: str):
 
         # Request ephemeral key from OpenAI Realtime sessions endpoint
         session_config = {
-            "model": "gpt-4o-realtime-preview",
+            "model": "gpt-realtime",
             "voice": voice,
             "instructions": instructions,
             "tools": REALTIME_TOOLS,
