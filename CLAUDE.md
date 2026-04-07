@@ -421,11 +421,13 @@ Requires a `.env` file at the project root (copy `.env.example`).
 
 ### Live Interview Mode (complete)
 - Real-time full-duplex voice via OpenAI Realtime API over WebRTC — no turn-taking
+- Uses `gpt-realtime` (GA) model — upgraded from `gpt-4o-realtime-preview` for better instruction following
+- **Separate realtime prompt:** `SYSTEM_PROMPT_REALTIME` + `build_realtime_interviewer_prompt()` in `server/interviewer/prompts.py` — optimised for speech-to-speech models following OpenAI's realtime prompting guide (bullets over paragraphs, sample phrases, concise sections, variety rule)
 - Backend mints ephemeral tokens via `POST /v1/realtime/sessions` — API key never reaches the browser
 - Two parallel connections: WebRTC to OpenAI (audio), HTTP POSTs to backend (turn persistence)
 - Transcripts saved turn-by-turn to MongoDB via `POST /{session_id}/realtime-turn`
 - Coverage tracking via Realtime API tool/function calls (`update_coverage`, `report_abuse`) instead of text tags
-- System prompt adapted with `realtime_mode=True` — replaces tag-based coverage/abuse sections with tool-based instructions
+- Tool usage instructions embedded in the realtime prompt's Tools section (not in coverage/abuse text blocks)
 - `PERSONALITY_VOICE_MAP` maps personality tones to OpenAI voices (professional→ash, friendly→coral, casual→sage, fun→shimmer)
 - Server-side VAD (Voice Activity Detection) for automatic turn detection
 - Conversation history injected into WebRTC session via data channel `conversation.item.create` events
@@ -528,12 +530,15 @@ Requires a `.env` file at the project root (copy `.env.example`).
 
 ### Live Interview Mode (Realtime API via WebRTC)
 - Uses OpenAI Realtime API with ephemeral token approach — backend holds `OPENAI_API_KEY`, mints short-lived token via `POST https://api.openai.com/v1/realtime/sessions`.
+- Model: `gpt-realtime` (GA) — upgraded from `gpt-4o-realtime-preview` for stronger instruction following, better voice quality, and more reliable tool calling.
 - Ephemeral token returned to frontend along with voice config and conversation history.
-- Frontend creates `RTCPeerConnection`, adds local mic track, creates data channel `"oai-events"`, performs SDP exchange with `https://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview`.
+- Frontend creates `RTCPeerConnection`, adds local mic track, creates data channel `"oai-events"`, performs SDP exchange with `https://api.openai.com/v1/realtime?model=gpt-realtime`.
+- **Separate realtime prompt**: `SYSTEM_PROMPT_REALTIME` in `server/interviewer/prompts.py` is a speech-optimised prompt following OpenAI's realtime prompting guide. Built by `build_realtime_interviewer_prompt()`. Key differences from text prompt: bullet-based rules, sample phrases for variety, concise sections, tool usage instructions inline.
+- Text/voice modes continue using `SYSTEM_PROMPT_BASE` + `build_interviewer_prompt()` — completely separate prompt path.
 - Conversation history from MongoDB injected into WebRTC session via `conversation.item.create` data channel events.
-- Coverage tracking uses **tool/function calls** instead of text tags. Two tools defined in session config: `update_coverage` (params: `questions_covered: [int]`) and `report_abuse` (no params). The system prompt's COVERAGE TRACKING and ABUSE DETECTION sections are swapped for tool-based instructions when `realtime_mode=True`.
+- Coverage tracking uses **tool/function calls** instead of text tags. Two tools defined in session config: `update_coverage` (params: `questions_covered: [int]`) and `report_abuse` (no params). Tool usage rules are in the realtime prompt's Tools section.
 - `PERSONALITY_VOICE_MAP` in `server/interviewer/prompts.py` maps personality tones to OpenAI Realtime voices.
-- `SYSTEM_PROMPT` refactored into composable parts: `SYSTEM_PROMPT_BASE` + `COVERAGE_TRACKING_TEXT`/`COVERAGE_TRACKING_REALTIME` + `ABUSE_DETECTION_TEXT`/`ABUSE_DETECTION_REALTIME`. The old `SYSTEM_PROMPT` constant preserved for backward compatibility.
+- `SYSTEM_PROMPT` (text mode) refactored into composable parts: `SYSTEM_PROMPT_BASE` + `COVERAGE_TRACKING_TEXT`/`COVERAGE_TRACKING_REALTIME` + `ABUSE_DETECTION_TEXT`/`ABUSE_DETECTION_REALTIME`. The old `SYSTEM_PROMPT` constant preserved for backward compatibility.
 - `process_stream_result()` refactored into `process_turn_result()` (returns dict) + SSE wrapper. The realtime-turn endpoint calls `process_turn_result()` directly.
 - Data channel events handled: `conversation.item.input_audio_transcription.completed` (user turn), `response.audio_transcript.done` (assistant turn), `response.function_call_arguments.done` (coverage/abuse tool calls).
 - Tool call results sent back via data channel (`conversation.item.create` with `function_call_output`) followed by `response.create` to continue the conversation.
@@ -541,6 +546,15 @@ Requires a `.env` file at the project root (copy `.env.example`).
 - `RealtimeChat` component (`client/src/components/interview/RealtimeChat.jsx`) renders transcript bubbles (same styling as ChatThread), connection status, mic controls, end session button.
 - Mode switching mid-session is allowed — WebRTC connection closes on unmount (hook cleanup), subsequent turns go through standard SSE path. Conversation history in MongoDB is continuous.
 - `InterviewPage.jsx` uses `interviewMode` state (`'text' | 'voice' | 'live'`) instead of `voiceMode` boolean.
+
+#### Realtime Prompting Findings
+Key learnings from building the voice interviewer on OpenAI's Realtime API:
+- **`gpt-realtime` (GA) vs `gpt-4o-realtime-preview`:** The preview model ignores per-question instructions and tool-call directives. The GA model follows them reliably. Always use `gpt-realtime`.
+- **Separate prompt structure for realtime:** Bullets over paragraphs, concise sections with clear headers, sample phrases for variety. Long prose prompts that work with text models (GPT-4o/5) fall flat in speech-to-speech.
+- **Sample phrases prevent robotic repetition:** Without a variety rule + sample phrases, the model reuses the same transitions every turn.
+- **Explicit session-end in tool instructions:** The model says "Thanks for your time!" but won't call `update_coverage` with all questions marked unless explicitly told to. Prompt must say: "when wrapping up, call update_coverage with ALL indices so the session ends automatically."
+- **Tool descriptions in both places:** Describe tool usage rules in a dedicated Tools section of the prompt AND in the function schema. Redundancy helps realtime models.
+- **Two prompt paths:** `SYSTEM_PROMPT_BASE` + `build_interviewer_prompt()` for text/voice. `SYSTEM_PROMPT_REALTIME` + `build_realtime_interviewer_prompt()` for live mode.
 
 ### Question Test Panel
 - Completely stateless design — no interview session in MongoDB, no DB reads/writes

@@ -238,7 +238,7 @@ export function useRealtimeInterview({ sessionId, onComplete, onTerminated }) {
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
-      const sdpResponse = await fetch(`${REALTIME_URL}?model=gpt-4o-realtime-preview`, {
+      const sdpResponse = await fetch(`${REALTIME_URL}?model=gpt-realtime`, {
         method: 'POST',
         body: offer.sdp,
         headers: {
