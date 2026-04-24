@@ -18,7 +18,7 @@ import {
 import { useAuth } from '../hooks/useAuth';
 import { useClipboard } from '../hooks/useClipboard';
 import { getSurveys, deleteSurvey } from '../api';
-import { formatDate } from '../utils/formatters';
+import { formatDate, getInitials } from '../utils/formatters';
 import StatusBadge from '../components/shared/StatusBadge';
 import VisibilityBadge from '../components/shared/VisibilityBadge';
 
@@ -94,11 +94,10 @@ export default function Dashboard() {
             <LogOut className="w-4 h-4" />
             <span className="hidden sm:inline">Logout</span>
           </button>
-          {/* Profile avatar */}
           <div className="flex items-center gap-2 pl-2 border-l border-card-border">
             <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center shrink-0">
               <span className="text-white text-xs font-sans font-semibold">
-                {user?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?'}
+                {getInitials(user?.name)}
               </span>
             </div>
             <span className="text-sm text-text-primary font-sans font-medium hidden sm:block">{user?.name}</span>
@@ -107,7 +106,7 @@ export default function Dashboard() {
       </header>
 
       {/* Main content */}
-      <main className="container-max px-4 sm:px-6 lg:px-8 py-10">
+      <main className="container-max section-padding">
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -116,7 +115,7 @@ export default function Dashboard() {
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-accent flex items-center justify-center shrink-0">
               <span className="text-white text-base font-sans font-semibold">
-                {user?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?'}
+                {getInitials(user?.name)}
               </span>
             </div>
             <div>
