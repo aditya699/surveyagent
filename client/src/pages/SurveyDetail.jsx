@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useClipboard } from '../hooks/useClipboard';
+import { useChatbotPage } from '../hooks/useChatbotPage';
 import { getSurvey } from '../api';
 import { formatDate } from '../utils/formatters';
 import { exportSurveyDefinitionPDF } from '../utils/pdf';
@@ -44,6 +45,11 @@ export default function SurveyDetail() {
     };
     fetchSurvey();
   }, [id]);
+
+  const detailSummary = survey
+    ? `User is viewing survey "${survey.title}" (${survey.status}). ${survey.questions?.length ?? 0} questions. Goal: ${survey.goal || 'not set'}. Description: ${survey.description || 'not set'}.`
+    : '';
+  useChatbotPage(detailSummary);
 
   if (loading) {
     return (

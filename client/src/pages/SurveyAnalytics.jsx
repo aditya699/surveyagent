@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useSurveyAnalysis } from '../hooks/useSurveyAnalysis';
+import { useChatbotPage } from '../hooks/useChatbotPage';
 import { getSurveyAnalytics, getSurveyInterviews, exportSurveyInterviews } from '../api';
 import { formatDuration, formatDateWithTime } from '../utils/formatters';
 import { exportInterviewsList } from '../utils/export';
@@ -54,6 +55,14 @@ export default function SurveyAnalytics() {
   const [interviewsLoading, setInterviewsLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
+
+  const completionRate = stats && stats.total_interviews > 0
+    ? Math.round((stats.completed / stats.total_interviews) * 100)
+    : 0;
+  const analyticsSummary = !loading && title
+    ? `User is viewing survey analytics for "${title}". ${stats?.total_interviews ?? 0} total interviews, ${stats?.completed ?? 0} completed (${completionRate}% completion rate)${stats?.avg_score ? `, average score ${stats.avg_score.toFixed(1)}/10` : ''}.`
+    : '';
+  useChatbotPage(analyticsSummary);
 
   const {
     analysis,

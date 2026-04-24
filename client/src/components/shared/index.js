@@ -5,3 +5,5 @@ export { default as VisibilityBadge } from './VisibilityBadge';
 export { default as RoleBadge } from './RoleBadge';
 export { default as EnhanceButton } from './EnhanceButton';
 export { default as PoweredBy } from './PoweredBy';
+export { default as FloatingChatbot } from './FloatingChatbot';
+export { default as ChatMarkdown } from './ChatMarkdown';
