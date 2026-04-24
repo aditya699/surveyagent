@@ -76,6 +76,14 @@ export const ENDPOINTS = {
     SUBMIT: `${PREFIX}/feedback`,
   },
 
+  ADMIN: {
+    USAGE:       `${PREFIX}/admin/usage`,
+    FEEDBACK:    `${PREFIX}/admin/feedback`,
+    ERRORS:      `${PREFIX}/admin/errors`,
+    USERS:       `${PREFIX}/admin/users`,
+    USER_DETAIL: (id) => `${PREFIX}/admin/users/${id}`,
+  },
+
   TEAMS: {
     LIST:           `${PREFIX}/teams`,
     CREATE:         `${PREFIX}/teams`,

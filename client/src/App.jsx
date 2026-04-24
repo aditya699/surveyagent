@@ -15,7 +15,11 @@ import AnalyticsOverview from './pages/AnalyticsOverview';
 import SurveyAnalytics from './pages/SurveyAnalytics';
 import InterviewDetail from './pages/InterviewDetail';
 import Feedback from './pages/Feedback';
+import AdminDashboard from './pages/AdminDashboard';
+import AdminUsers from './pages/AdminUsers';
+import AdminUserDetail from './pages/AdminUserDetail';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import PlatformAdminRoute from './components/auth/PlatformAdminRoute';
 
 export default function App() {
   return (
@@ -39,6 +43,11 @@ export default function App() {
         <Route path="/analytics" element={<AnalyticsOverview />} />
         <Route path="/surveys/:id/analytics" element={<SurveyAnalytics />} />
         <Route path="/analytics/interviews/:interviewId" element={<InterviewDetail />} />
+      </Route>
+      <Route element={<PlatformAdminRoute />}>
+        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/admin/users" element={<AdminUsers />} />
+        <Route path="/admin/users/:userId" element={<AdminUserDetail />} />
       </Route>
     </Routes>
   );

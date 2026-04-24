@@ -61,3 +61,10 @@ export {
   removeTeamMember,
 } from './teams';
 export { submitFeedback } from './feedback';
+export {
+  getAdminUsage,
+  getAdminFeedback,
+  getAdminErrors,
+  getAdminUsers,
+  getAdminUserDetail,
+} from './admin';

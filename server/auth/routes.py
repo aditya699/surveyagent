@@ -623,4 +623,6 @@ async def update_admin_profile(
 @router.get("/me")
 async def get_current_admin_info(current_user: dict = Depends(get_current_user)):
     """Get current admin information."""
-    return {"message": "Admin information retrieved successfully", "user": current_user}
+    from server.core.config import settings
+    user = {**current_user, "is_platform_admin": settings.is_platform_admin(current_user.get("email"))}
+    return {"message": "Admin information retrieved successfully", "user": user}
