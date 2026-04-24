@@ -87,6 +87,9 @@ app.include_router(teams_router, prefix="/api/v1/teams", tags=["Teams"])
 from server.feedback.routes import router as feedback_router
 app.include_router(feedback_router, prefix="/api/v1/feedback", tags=["Feedback"])
 
+from server.admin.routes import router as admin_router
+app.include_router(admin_router, prefix="/api/v1/admin", tags=["Admin"])
+
 
 @app.get("/health")
 async def health():

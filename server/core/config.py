@@ -29,6 +29,15 @@ class Settings(BaseSettings):
     MAX_SURVEYS_PER_USER: int = 0  # 0 = unlimited (default for self-hosted/dev)
     BYPASS_LIMIT_EMAILS: str = ""  # comma-separated emails that skip survey limits
     INTERVIEW_ABANDON_TIMEOUT_MINUTES: int = 120  # 2 hours; 0 = disabled
+    PLATFORM_ADMIN_EMAILS: str = ""  # comma-separated emails with access to /admin usage dashboard (set via .env)
+
+    def platform_admin_emails(self) -> set[str]:
+        return {e.strip().lower() for e in self.PLATFORM_ADMIN_EMAILS.split(",") if e.strip()}
+
+    def is_platform_admin(self, email: str | None) -> bool:
+        if not email:
+            return False
+        return email.strip().lower() in self.platform_admin_emails()
 
     model_config = SettingsConfigDict(
         env_file=Path(__file__).resolve().parent.parent.parent / ".env",
