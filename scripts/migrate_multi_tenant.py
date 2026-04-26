@@ -129,6 +129,10 @@ async def migrate():
     await db["surveys"].create_index("team_ids")
     print("  surveys indexes created")
 
+    # Chatbot rate limits
+    await db["chatbot_rate_limits"].create_index("user_id", unique=True)
+    print("  chatbot_rate_limits.user_id (unique)")
+
     print("\nMigration complete!")
 
     client.close()

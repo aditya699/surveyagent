@@ -1,14 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
 
 const RATE_LIMIT = 20;
-const WARNING_AT = 3;          // show warning when this many messages remain
-const WINDOW_MS = 60 * 60 * 1000;   // 1 hour
-const BLOCK_MS  = 2 * 60 * 60 * 1000; // 2 hours (fallback if backend omits retry_after)
-const STORAGE_KEY = 'sa_chat_rate';
+const WARNING_AT = 3;                          // show warning when this many messages remain
+const WINDOW_MS  = 60 * 60 * 1000;            // 1 hour
+const BLOCK_MS   = 2 * 60 * 60 * 1000;        // 2 hours (fallback if backend omits retry_after)
 
-function loadData() {
+function storageKey(userId) {
+  // Key per-user so different accounts on the same browser don't share state
+  return userId ? `sa_chat_rate_${userId}` : null;
+}
+
+function loadData(userId) {
+  const key = storageKey(userId);
+  if (!key) return { windowStart: Date.now(), count: 0, blockedUntil: null };
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(key);
     if (!raw) return { windowStart: Date.now(), count: 0, blockedUntil: null };
     return JSON.parse(raw);
   } catch {
@@ -16,8 +22,10 @@ function loadData() {
   }
 }
 
-function persist(data) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
+function persist(data, userId) {
+  const key = storageKey(userId);
+  if (!key) return;
+  try { localStorage.setItem(key, JSON.stringify(data)); } catch {}
 }
 
 function formatCountdown(ms) {
@@ -31,12 +39,17 @@ function formatCountdown(ms) {
   return `${sec}s`;
 }
 
-export function useChatRateLimit() {
-  const [data, setData] = useState(loadData);
+export function useChatRateLimit(userId) {
+  const [data, setData] = useState(() => loadData(userId));
   const [countdown, setCountdown] = useState('');
 
+  // Re-load when userId resolves (e.g. on login)
+  useEffect(() => {
+    setData(loadData(userId));
+  }, [userId]);
+
   // Persist whenever data changes
-  useEffect(() => { persist(data); }, [data]);
+  useEffect(() => { persist(data, userId); }, [data, userId]);
 
   // Countdown tick — also auto-unblocks when timer hits zero
   useEffect(() => {
@@ -59,13 +72,13 @@ export function useChatRateLimit() {
 
   // Derive values (re-check window expiry on each render)
   const now = Date.now();
-  const windowExpired = now - data.windowStart > WINDOW_MS;
+  const windowExpired  = now - data.windowStart > WINDOW_MS;
   const effectiveCount = windowExpired ? 0 : data.count;
-  const remaining = Math.max(0, RATE_LIMIT - effectiveCount);
-  const isBlocked = !!(data.blockedUntil && data.blockedUntil > now);
-  const showWarning = !isBlocked && remaining <= WARNING_AT && remaining > 0;
+  const remaining      = Math.max(0, RATE_LIMIT - effectiveCount);
+  const isBlocked      = !!(data.blockedUntil && data.blockedUntil > now);
+  const showWarning    = !isBlocked && remaining <= WARNING_AT && remaining > 0;
 
-  // Called on every successful message send
+  // Called on every completed or errored request (server counted it either way)
   const incrementCount = useCallback(() => {
     setData((prev) => {
       const now = Date.now();

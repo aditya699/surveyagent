@@ -16,5 +16,6 @@ export function useChatbotPage(summary) {
   useEffect(() => {
     if (summary) setPageContext(summary);
     return () => setPageContext('');
+    // setPageContext is a stable useState setter — safe to omit from deps
   }, [summary]); // eslint-disable-line react-hooks/exhaustive-deps
 }

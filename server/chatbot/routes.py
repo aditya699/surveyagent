@@ -18,34 +18,43 @@ async def chat_message(
     request: ChatRequest,
     current_user: dict = Depends(get_current_user),
 ):
-    # Rate limit: 20 messages per hour, 2-hour block on breach
-    allowed, retry_after = await check_and_increment(str(current_user["_id"]))
-    if not allowed:
-        raise HTTPException(
-            status_code=429,
-            detail={"message": "Chat limit reached. You can send 20 messages per hour.", "retry_after": retry_after},
-        )
-    # Sliding window: cap history before passing to LLM
-    windowed = request.history[-WINDOW_SIZE:]
-    messages = [{"role": m.role, "content": m.content} for m in windowed]
-
-    # User-message injection: prepend live page data so the AI answers about
-    # what is actually on screen, not generic platform knowledge.
-    if request.page_context:
-        user_message = f"[Current page data]\n{request.page_context}\n\n{request.message}"
-    else:
-        user_message = request.message
-    messages.append({"role": "user", "content": user_message})
-
-    # System-prompt injection: stable identity context (name, org, page label)
-    system_prompt = build_chatbot_prompt(request.context)
-
     try:
-        provider = await get_provider(request.llm_provider or "openai")
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Unknown LLM provider: {e}")
+        # Rate limit: 20 messages per hour, 2-hour block on breach
+        allowed, retry_after = await check_and_increment(str(current_user["_id"]))
+        if not allowed:
+            raise HTTPException(
+                status_code=429,
+                detail={"message": "Chat limit reached. You can send 20 messages per hour.", "retry_after": retry_after},
+            )
 
-    model = request.llm_model or provider.default_model
+        # Sliding window: cap history before passing to LLM
+        windowed = request.history[-WINDOW_SIZE:]
+        messages = [{"role": m.role, "content": m.content} for m in windowed]
+
+        # User-message injection: prepend live page data so the AI answers about
+        # what is actually on screen, not generic platform knowledge.
+        if request.page_context:
+            user_message = f"[Current page data]\n{request.page_context}\n\n{request.message}"
+        else:
+            user_message = request.message
+        messages.append({"role": "user", "content": user_message})
+
+        # System-prompt injection: stable identity context (name, org, page label)
+        system_prompt = build_chatbot_prompt(request.context)
+
+        try:
+            provider = await get_provider(request.llm_provider or "openai")
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Unknown LLM provider: {e}")
+
+        model = request.llm_model or provider.default_model
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Chatbot setup failed: {e}", exc_info=True)
+        await log_error("chatbot_setup", str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
     async def event_stream():
         try:

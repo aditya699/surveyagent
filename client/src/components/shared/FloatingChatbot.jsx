@@ -10,7 +10,6 @@ import { streamChatMessage } from '../../api/chatbot';
 
 const WINDOW_SIZE = 20;
 const MAX_STORED  = 100;
-const STORAGE_KEY = 'sa_chat_history';
 
 const WELCOME_MESSAGE = {
   id: 'welcome',
@@ -19,19 +18,26 @@ const WELCOME_MESSAGE = {
   isTyping: false,
 };
 
-function loadHistory() {
+function historyKey(userId) {
+  return `sa_chat_history_${userId}`;
+}
+
+function loadHistory(userId) {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(historyKey(userId));
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) && parsed.length > 0 ? parsed : null;
-  } catch { return null; }
+  } catch {
+    console.warn('[FloatingChatbot] Failed to parse chat history from localStorage');
+    return null;
+  }
 }
 
-function saveHistory(messages) {
+function saveHistory(messages, userId) {
   try {
     const toStore = messages.filter((m) => !m.isTyping).slice(-MAX_STORED);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(toStore));
+    localStorage.setItem(historyKey(userId), JSON.stringify(toStore));
   } catch {}
 }
 
@@ -39,20 +45,34 @@ export default function FloatingChatbot() {
   const { user } = useAuth();
   const location = useLocation();
   const { pageContext } = useChatbotPageContext();
-  const { isBlocked, showWarning, remaining, countdown, incrementCount, handleRateLimit } = useChatRateLimit();
+  const { isBlocked, showWarning, remaining, countdown, incrementCount, handleRateLimit } = useChatRateLimit(user?.user_id);
 
   const [isOpen, setIsOpen] = useState(false);
   const [hasOpened, setHasOpened] = useState(false);
   const [showTooltip, setShowTooltip] = useState(true);
-  const [messages, setMessages] = useState(() => loadHistory() ?? [WELCOME_MESSAGE]);
+  const [messages, setMessages] = useState([WELCOME_MESSAGE]);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
 
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
   const abortRef = useRef(null);
+  const historyLoadedRef = useRef(false);
 
-  useEffect(() => { saveHistory(messages); }, [messages]);
+  // Load per-user history once when user resolves
+  useEffect(() => {
+    if (!user?.user_id || historyLoadedRef.current) return;
+    historyLoadedRef.current = true;
+    const saved = loadHistory(user.user_id);
+    if (saved) setMessages(saved);
+  }, [user?.user_id]);
+
+  // Persist history keyed by user
+  useEffect(() => {
+    if (!user?.user_id) return;
+    saveHistory(messages, user.user_id);
+  }, [messages, user?.user_id]);
+
   useEffect(() => {
     const t = setTimeout(() => setShowTooltip(false), 4000);
     return () => clearTimeout(t);
@@ -73,7 +93,7 @@ export default function FloatingChatbot() {
 
   const handleClearHistory = () => {
     setMessages([WELCOME_MESSAGE]);
-    localStorage.removeItem(STORAGE_KEY);
+    if (user?.user_id) localStorage.removeItem(historyKey(user.user_id));
   };
 
   const handleSend = useCallback(async () => {
@@ -128,6 +148,8 @@ export default function FloatingChatbot() {
         abortRef.current = null;
       },
       onError: () => {
+        // Server already counted this request — keep client in sync
+        incrementCount();
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantMsgId
@@ -163,9 +185,10 @@ export default function FloatingChatbot() {
     setInput(el.value);
   };
 
-  if (!user) return null;
+  // Hide on unauthenticated pages and on the interview UI (respondent view + admin test)
+  if (!user || location.pathname.startsWith('/interview/')) return null;
 
-  const visibleCount   = messages.filter((m) => !m.isTyping).length;
+  const visibleCount     = messages.filter((m) => !m.isTyping).length;
   const showWindowBanner = visibleCount > WINDOW_SIZE + 1;
 
   return (

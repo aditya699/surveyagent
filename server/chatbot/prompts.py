@@ -2,7 +2,11 @@
 # Older messages are dropped from the API call but remain visible in the UI.
 WINDOW_SIZE = 20  # 10 user/assistant turns
 
-_BASE_PROMPT = """You are a helpful assistant built into SurveyAgent, an AI-powered survey platform.
+BASE_PROMPT = """You are a helpful assistant built into SurveyAgent, an AI-powered survey platform.
+
+STRICT SCOPE RULE: You only answer questions about SurveyAgent and its features. If a user asks anything unrelated — general knowledge, news, politics, science, coding outside this platform, or any other topic — respond with:
+"I can only help with SurveyAgent-related questions. Try asking me about surveys, interviews, analytics, or platform settings."
+Do not answer off-topic questions under any circumstances, even if the user insists.
 
 Your job is to help users get the most out of the platform. You can help with:
 
@@ -45,20 +49,20 @@ Keep your answers concise and practical. Format responses using markdown:
 - Keep responses short — avoid long prose paragraphs"""
 
 # Human-readable labels for URL paths injected as context
-_PAGE_LABELS = {
-    "/dashboard":   "Dashboard — managing their surveys",
-    "/analytics":   "Analytics Overview — reviewing all survey stats",
-    "/settings":    "Profile Settings",
-    "/settings/org":    "Organization Settings — managing org members and roles",
-    "/settings/teams":  "Team Management — managing teams",
-    "/feedback":    "Public Feedback page",
+PAGE_LABELS = {
+    "/dashboard":        "Dashboard — managing their surveys",
+    "/analytics":        "Analytics Overview — reviewing all survey stats",
+    "/settings":         "Profile Settings",
+    "/settings/org":     "Organization Settings — managing org members and roles",
+    "/settings/teams":   "Team Management — managing teams",
+    "/feedback":         "Public Feedback page",
 }
 
 
-def _page_label(path: str) -> str:
+def page_label(path: str) -> str:
     if not path:
         return "unknown"
-    for prefix, label in _PAGE_LABELS.items():
+    for prefix, label in PAGE_LABELS.items():
         if path.startswith(prefix):
             return label
     if "/surveys/" in path and "/analytics" in path:
@@ -79,7 +83,7 @@ def _page_label(path: str) -> str:
 def build_chatbot_prompt(context=None) -> str:
     """Return the system prompt, optionally prepended with injected user context."""
     if not context:
-        return _BASE_PROMPT
+        return BASE_PROMPT
 
     lines = ["[Injected context — use this to personalise your responses]"]
     if context.name:
@@ -87,7 +91,7 @@ def build_chatbot_prompt(context=None) -> str:
     if context.org_name:
         lines.append(f"Organization: {context.org_name}")
     if context.current_page:
-        lines.append(f"Current page: {_page_label(context.current_page)}")
+        lines.append(f"Current page: {page_label(context.current_page)}")
 
     ctx_block = "\n".join(lines)
-    return f"{ctx_block}\n\n{_BASE_PROMPT}"
+    return f"{ctx_block}\n\n{BASE_PROMPT}"
