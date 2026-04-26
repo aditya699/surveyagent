@@ -51,6 +51,18 @@ app = FastAPI(
     redoc_url="/redoc" if settings.ENABLE_DOCS else None,
     lifespan=lifespan,
     redirect_slashes=False,
+    openapi_tags=[
+        {"name": "Authentication",  "description": "Register, login, token refresh, profile management, OTP, and invite flows"},
+        {"name": "Surveys",         "description": "Create, read, update, delete, and publish surveys"},
+        {"name": "AI",              "description": "AI question generation, field enhancement, and TTS synthesis via SSE"},
+        {"name": "Interview",       "description": "Start and conduct AI-powered interviews (text, voice, live/WebRTC)"},
+        {"name": "Analytics",       "description": "Per-survey and per-interview analytics, AI analysis, and data export"},
+        {"name": "Chatbot",         "description": "Floating assistant chat — streams contextual help about the SurveyAgent platform"},
+        {"name": "Organization",    "description": "Org management: members, roles, and ownership transfer"},
+        {"name": "Teams",           "description": "Team and sub-team management within an org"},
+        {"name": "Feedback",        "description": "Public feedback submissions (no auth required)"},
+        {"name": "Admin",           "description": "Platform-admin endpoints: usage stats, user management, error logs"},
+    ],
 )
 
 # CORS middleware
@@ -89,6 +101,9 @@ app.include_router(feedback_router, prefix="/api/v1/feedback", tags=["Feedback"]
 
 from server.admin.routes import router as admin_router
 app.include_router(admin_router, prefix="/api/v1/admin", tags=["Admin"])
+
+from server.chatbot.routes import router as chatbot_router
+app.include_router(chatbot_router, prefix="/api/v1/chatbot", tags=["Chatbot"])
 
 
 @app.get("/health")

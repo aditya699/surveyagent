@@ -84,6 +84,10 @@ export const ENDPOINTS = {
     USER_DETAIL: (id) => `${PREFIX}/admin/users/${id}`,
   },
 
+  CHATBOT: {
+    MESSAGE: `${PREFIX}/chatbot/message`,
+  },
+
   TEAMS: {
     LIST:           `${PREFIX}/teams`,
     CREATE:         `${PREFIX}/teams`,

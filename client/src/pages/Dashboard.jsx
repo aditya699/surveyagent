@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useClipboard } from '../hooks/useClipboard';
+import { useChatbotPage } from '../hooks/useChatbotPage';
 import { getSurveys, deleteSurvey } from '../api';
 import { formatDate, getInitials } from '../utils/formatters';
 import StatusBadge from '../components/shared/StatusBadge';
@@ -36,6 +37,13 @@ export default function Dashboard() {
   const { copied: copySuccess, copy: copyToClipboard } = useClipboard();
 
   const atLimit = surveyLimit > 0 && surveysCreated >= surveyLimit && !limitBypassed;
+
+  const dashboardSummary = !loading
+    ? surveys.length === 0
+      ? 'User is on the Dashboard. They have no surveys yet.'
+      : `User is on the Dashboard. They have ${surveys.length} survey${surveys.length !== 1 ? 's' : ''}: ${surveys.map(s => `"${s.title}" (${s.status})`).join(', ')}.`
+    : '';
+  useChatbotPage(dashboardSummary);
 
   useEffect(() => {
     const fetchSurveys = async () => {

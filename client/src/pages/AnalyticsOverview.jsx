@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { getAnalyticsOverview } from '../api';
+import { useChatbotPage } from '../hooks/useChatbotPage';
 import { formatDuration } from '../utils/formatters';
 import { exportSurveySummary } from '../utils/export';
 import StatusBadge from '../components/shared/StatusBadge';
@@ -48,6 +49,11 @@ export default function AnalyticsOverview() {
   const overallRate = totals.interviews > 0
     ? Math.round((totals.completed / totals.interviews) * 100)
     : 0;
+
+  const overviewSummary = !loading && surveys.length > 0
+    ? `User is on the Analytics Overview. ${surveys.length} surveys, ${totals.interviews} total interviews, ${overallRate}% overall completion rate. Per survey: ${surveys.map(s => `"${s.title}" — ${s.total_interviews} interviews, ${s.total_interviews > 0 ? Math.round((s.completed / s.total_interviews) * 100) : 0}% completion`).join('; ')}.`
+    : '';
+  useChatbotPage(overviewSummary);
 
   return (
     <div className="min-h-screen bg-background">
