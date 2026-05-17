@@ -8,7 +8,8 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { getRealtimeToken, saveRealtimeTurn } from '../api';
 
-const REALTIME_URL = 'https://api.openai.com/v1/realtime';
+const REALTIME_CALLS_URL = 'https://api.openai.com/v1/realtime/calls';
+const REALTIME_MODEL = 'gpt-realtime-2';
 
 export function useRealtimeInterview({ sessionId, onComplete, onTerminated }) {
   const [realtimeState, setRealtimeState] = useState('idle'); // idle | connecting | connected | error
@@ -110,13 +111,13 @@ export function useRealtimeInterview({ sessionId, onComplete, onTerminated }) {
       }
 
       // Assistant audio transcript delta
-      case 'response.audio_transcript.delta': {
+      case 'response.output_audio_transcript.delta': {
         assistantTextRef.current += data.delta || '';
         break;
       }
 
       // Assistant audio transcript complete
-      case 'response.audio_transcript.done': {
+      case 'response.output_audio_transcript.done': {
         const fullText = data.transcript || assistantTextRef.current;
         assistantTextRef.current = '';
 
@@ -238,7 +239,7 @@ export function useRealtimeInterview({ sessionId, onComplete, onTerminated }) {
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
-      const sdpResponse = await fetch(`${REALTIME_URL}?model=gpt-realtime`, {
+      const sdpResponse = await fetch(`${REALTIME_CALLS_URL}?model=${REALTIME_MODEL}`, {
         method: 'POST',
         body: offer.sdp,
         headers: {

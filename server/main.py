@@ -62,6 +62,7 @@ app = FastAPI(
         {"name": "Teams",           "description": "Team and sub-team management within an org"},
         {"name": "Feedback",        "description": "Public feedback submissions (no auth required)"},
         {"name": "Admin",           "description": "Platform-admin endpoints: usage stats, user management, error logs"},
+        {"name": "Translation",     "description": "Realtime translation token minting for the hidden demo route"},
     ],
 )
 
@@ -104,6 +105,9 @@ app.include_router(admin_router, prefix="/api/v1/admin", tags=["Admin"])
 
 from server.chatbot.routes import router as chatbot_router
 app.include_router(chatbot_router, prefix="/api/v1/chatbot", tags=["Chatbot"])
+
+from server.translation.routes import router as translation_router
+app.include_router(translation_router, prefix="/api/v1/translation", tags=["Translation"])
 
 
 @app.get("/health")

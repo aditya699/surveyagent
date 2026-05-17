@@ -15,6 +15,7 @@ import AnalyticsOverview from './pages/AnalyticsOverview';
 import SurveyAnalytics from './pages/SurveyAnalytics';
 import InterviewDetail from './pages/InterviewDetail';
 import Feedback from './pages/Feedback';
+import RealtimeTranslationPage from './pages/RealtimeTranslationPage';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminUsers from './pages/AdminUsers';
 import AdminUserDetail from './pages/AdminUserDetail';
@@ -34,6 +35,7 @@ export default function App() {
       <Route path="/interview/:token" element={<InterviewPage />} />
       <Route element={<ProtectedRoute />}>
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/realtime_translation" element={<RealtimeTranslationPage />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/settings/org" element={<OrgSettings />} />
         <Route path="/settings/teams" element={<TeamManagement />} />

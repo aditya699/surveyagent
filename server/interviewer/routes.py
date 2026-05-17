@@ -556,19 +556,27 @@ async def get_realtime_token(session_id: str):
             for msg in interview.conversation
         ]
 
-        # Request ephemeral key from OpenAI Realtime sessions endpoint
+        # Request ephemeral key from OpenAI Realtime GA client_secrets endpoint.
+        # GA moved input transcription + VAD under session.audio.input.
         session_config = {
-            "model": "gpt-realtime",
-            "voice": voice,
-            "instructions": instructions,
-            "tools": REALTIME_TOOLS,
-            "input_audio_transcription": {"model": "whisper-1"},
-            "turn_detection": {"type": "server_vad"},
+            "session": {
+                "type": "realtime",
+                "model": "gpt-realtime-2",
+                "audio": {
+                    "input": {
+                        "transcription": {"model": "whisper-1"},
+                        "turn_detection": {"type": "server_vad"},
+                    },
+                    "output": {"voice": voice},
+                },
+                "instructions": instructions,
+                "tools": REALTIME_TOOLS,
+            }
         }
 
         async with httpx.AsyncClient(timeout=15) as client:
             resp = await client.post(
-                "https://api.openai.com/v1/realtime/sessions",
+                "https://api.openai.com/v1/realtime/client_secrets",
                 headers={
                     "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
                     "Content-Type": "application/json",
@@ -576,16 +584,16 @@ async def get_realtime_token(session_id: str):
                 json=session_config,
             )
             if resp.status_code != 200:
-                logger.error(f"OpenAI Realtime sessions error: {resp.status_code} {resp.text}")
+                logger.error(f"OpenAI Realtime client_secrets error: {resp.status_code} {resp.text}")
                 raise HTTPException(status_code=502, detail="Failed to create realtime session")
 
             data = resp.json()
 
         return {
-            "client_secret": data["client_secret"]["value"],
+            "client_secret": data["value"],
             "voice": voice,
             "conversation_history": conversation_history,
-            "expires_at": data["client_secret"].get("expires_at"),
+            "expires_at": data.get("expires_at"),
         }
 
     except HTTPException:

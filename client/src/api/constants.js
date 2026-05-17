@@ -88,6 +88,10 @@ export const ENDPOINTS = {
     MESSAGE: `${PREFIX}/chatbot/message`,
   },
 
+  TRANSLATION: {
+    TOKEN: `${PREFIX}/translation/token`,
+  },
+
   TEAMS: {
     LIST:           `${PREFIX}/teams`,
     CREATE:         `${PREFIX}/teams`,
