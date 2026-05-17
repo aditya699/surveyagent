@@ -86,10 +86,9 @@ export default function RealtimeTranslationPage() {
   }, [bToA.state, micsOn, bToA]);
 
   const handleStart = useCallback(async () => {
-    if (langA === langB) return;
     setPhase('live');
     await Promise.all([aToB.startSession(), bToA.startSession()]);
-  }, [langA, langB, aToB, bToA]);
+  }, [aToB, bToA]);
 
   const handleEnd = useCallback(() => {
     aToB.endSession();
@@ -149,17 +148,10 @@ export default function RealtimeTranslationPage() {
               </select>
             </div>
 
-            {langA === langB && (
-              <div className="text-yellow-400 font-sans text-xs">
-                Pick two different languages.
-              </div>
-            )}
-
             <button
               type="button"
               onClick={handleStart}
-              disabled={langA === langB}
-              className="w-full bg-accent text-white font-sans font-medium py-3 rounded-lg hover:bg-accent/90 disabled:bg-white/10 disabled:text-white/30 transition-colors"
+              className="w-full bg-accent text-white font-sans font-medium py-3 rounded-lg hover:bg-accent/90 transition-colors"
             >
               Start translating
             </button>
