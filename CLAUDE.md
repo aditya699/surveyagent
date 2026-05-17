@@ -4,7 +4,7 @@
 
 SurveyAgent is an open-source AI survey platform that replaces static forms with dynamic conversations. It conducts interviews via text chat, voice, or video avatar. It's self-hostable, LLM-agnostic, and keeps survey data under the user's control.
 
-**Status:** Early development. Auth system, landing page, survey CRUD, AI question generation, AI field enhancement (with custom instructions), question test panel (per-question AI testing), multi-LLM provider support (OpenAI, Anthropic, Gemini), interviewer foundation, interviewer engine + routes, interview chat UI (text + speech-to-text dictation), voice interview mode (Whisper transcription + sentence-level TTS), live interview mode (OpenAI Realtime API via WebRTC), analytics, data export, webhooks, multi-tenant org support (orgs, roles, teams, email OTP verification, invite system, survey visibility), email notifications on interview completion, custom analytics instructions, public feedback collection (with speech-to-text dictation), Docker containerization, per-user survey creation limits, and abandoned interview detection (auto-timeout with lazy evaluation) are built. Video avatar is not yet implemented.
+**Status:** Early development. Auth system, landing page, survey CRUD, AI question generation, AI field enhancement (with custom instructions), question test panel (per-question AI testing), multi-LLM provider support (OpenAI, Anthropic, Gemini), interviewer foundation, interviewer engine + routes, interview chat UI (text + speech-to-text dictation), voice interview mode (Whisper transcription + sentence-level TTS), live interview mode (OpenAI Realtime API GA via WebRTC, `gpt-realtime-2`), hidden live translation demo (`gpt-realtime-translate` two-way captions, auth-gated, no persistence), analytics, data export, webhooks, multi-tenant org support (orgs, roles, teams, email OTP verification, invite system, survey visibility), email notifications on interview completion, custom analytics instructions, public feedback collection (with speech-to-text dictation), Docker containerization, per-user survey creation limits, and abandoned interview detection (auto-timeout with lazy evaluation) are built. Video avatar is not yet implemented.
 
 ## Tech Stack
 
@@ -74,11 +74,14 @@ surveyagent/
 │   │   ├── __init__.py        # Package marker
 │   │   ├── schemas.py         # FeedbackCreate, FeedbackResponse models
 │   │   └── routes.py          # POST feedback (public, no auth)
-│   └── teams/                 # Team management
+│   ├── teams/                 # Team management
+│   │   ├── __init__.py        # Package marker
+│   │   ├── routes.py          # Team CRUD, member add/remove
+│   │   ├── schemas.py         # Team request/response models
+│   │   └── db.py              # Team DB operations, get_user_team_ids()
+│   └── translation/           # Hidden realtime translation demo
 │       ├── __init__.py        # Package marker
-│       ├── routes.py          # Team CRUD, member add/remove
-│       ├── schemas.py         # Team request/response models
-│       └── db.py              # Team DB operations, get_user_team_ids()
+│       └── routes.py          # POST /token — mints gpt-realtime-translate ephemeral keys (auth-gated)
 ├── client/                    # React frontend
 │   ├── index.html             # Entry HTML with Google Fonts
 │   ├── tailwind.config.js     # Design system (colors, fonts, animations)
@@ -420,10 +423,10 @@ Requires a `.env` file at the project root (copy `.env.example`).
 - Works with multiple Gunicorn workers and Docker single-container deployment
 
 ### Live Interview Mode (complete)
-- Real-time full-duplex voice via OpenAI Realtime API over WebRTC — no turn-taking
-- Uses `gpt-realtime` (GA) model — upgraded from `gpt-4o-realtime-preview` for better instruction following
+- Real-time full-duplex voice via OpenAI Realtime API (GA) over WebRTC — no turn-taking
+- Uses `gpt-realtime-2` on the GA endpoints (`/v1/realtime/client_secrets` + `/v1/realtime/calls`). The legacy Beta path (`/v1/realtime/sessions`, `/v1/realtime?model=...`) was shut down on 2026-05-17 — calling it now returns `beta_api_shape_disabled`.
 - **Separate realtime prompt:** `SYSTEM_PROMPT_REALTIME` + `build_realtime_interviewer_prompt()` in `server/interviewer/prompts.py` — optimised for speech-to-speech models following OpenAI's realtime prompting guide (bullets over paragraphs, sample phrases, concise sections, variety rule)
-- Backend mints ephemeral tokens via `POST /v1/realtime/sessions` — API key never reaches the browser
+- Backend mints ephemeral tokens via `POST /v1/realtime/client_secrets` — API key never reaches the browser
 - Two parallel connections: WebRTC to OpenAI (audio), HTTP POSTs to backend (turn persistence)
 - Transcripts saved turn-by-turn to MongoDB via `POST /{session_id}/realtime-turn`
 - Coverage tracking via Realtime API tool/function calls (`update_coverage`, `report_abuse`) instead of text tags
@@ -436,6 +439,17 @@ Requires a `.env` file at the project root (copy `.env.example`).
 - Three-way mode toggle on interview page: Text / Voice / Live — seamless switching mid-session
 - Reuses existing `add_message()`, `process_turn_result()`, completion flow (webhooks, emails)
 - No changes to MongoDB schema — same interview document structure
+
+### Live Translation Demo (complete, hidden)
+- Hidden route at `/realtime_translation` — auth-gated (wrapped in `ProtectedRoute`), not linked from any UI navigation. Open by typing the URL.
+- Two-people-one-laptop demo: both speakers share the laptop mic, captions stream live in both target languages, no buttons during conversation.
+- Two parallel `gpt-realtime-translate` sessions (one per target language). Each session's translated audio plays through speakers; for the demo, mute speakers and watch captions to avoid echo.
+- Backend module `server/translation/` with a single endpoint: `POST /api/v1/translation/token` (Bearer auth). Proxies to `https://api.openai.com/v1/realtime/translations/client_secrets` with `{session: {model: "gpt-realtime-translate", audio: {output: {language: "<iso-code>"}}}}`.
+- Target language passed as ISO-639-1 codes (`en`, `es`, `fr`, `de`, `hi`, `ja`, `zh`, `ar`, `pt`). The translation API rejects English names — only codes work.
+- Frontend WebRTC SDP exchange targets `https://api.openai.com/v1/realtime/translations/calls` (note: translation has its own `/calls` path, separate from the voice-agent one).
+- Data channel events handled: `session.input_transcript.delta` (source speech, what was heard) and `session.output_transcript.delta` (translated text). Translated audio comes through the standard WebRTC audio track.
+- **No persistence** — transcripts are local React state only, no MongoDB writes, no save-turn endpoint. Demo only.
+- Files: `server/translation/routes.py`, `client/src/hooks/useRealtimeTranslation.js` (one instance per direction), `client/src/pages/RealtimeTranslationPage.jsx`, `client/src/api/translation.js`.
 
 ### Frontend Infrastructure (complete)
 - API layer: Axios client, endpoint constants, form helpers, interceptors, barrel exports
@@ -529,10 +543,12 @@ Requires a `.env` file at the project root (copy `.env.example`).
 - Audio recording uses `MediaRecorder` API; codec selection: `audio/webm;codecs=opus` > `audio/webm` > `audio/mp4` (Safari fallback).
 
 ### Live Interview Mode (Realtime API via WebRTC)
-- Uses OpenAI Realtime API with ephemeral token approach — backend holds `OPENAI_API_KEY`, mints short-lived token via `POST https://api.openai.com/v1/realtime/sessions`.
-- Model: `gpt-realtime` (GA) — upgraded from `gpt-4o-realtime-preview` for stronger instruction following, better voice quality, and more reliable tool calling.
+- Uses OpenAI Realtime GA API with ephemeral token approach — backend holds `OPENAI_API_KEY`, mints short-lived token via `POST https://api.openai.com/v1/realtime/client_secrets`.
+- Model: `gpt-realtime-2` on the GA endpoint. The Beta path (`/v1/realtime/sessions`) was shut down on 2026-05-17 — calling it returns `beta_api_shape_disabled`.
+- **GA payload shape:** session config is wrapped (`{"session": {...}}`) with `session.type: "realtime"`. Input transcription + VAD live under `session.audio.input` (`{transcription: {model: "whisper-1"}, turn_detection: {type: "server_vad"}}`). Output voice lives under `session.audio.output.voice`. The flat Beta keys (`input_audio_transcription`, `turn_detection`, `voice`) are rejected.
+- **GA response shape:** `client_secrets` returns `{"value": "ek_...", "expires_at": ...}` at the top level (Beta nested it under `client_secret.value`).
 - Ephemeral token returned to frontend along with voice config and conversation history.
-- Frontend creates `RTCPeerConnection`, adds local mic track, creates data channel `"oai-events"`, performs SDP exchange with `https://api.openai.com/v1/realtime?model=gpt-realtime`.
+- Frontend creates `RTCPeerConnection`, adds local mic track, creates data channel `"oai-events"`, performs SDP exchange with `https://api.openai.com/v1/realtime/calls?model=gpt-realtime-2`.
 - **Separate realtime prompt**: `SYSTEM_PROMPT_REALTIME` in `server/interviewer/prompts.py` is a speech-optimised prompt following OpenAI's realtime prompting guide. Built by `build_realtime_interviewer_prompt()`. Key differences from text prompt: bullet-based rules, sample phrases for variety, concise sections, tool usage instructions inline.
 - Text/voice modes continue using `SYSTEM_PROMPT_BASE` + `build_interviewer_prompt()` — completely separate prompt path.
 - Conversation history from MongoDB injected into WebRTC session via `conversation.item.create` data channel events.
@@ -540,7 +556,7 @@ Requires a `.env` file at the project root (copy `.env.example`).
 - `PERSONALITY_VOICE_MAP` in `server/interviewer/prompts.py` maps personality tones to OpenAI Realtime voices.
 - `SYSTEM_PROMPT` (text mode) refactored into composable parts: `SYSTEM_PROMPT_BASE` + `COVERAGE_TRACKING_TEXT`/`COVERAGE_TRACKING_REALTIME` + `ABUSE_DETECTION_TEXT`/`ABUSE_DETECTION_REALTIME`. The old `SYSTEM_PROMPT` constant preserved for backward compatibility.
 - `process_stream_result()` refactored into `process_turn_result()` (returns dict) + SSE wrapper. The realtime-turn endpoint calls `process_turn_result()` directly.
-- Data channel events handled: `conversation.item.input_audio_transcription.completed` (user turn), `response.audio_transcript.done` (assistant turn), `response.function_call_arguments.done` (coverage/abuse tool calls).
+- Data channel events handled: `conversation.item.input_audio_transcription.completed` (user turn), `response.output_audio_transcript.delta`/`response.output_audio_transcript.done` (assistant transcript stream — renamed from Beta's `response.audio_transcript.*`), `response.function_call_arguments.done` (coverage/abuse tool calls).
 - Tool call results sent back via data channel (`conversation.item.create` with `function_call_output`) followed by `response.create` to continue the conversation.
 - `useRealtimeInterview` hook (`client/src/hooks/useRealtimeInterview.js`) manages full lifecycle: token fetch, peer connection, data channel events, turn saving via HTTP POST, mute toggle, cleanup on unmount.
 - `RealtimeChat` component (`client/src/components/interview/RealtimeChat.jsx`) renders transcript bubbles (same styling as ChatThread), connection status, mic controls, end session button.
@@ -549,7 +565,7 @@ Requires a `.env` file at the project root (copy `.env.example`).
 
 #### Realtime Prompting Findings
 Key learnings from building the voice interviewer on OpenAI's Realtime API:
-- **`gpt-realtime` (GA) vs `gpt-4o-realtime-preview`:** The preview model ignores per-question instructions and tool-call directives. The GA model follows them reliably. Always use `gpt-realtime`.
+- **`gpt-realtime-2` (GA) vs `gpt-4o-realtime-preview`:** The original preview model ignored per-question instructions and tool-call directives. GA models follow them reliably. Always use `gpt-realtime-2` on the GA endpoints.
 - **Separate prompt structure for realtime:** Bullets over paragraphs, concise sections with clear headers, sample phrases for variety. Long prose prompts that work with text models (GPT-4o/5) fall flat in speech-to-speech.
 - **Sample phrases prevent robotic repetition:** Without a variety rule + sample phrases, the model reuses the same transitions every turn.
 - **Explicit session-end in tool instructions:** The model says "Thanks for your time!" but won't call `update_coverage` with all questions marked unless explicitly told to. Prompt must say: "when wrapping up, call update_coverage with ALL indices so the session ends automatically."
@@ -693,6 +709,12 @@ Key learnings from building the voice interviewer on OpenAI's Realtime API:
 | Method | Path | Auth     | Description                    |
 |--------|------|----------|--------------------------------|
 | POST   |      | None     | Submit public feedback         |
+
+### Translation — `/api/v1/translation`
+
+| Method | Path   | Auth   | Description                                                                |
+|--------|--------|--------|----------------------------------------------------------------------------|
+| POST   | /token | Bearer | Mint a `gpt-realtime-translate` ephemeral key for the hidden demo route    |
 
 ## Conventions
 
