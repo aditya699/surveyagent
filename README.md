@@ -53,13 +53,15 @@ Open source. Self-hostable. Your data never leaves your infrastructure.
 
 ### Talk, not click
 
-Respondents have a real conversation instead of picking radio buttons. The AI knows when to probe deeper, when to move on, and when to wrap up. Set the personality — professional, friendly, casual, or fun.
+Respondents have a real conversation instead of picking radio buttons. The AI knows when to probe deeper, when to move on, and when to wrap up. Set the personality — professional, friendly, casual, or fun. Respondents choose their own language — English, Spanish, French, Hindi, and 16 more — so one survey works worldwide.
 
 ### Three ways to respond
 
 **Text** — Chat naturally in the browser. Speech-to-text dictation built in.
 
 **Voice** — Speak to the AI. Whisper transcribes, the AI responds with sentence-level TTS streaming (speaks the first sentence while still thinking about the rest), then auto-listens for your reply.
+
+**Live** — Real-time full-duplex voice via OpenAI Realtime API (`gpt-realtime`) over WebRTC. No turn-taking — talk naturally as if you were on a phone call. Sub-second latency, automatic turn detection, transcripts saved in real time. Speech-optimised prompting for reliable instruction following.
 
 **Video avatar** — Coming soon. A face on the other side of the conversation.
 
@@ -155,6 +157,21 @@ See [deployment-guide.md](deployment-guide.md) for Azure Web Apps deployment.
 | [**PRODUCT.md**](PRODUCT.md) | Feature deep-dives, product philosophy, roadmap |
 | [**CLAUDE.md**](CLAUDE.md) | Architecture, API endpoints, coding conventions |
 | [**deployment-guide.md**](deployment-guide.md) | Step-by-step cloud deployment |
+
+---
+
+## Realtime prompting findings
+
+Building a voice interviewer on OpenAI's Realtime API taught us a few things worth sharing:
+
+- **Use `gpt-realtime` (GA), not `gpt-4o-realtime-preview`.** The older preview model largely ignores per-question instructions and tool-call directives. The GA model follows them reliably.
+- **Realtime models need a different prompt structure than text models.** Bullets over paragraphs, concise sections with clear headers, and sample phrases for variety. Long prose prompts that work great with GPT-4o/5 fall flat in speech-to-speech.
+- **Sample phrases prevent robotic repetition.** Without them, the model reuses the same transitions ("Got it", "That makes sense") every turn. A short list of examples + a "vary your responses" rule fixes this.
+- **Tool calls need explicit session-end instructions.** The model will say "Thanks for your time!" but won't call the coverage tool with all questions marked — leaving the session hanging. You have to explicitly tell it: "when wrapping up, call update_coverage with ALL indices so the session ends automatically."
+- **Per-question instructions work — but only with the GA model.** Instructions like "drill down and ask for confidence" are followed in text and voice mode (GPT-4o), but the preview realtime model ignores them. The GA `gpt-realtime` model follows them.
+- **Keep tool descriptions in both the tools list AND the prompt.** Redundancy helps — describe tool usage rules in a dedicated Tools section of the prompt, not just in the function schema.
+
+We maintain two separate prompt paths: `SYSTEM_PROMPT_BASE` for text/voice (optimised for text LLMs) and `SYSTEM_PROMPT_REALTIME` for live mode (optimised for speech-to-speech). See `server/interviewer/prompts.py`.
 
 ---
 

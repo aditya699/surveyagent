@@ -17,8 +17,9 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useClipboard } from '../hooks/useClipboard';
+import { useChatbotPage } from '../hooks/useChatbotPage';
 import { getSurveys, deleteSurvey } from '../api';
-import { formatDate } from '../utils/formatters';
+import { formatDate, getInitials } from '../utils/formatters';
 import StatusBadge from '../components/shared/StatusBadge';
 import VisibilityBadge from '../components/shared/VisibilityBadge';
 
@@ -36,6 +37,13 @@ export default function Dashboard() {
   const { copied: copySuccess, copy: copyToClipboard } = useClipboard();
 
   const atLimit = surveyLimit > 0 && surveysCreated >= surveyLimit && !limitBypassed;
+
+  const dashboardSummary = !loading
+    ? surveys.length === 0
+      ? 'User is on the Dashboard. They have no surveys yet.'
+      : `User is on the Dashboard. They have ${surveys.length} survey${surveys.length !== 1 ? 's' : ''}: ${surveys.map(s => `"${s.title}" (${s.status})`).join(', ')}.`
+    : '';
+  useChatbotPage(dashboardSummary);
 
   useEffect(() => {
     const fetchSurveys = async () => {
@@ -73,7 +81,6 @@ export default function Dashboard() {
       <header className="bg-white border-b border-card-border px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
         <h1 className="text-xl font-serif text-text-primary">SurveyAgent</h1>
         <div className="flex items-center gap-3 sm:gap-4">
-          <span className="text-sm text-text-muted font-sans hidden sm:block">{user?.name}</span>
           <Link
             to="/analytics"
             className="flex items-center gap-1.5 text-sm text-text-muted hover:text-text-primary transition-colors font-sans"
@@ -95,6 +102,14 @@ export default function Dashboard() {
             <LogOut className="w-4 h-4" />
             <span className="hidden sm:inline">Logout</span>
           </button>
+          <div className="flex items-center gap-2 pl-2 border-l border-card-border">
+            <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center shrink-0">
+              <span className="text-white text-xs font-sans font-semibold">
+                {getInitials(user?.name)}
+              </span>
+            </div>
+            <span className="text-sm text-text-primary font-sans font-medium hidden sm:block">{user?.name}</span>
+          </div>
         </div>
       </header>
 
@@ -103,23 +118,30 @@ export default function Dashboard() {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-10"
+          className="bg-white border border-card-border rounded-2xl px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8"
         >
-          <div>
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif text-text-primary">
-              Welcome back, {user?.name}
-            </h2>
-            <p className="text-text-muted font-sans mt-2">{user?.org_name}</p>
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-accent flex items-center justify-center shrink-0">
+              <span className="text-white text-base font-sans font-semibold">
+                {getInitials(user?.name)}
+              </span>
+            </div>
+            <div>
+              <h2 className="text-xl sm:text-2xl font-serif text-text-primary">
+                Welcome back, {user?.name}
+              </h2>
+              <p className="text-xs text-text-muted font-sans mt-0.5">{user?.org_name}</p>
+            </div>
           </div>
           {atLimit ? (
-            <span className="btn-primary text-sm inline-flex items-center gap-2 shrink-0 self-start opacity-50 cursor-not-allowed">
+            <span className="btn-primary text-sm inline-flex items-center gap-2 shrink-0 opacity-50 cursor-not-allowed">
               <PlusCircle className="w-4 h-4" />
               Create Survey
             </span>
           ) : (
             <Link
               to="/surveys/create"
-              className="btn-primary text-sm inline-flex items-center gap-2 shrink-0 self-start"
+              className="btn-primary text-sm inline-flex items-center gap-2 shrink-0"
             >
               <PlusCircle className="w-4 h-4" />
               Create Survey

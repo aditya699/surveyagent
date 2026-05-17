@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, User, Building2, LogOut, Check, Users, ChevronRight } from 'lucide-react';
+import { ArrowLeft, User, Building2, LogOut, Check, Users, ChevronRight, Shield } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { RoleBadge } from '../components/shared';
 
@@ -92,6 +92,19 @@ export default function Settings() {
               <ChevronRight className="w-4 h-4 text-text-muted/40 group-hover:text-accent transition-colors" />
             </Link>
           </div>
+
+          {user?.is_platform_admin && (
+            <Link
+              to="/admin"
+              className="card p-4 hover:border-accent/30 transition-colors flex items-center justify-between group mb-8"
+            >
+              <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4 text-accent" />
+                <span className="text-sm font-sans text-text-primary">Platform Admin Dashboard</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-text-muted/40 group-hover:text-accent transition-colors" />
+            </Link>
+          )}
 
           <h2 className="text-2xl font-serif text-text-primary mb-1">Profile</h2>
           <p className="text-sm text-text-muted font-sans mb-8">

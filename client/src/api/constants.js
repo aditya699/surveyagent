@@ -29,6 +29,8 @@ export const ENDPOINTS = {
     TEST_QUESTION: `${PREFIX}/interview/test-question`,
     TRANSCRIBE: (sessionId) => `${PREFIX}/interview/${sessionId}/transcribe`,
     SYNTHESIZE: (sessionId) => `${PREFIX}/interview/${sessionId}/synthesize`,
+    REALTIME_TOKEN: (sessionId) => `${PREFIX}/interview/${sessionId}/realtime-token`,
+    REALTIME_TURN:  (sessionId) => `${PREFIX}/interview/${sessionId}/realtime-turn`,
   },
 
   SURVEYS: {
@@ -72,6 +74,18 @@ export const ENDPOINTS = {
 
   FEEDBACK: {
     SUBMIT: `${PREFIX}/feedback`,
+  },
+
+  ADMIN: {
+    USAGE:       `${PREFIX}/admin/usage`,
+    FEEDBACK:    `${PREFIX}/admin/feedback`,
+    ERRORS:      `${PREFIX}/admin/errors`,
+    USERS:       `${PREFIX}/admin/users`,
+    USER_DETAIL: (id) => `${PREFIX}/admin/users/${id}`,
+  },
+
+  CHATBOT: {
+    MESSAGE: `${PREFIX}/chatbot/message`,
   },
 
   TEAMS: {

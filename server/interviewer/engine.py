@@ -62,6 +62,7 @@ async def run_question_test_turn(
     survey_context: str | None = None,
     llm_provider: str | None = None,
     llm_model: str | None = None,
+    language: str = "English",
 ) -> AsyncGenerator[str, None]:
     """
     Stream one question-test turn via SSE. Stateless — no DB reads/writes.
@@ -76,6 +77,7 @@ async def run_question_test_turn(
         survey_title=survey_title,
         survey_goal=survey_goal,
         survey_context=survey_context,
+        language=language,
     )
 
     messages = [{"role": msg["role"], "content": msg["content"]} for msg in conversation]
@@ -108,6 +110,7 @@ async def run_interview_turn(
     conversation: list[dict],
     remaining_minutes: int,
     personality_tone: str = "friendly",
+    language: str = "English",
 ) -> AsyncGenerator[str, None]:
     """
     Stream one interviewer turn via SSE.
@@ -129,6 +132,7 @@ async def run_interview_turn(
         questions=survey.get("questions", []),
         remaining_minutes=remaining_minutes,
         personality_tone=personality_tone,
+        language=language,
     )
 
     # If time is up, add urgency instruction

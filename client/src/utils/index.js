@@ -5,6 +5,7 @@ export {
   formatDuration,
   formatDurationLong,
   formatTimer,
+  getInitials,
 } from './formatters';
 
 export {

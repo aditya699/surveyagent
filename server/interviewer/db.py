@@ -41,6 +41,7 @@ async def create_interview(
     survey_id: str,
     respondent: Optional[dict] = None,
     is_test_run: bool = False,
+    language: str = "English",
 ) -> InterviewResponse:
     """Create a new interview session."""
     db = await get_db()
@@ -53,6 +54,7 @@ async def create_interview(
         "status": "in_progress",
         "is_test_run": is_test_run,
         "questions_covered": [],
+        "language": language,
         "started_at": now,
         "completed_at": None,
         "last_activity_at": now,

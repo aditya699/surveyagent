@@ -49,3 +49,8 @@ export function formatTimer(seconds) {
   const s = seconds % 60;
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
+
+export function getInitials(name) {
+  if (!name) return '?';
+  return name.trim().split(/\s+/).filter(Boolean).map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?';
+}

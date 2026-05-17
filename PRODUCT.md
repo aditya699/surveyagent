@@ -21,6 +21,17 @@ Traditional survey tools give you structured data but miss the story behind the 
 - The interviewer follows your questions but adapts the conversation in real time
 - It knows when to probe deeper, when to move on, and when to wrap up
 - Time-aware — respects your estimated duration and wraps up gracefully
+- **Three interview modes:** Text chat, Voice (Whisper + TTS), and Live (real-time full-duplex via OpenAI Realtime API over WebRTC)
+
+### Live Interview Mode
+- Real-time full-duplex voice conversations — no turn-taking, speak naturally as on a phone call
+- Powered by OpenAI Realtime API over WebRTC for sub-second latency
+- Backend mints ephemeral tokens — your API key never reaches the browser
+- Transcripts saved to MongoDB turn-by-turn in parallel with the live audio
+- Coverage tracking via tool/function calls (the AI never speaks metadata tags aloud)
+- Automatic turn detection via server-side Voice Activity Detection (VAD)
+- Mic mute/unmute and end session controls
+- Seamless fallback — switch between Text, Voice, and Live modes mid-session
 
 ### Smart Survey Creation
 - Define your survey with a title, description, goal, and context
@@ -39,6 +50,11 @@ Traditional survey tools give you structured data but miss the story behind the 
 - Choose a tone for your interviewer: professional, friendly, casual, or fun
 - The personality shapes how the AI asks questions, responds to answers, and manages the conversation
 - Custom welcome messages let you set the first impression
+
+### Multi-Language Interviews
+- **Respondent chooses their language** — before starting an interview, each respondent picks their preferred language from 20+ options (English, Spanish, French, German, Hindi, Mandarin Chinese, Japanese, Korean, Arabic, and more)
+- The AI conducts the entire interview in that language across all three modes (Text, Voice, Live)
+- Same survey, different languages — a global team can create one survey and respondents worldwide take it in their own language
 
 ### Multi-LLM Provider Support
 - Choose between OpenAI, Anthropic (Claude), and Google Gemini as your AI backend

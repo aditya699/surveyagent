@@ -31,6 +31,8 @@ export {
   streamInterviewMessage,
   transcribeAudio,
   synthesizeInterviewSpeech,
+  getRealtimeToken,
+  saveRealtimeTurn,
 } from './interview';
 export {
   getAnalyticsOverview,
@@ -59,3 +61,11 @@ export {
   removeTeamMember,
 } from './teams';
 export { submitFeedback } from './feedback';
+export { streamChatMessage } from './chatbot';
+export {
+  getAdminUsage,
+  getAdminFeedback,
+  getAdminErrors,
+  getAdminUsers,
+  getAdminUserDetail,
+} from './admin';
