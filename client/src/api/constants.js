@@ -92,6 +92,11 @@ export const ENDPOINTS = {
     TOKEN: `${PREFIX}/translation/token`,
   },
 
+  FEEDBACK_LIVE: {
+    TOKEN:   `${PREFIX}/feedback-live/token`,
+    EXTRACT: `${PREFIX}/feedback-live/extract`,
+  },
+
   TEAMS: {
     LIST:           `${PREFIX}/teams`,
     CREATE:         `${PREFIX}/teams`,

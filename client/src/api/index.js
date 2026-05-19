@@ -63,6 +63,7 @@ export {
 export { submitFeedback } from './feedback';
 export { streamChatMessage } from './chatbot';
 export { getTranslationToken } from './translation';
+export { getFeedbackLiveToken, extractDashboard } from './feedbackLive';
 export {
   getAdminUsage,
   getAdminFeedback,
